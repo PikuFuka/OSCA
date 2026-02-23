@@ -1,0 +1,58 @@
+# OSCA Senior Citizen ID System - Download & Installation Guide
+
+This document lists all the software you need to download and install to run the OSCA system on your local machine.
+
+## 1. Required Software (Downloads)
+
+### A. XAMPP (For PHP and Database)
+- **Version:** PHP 8.2 or 8.3 recommended.
+- **Download:** [https://www.apachefriends.org/download.html](https://www.apachefriends.org/download.html)
+- **Includes:** Apache (Web Server), MySQL (Database), and PHP.
+
+### B. Node.js & npm (For Frontend)
+- **Version:** v22.x (LTS) recommended.
+- **Download:** [https://nodejs.org/](https://nodejs.org/)
+- **Includes:** npm (Node Package Manager).
+
+### C. Composer (For Backend PHP Dependencies)
+- **Version:** v2.x
+- **Download:** [https://getcomposer.org/download/](https://getcomposer.org/download/)
+
+### D. Git (Optional but Recommended)
+- **Download:** [https://git-scm.com/downloads](https://git-scm.com/downloads)
+
+## 2. Initial Setup Instructions
+
+Once the software above is installed, follow these steps:
+
+1.  **Clone/Download the Project:**
+    - Place the `OSCA` folder in your desired directory.
+
+2.  **Backend Setup:**
+    - Open a terminal in the `backend` folder.
+    - Run: `composer install`
+    - Copy `.env.example` to `.env`.
+    - Run: `php artisan key:generate`
+
+3.  **Frontend Setup:**
+    - Open a terminal in the `frontend` folder.
+    - Run: `npm install`
+
+4.  **Database Setup:**
+    - Open XAMPP Control Panel and start **Apache** and **MySQL**.
+    - Go to [http://localhost/phpmyadmin](http://localhost/phpmyadmin).
+    - Create a new database named `osca_db`.
+    - In your `backend/.env` file, ensure `DB_DATABASE=osca_db` and your credentials (usually `root` and no password) are correct.
+
+5.  **Run Migrations:**
+    - In the `backend` terminal, run: `php artisan migrate`
+
+## 3. Running the System
+
+In the **Root Folder (OSCA)**, run the following command to start everything:
+```bash
+npm run dev
+```
+
+---
+*Last Updated: February 23, 2026*

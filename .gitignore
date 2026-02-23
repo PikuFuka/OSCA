@@ -1,0 +1,38 @@
+# Node files
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Vite cache
+.vite/
+
+# Backend (Laravel) ignore redundancy
+# (Note: backend/.gitignore handles files inside that folder)
+backend/.env
+
+# Frontend (Vite/React) ignore redundancy
+# (Note: frontend/.gitignore handles files inside that folder)
+frontend/dist/
+frontend/node_modules/
+
+# Files to hide/ignore for privacy (PII)
+*.xlsx
+*.csv
+*.sql
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

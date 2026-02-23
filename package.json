@@ -1,0 +1,14 @@
+{
+  "name": "osca-root",
+  "version": "1.0.0",
+  "description": "Root package to run OSCA backend and frontend",
+  "scripts": {
+  "mysql": "C:\\xampp\\mysql\\bin\\mysqld.exe --defaults-file=C:\\xampp\\mysql\\bin\\my.ini --standalone",
+    "backend": "cd backend && php artisan serve",
+    "frontend": "npm run dev --prefix frontend",
+    "dev": "concurrently \"npm run mysql\" \"npm run backend\" \"npm run frontend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
