@@ -19,11 +19,6 @@ const api = axios.create({
   }
 });
 
-/**
- * Helper to add artificial delay for smoother loading transitions
- */
-const artificialDelay = (ms: number = 1500) => new Promise(resolve => setTimeout(resolve, ms));
-
 // axios interceptor to attach Bearer token to every request
 api.interceptors.request.use((config) => {
   const token = getToken();
@@ -35,25 +30,14 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-// axios interceptor to handle unauthorized (401) errors globally
+// axios interceptor to show a response immediately without artificial delay
 api.interceptors.response.use(
-  async (response) => {
-    // Only add delay if not explicitly skipped in request config
-    if (!(response.config as any).skipDelay) {
-      await artificialDelay(1500);
-    }
+  (response) => {
     return response;
   },
-  async (error) => {
-    // Only add delay if not explicitly skipped in request config
-    if (error.config && !(error.config as any).skipDelay) {
-      await artificialDelay(1500);
-    }
-
+  (error) => {
     if (error.response?.status === 401) {
       removeToken();
-      // We don't force a page reload here to let the AuthContext handle state cleanup
-      // but we could emit a custom event or let the rejected promise be handled by the caller.
     }
     
     // Transform error for better UI display
@@ -66,9 +50,30 @@ api.interceptors.response.use(
   }
 );
 
+// Simple in-memory cache for API requests
+const cache = new Map<string, { data: any, timestamp: number }>();
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Cache helper to wrap API calls with simple caching
+ */
+const withCache = async (key: string, fetcher: () => Promise<any>) => {
+  const cached = cache.get(key);
+  if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+    // Return from cache immediately, but we could also background refresh
+    return cached.data;
+  }
+  
+  const data = await fetcher();
+  cache.set(key, { data, timestamp: Date.now() });
+  return data;
+};
+
 // Auth API
 export const authAPI = {
   login: async (identifier: string, password: string) => {
+    // Reset cache on login
+    cache.clear();
     const response = await api.post('/login', { identifier, password });
     if (response.data.token) {
       setToken(response.data.token);
@@ -76,64 +81,48 @@ export const authAPI = {
     return response.data;
   },
 
-  register: async (formData: any, files?: { [key: string]: File }) => {
-    const fd = new FormData();
-    Object.entries(formData).forEach(([key, value]) => {
-      if (value !== null && value !== undefined) {
-        if (typeof value === 'object' && !Array.isArray(value)) {
-          fd.append(key, JSON.stringify(value));
-        } else if (Array.isArray(value)) {
-          fd.append(key, JSON.stringify(value));
-        } else {
-          fd.append(key, String(value));
-        }
-      }
-    });
-
-    if (files) {
-      Object.entries(files).forEach(([key, file]) => {
-        if (file) fd.append(key, file);
-      });
-    }
-
-    const response = await api.post('/register', fd, {
-      headers: { 'Content-Type': 'multipart/form-data' }
-    });
-    return response.data;
-  },
-
   logout: async () => {
+    // Reset cache on logout
+    cache.clear();
     try {
-      await api.post('/logout');
+      if (getToken()) await api.post('/logout');
     } finally {
       removeToken();
     }
   },
 
   getCurrentUser: async () => {
-    const response = await api.get('/me');
-    return response.data;
+    return withCache('user-me', async () => {
+      const response = await api.get('/me');
+      return response.data;
+    });
   },
 };
 
 // Seniors API
 export const seniorsAPI = {
+  clearCache: () => cache.clear(),
+
   getAll: async (params?: any) => {
-    const response = await api.get('/seniors', { 
-      params, 
-      skipDelay: params?.per_page === 5 // Skip delay for "Recent Seniors" widget
-    } as any);
-    return response.data;
+    const key = `seniors-all-${JSON.stringify(params || {})}`;
+    return withCache(key, async () => {
+      const response = await api.get('/seniors', { params } as any);
+      return response.data;
+    });
   },
 
   getById: async (id: number | string) => {
-    const response = await api.get(`/seniors/${id}`, { skipDelay: true } as any);
-    return response.data;
+    return withCache(`senior-detail-${id}`, async () => {
+      const response = await api.get(`/seniors/${id}`);
+      return response.data;
+    });
   },
 
   getByOscaId: async (oscaId: string) => {
-    const response = await api.get(`/seniors/osca/${oscaId}`, { skipDelay: true } as any);
-    return response.data;
+    return withCache(`senior-osca-${oscaId}`, async () => {
+      const response = await api.get(`/seniors/osca/${oscaId}`);
+      return response.data;
+    });
   },
 
   create: async (seniorData: any, files?: { [key: string]: File }) => {
@@ -179,6 +168,7 @@ export const seniorsAPI = {
       });
     }
 
+    cache.clear(); // Clear cache on update
     const response = await api.post(`/seniors/${id}`, formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
@@ -186,41 +176,51 @@ export const seniorsAPI = {
   },
 
   delete: async (id: number | string) => {
+    cache.clear(); // Clear cache on delete
     const response = await api.delete(`/seniors/${id}`);
     return response.data;
   },
 
   getDeleted: async () => {
-    const response = await api.get('/seniors/deleted');
-    return response.data;
+    return withCache('seniors-deleted', async () => {
+      const response = await api.get('/seniors/deleted');
+      return response.data;
+    });
   },
 
   getDeceased: async () => {
-    const response = await api.get('/seniors/deceased');
-    return response.data;
+    return withCache('seniors-deceased', async () => {
+      const response = await api.get('/seniors/deceased');
+      return response.data;
+    });
   },
 
   restore: async (id: number | string) => {
+    cache.clear();
     const response = await api.post(`/seniors/${id}/restore`);
     return response.data;
   },
 
   markDeceased: async (id: number | string, dateOfDeath: string) => {
+    cache.clear();
     const response = await api.post(`/seniors/${id}/deceased`, { date_of_death: dateOfDeath });
     return response.data;
   },
 
   unDeceased: async (id: number | string) => {
+    cache.clear();
     const response = await api.post(`/seniors/${id}/un-deceased`);
     return response.data;
   },
 
   updatePhoto: async (id: string | number, photoBase64: string) => {
+    cache.clear();
     const response = await api.post(`/seniors/${id}/photo`, { photo: photoBase64 });
     return response.data;
   },
 
   uploadDocument: async (seniorId: string | number, file: File, type: string) => {
+    cache.clear();
     const formData = new FormData();
     formData.append('document', file);
     formData.append('documentType', type);
@@ -231,16 +231,20 @@ export const seniorsAPI = {
   },
 
   deleteDocument: async (seniorId: string | number, documentId: string | number) => {
+    cache.clear();
     const response = await api.delete(`/seniors/${seniorId}/documents/${documentId}`);
     return response.data;
   },
 
   getStatistics: async (barangay?: string, year?: string | number) => {
-    const params: any = {};
-    if (barangay && barangay !== 'All Barangays') params.barangay = barangay;
-    if (year) params.year = year;
-    const response = await api.get('/seniors/statistics', { params });
-    return response.data;
+    const key = `stats-${barangay}-${year}`;
+    return withCache(key, async () => {
+      const params: any = {};
+      if (barangay && barangay !== 'All Barangays') params.barangay = barangay;
+      if (year) params.year = year;
+      const response = await api.get('/seniors/statistics', { params });
+      return response.data;
+    });
   },
 
   viewDocument: async (seniorId: string | number, documentId: string | number) => {

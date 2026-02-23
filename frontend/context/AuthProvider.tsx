@@ -36,8 +36,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const checkAuth = useCallback(async () => {
     const token = getToken();
     if (!token) {
-      // Add delay even for non-API auth check
-      await new Promise(resolve => setTimeout(resolve, 1500));
       setUser(null);
       setLoading(false);
       return;
