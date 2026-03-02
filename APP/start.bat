@@ -24,21 +24,36 @@ if not exist "%SHORTCUT_PATH%" (
     )
 )
 
-TITLE OSCA APP Starter
-echo ============================================
-echo      Starting OSCA Application Services      
-echo ============================================
+TITLE OSCA Startup Monitor
 
 :: Move to the project root directory
 cd /d "%SCRIPT_DIR%.."
 
-:: Check if node_modules exist, if not install them
+:: Check if node_modules exist, if not install them silently
 if not exist "node_modules\" (
-    echo [INFO] node_modules not found. Installing dependencies...
-    npm install
+    echo [INFO] First time setup: Installing dependencies...
+    call npm install --quiet
 )
 
-:: Run the dev script from the root package.json
-npm run dev
+:: Start the services in a minimized background window
+echo [INFO] Launching OSCA Services...
+start /min "OSCA Services" cmd /c "npm run dev"
 
-pause
+echo [INFO] Waiting for database connection...
+:CHECK_CONNECTION
+:: Check backend connectivity (requires DB to be up) using curl (silent)
+curl -s -f http://127.0.0.1:8000/api/seniors/next-id > nul
+
+if errorlevel 1 (
+    :: Silent wait for 2 seconds before retrying
+    ping 127.0.0.1 -n 3 > nul
+    goto CHECK_CONNECTION
+)
+
+echo [SUCCESS] Connected! Opening website...
+
+:: Automatically open the website
+start http://localhost:3000
+
+:: Exit the terminal automatically
+exit

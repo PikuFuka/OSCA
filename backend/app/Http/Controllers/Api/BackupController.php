@@ -15,6 +15,13 @@ class BackupController extends Controller
      */
     public function export(Request $request)
     {
+        // Only admins can export database
+        $user = $request->user();
+        $isUser = $user instanceof \App\Models\User;
+        if (!$isUser || $user->role !== 'Admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $database = config('database.connections.mysql.database');
         $username = config('database.connections.mysql.username');
         $password = config('database.connections.mysql.password');
@@ -36,11 +43,8 @@ class BackupController extends Controller
             file_put_contents($tempPath, $sql);
         }
 
-        $user = $request->user();
-        $isUser = $user instanceof \App\Models\User;
-
         ActivityLog::create([
-            'user_id' => $isUser ? $user->id : null,
+            'user_id' => $user->id,
             'action'  => 'DATABASE_EXPORT',
             'target_type' => 'System',
             'target_id'   => null,
@@ -58,6 +62,13 @@ class BackupController extends Controller
      */
     public function import(Request $request)
     {
+        // Only admins can import database
+        $user = $request->user();
+        $isUser = $user instanceof \App\Models\User;
+        if (!$isUser || $user->role !== 'Admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $request->validate([
             'file' => 'required|file|max:512000', // 500 MB
         ]);
@@ -74,11 +85,8 @@ class BackupController extends Controller
         try {
             DB::unprepared($sql);
 
-            $user = $request->user();
-            $isUser = $user instanceof \App\Models\User;
-
             ActivityLog::create([
-                'user_id' => $isUser ? $user->id : null,
+                'user_id' => $user->id,
                 'action'  => 'DATABASE_IMPORT',
                 'target_type' => 'System',
                 'target_id'   => null,

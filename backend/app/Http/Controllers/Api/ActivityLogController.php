@@ -121,6 +121,11 @@ class ActivityLogController extends Controller
      */
     public function clear(Request $request)
     {
+        // Only admins can clear logs
+        if ($request->user()->role !== 'Admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $count = ActivityLog::count();
         ActivityLog::truncate();
 

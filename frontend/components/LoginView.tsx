@@ -23,7 +23,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
       // login success is handled by AuthContext state change, which App.tsx listens to
       notify('You have successfully signed in.', 'success');
     } catch (error: any) {
-      console.error('Login error:', error);
       notify(error.message || 'Invalid credentials. Please check your ID/Email and password.', 'error');
     } finally {
       setLoading(false);

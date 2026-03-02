@@ -25,7 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         await authAPI.logout();
       }
     } catch (error) {
-      console.error('Logout error:', error);
+      // Silent fail on logout
     } finally {
       setUser(null);
       removeToken();
@@ -45,7 +45,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const userData = await authAPI.getCurrentUser();
       setUser(mapUserToCurrentUser(userData));
     } catch (error: any) {
-      console.error('Auth verification failed:', error);
       if (error.status === 401) {
         removeToken();
         setUser(null);

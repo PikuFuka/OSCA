@@ -15,6 +15,11 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
+        // Only admins can view users
+        if ($request->user()->role !== 'Admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $users = User::orderBy('name')->get();
 
         return response()->json([
@@ -37,6 +42,11 @@ class UserController extends Controller
      */
     public function store(Request $request)
     {
+        // Only admins can create users
+        if ($request->user()->role !== 'Admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
@@ -76,6 +86,11 @@ class UserController extends Controller
      */
     public function update(Request $request, $id)
     {
+        // Only admins can update users
+        if ($request->user()->role !== 'Admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $user = User::findOrFail($id);
 
         $validated = $request->validate([
@@ -121,6 +136,11 @@ class UserController extends Controller
      */
     public function destroy(Request $request, $id)
     {
+        // Only admins can delete users
+        if ($request->user()->role !== 'Admin') {
+            return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
+        }
+
         $user = User::findOrFail($id);
 
         // Prevent self-deletion

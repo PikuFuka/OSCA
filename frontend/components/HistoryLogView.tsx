@@ -79,7 +79,7 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
         setLogs(transformedLogs);
       }
     } catch (error) {
-      console.error('API fetch failed:', error);
+      // Silent fail
     } finally {
       setLoading(false);
     }

@@ -41,7 +41,6 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   useEffect(() => {
     let isMounted = true;
     const fetchAccounts = async () => {
-      console.log('Fetching accounts...');
       setLoading(true);
       setError(null);
       try {
@@ -86,7 +85,6 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
         setAccounts(unifiedAccounts);
       } catch (err: any) {
         if (!isMounted) return;
-        console.error('API fetch failed:', err);
         const errorMessage = err instanceof Error ? err.message : String(err);
         setError(errorMessage);
         notify("Could not sync with database. Please check your connection.", "error");
@@ -253,7 +251,6 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
       });
       notify(`New ${createForm.role} account created successfully!`, "success");
     } catch (error: any) {
-      console.error('API create failed:', error);
       notify(error.message || "Failed to create account on the server.", "error");
     }
   };
@@ -294,7 +291,6 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
         
         notify('Account updated successfully!', 'success');
       } catch (error) {
-        console.error("Update failed", error);
         notify("Failed to update account. Please try again.", "error");
       }
     }

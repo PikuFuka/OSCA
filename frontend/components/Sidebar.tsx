@@ -40,7 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleS
           const data = await seniorsAPI.getById(currentUser.id as any);
           setSeniorStatus(data.status || 'Pending');
         } catch (error) {
-          console.error('Failed to fetch senior status');
+          // Silent fail
         }
       };
       fetchStatus();

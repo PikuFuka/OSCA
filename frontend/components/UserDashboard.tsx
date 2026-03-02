@@ -46,7 +46,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
       const data = await seniorsAPI.getById(currentUser.id as any);
       setMemberDetails(data);
     } catch (error) {
-      console.error('Failed to fetch senior data:', error);
+      // Silent fail
     } finally {
       setLoading(false);
     }

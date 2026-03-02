@@ -147,7 +147,6 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
         setTotalCount(Array.isArray(response) ? response.length : 0);
       }
     } catch (error: any) {
-      console.error('Failed to fetch seniors:', error);
       notify('Failed to load member records from the server.', 'error');
     } finally {
       setLoading(false);
@@ -175,7 +174,6 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
       // Revoke after some time to free memory
       setTimeout(() => URL.revokeObjectURL(url), 60000);
     } catch (error) {
-      console.error('Failed to view document:', error);
       notify("Failed to open document. Please try again.", "error");
     } finally {
       setViewingDocId(null);
@@ -190,7 +188,6 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
       const data = await seniorsAPI.getById(senior.id as any);
       setSelectedSeniorForView(data);
     } catch (error) {
-      console.error('Failed to fetch senior details:', error);
       notify("Failed to load member details.", "error");
       setViewModalOpen(false);
     } finally {
@@ -273,7 +270,6 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
         notify(`Status for ${senior.name} marked as Deceased.`, 'warning');
       }
     } catch (error: any) {
-      console.error(`Action ${type} failed:`, error);
       notify(error.message || `Failed to perform ${type.toLowerCase()} action.`, 'error');
     } finally {
       setIsProcessing(false);
@@ -384,7 +380,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
             }
           });
         } catch (err) {
-          console.error("Failed to log print action:", err);
+          // Silent fail on log action
         }
       }
 

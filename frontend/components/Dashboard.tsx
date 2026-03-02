@@ -54,7 +54,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
       const data = await seniorsAPI.getStatistics(selectedBarangay, selectedYear);
       if (!isCancelled()) setStats(data);
     } catch (err: any) {
-      console.error('Error fetching dashboard statistics:', err);
       if (!isCancelled()) setError('Failed to load dashboard data. Please try again.');
     } finally {
       if (!isCancelled()) {

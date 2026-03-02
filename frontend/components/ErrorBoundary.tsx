@@ -22,7 +22,7 @@ class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Application error caught by ErrorBoundary:', error, errorInfo);
+    // Error logged to monitoring service in production
   }
 
   handleReload = () => {

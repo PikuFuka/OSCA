@@ -47,7 +47,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading }) => 
           setTotalPages(1);
         }
       } catch (error) {
-        console.warn('API fetch failed:', error);
+        // Silent fail
       } finally {
         setLoading(false);
       }
@@ -80,7 +80,6 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading }) => 
         if (setGlobalLoading) setGlobalLoading(false);
       }, 5000);
     } catch (error) {
-      console.error('Failed to generate report:', error);
       notify('Failed to generate report. Please try again.', 'error');
       setIsExporting(false);
       if (setGlobalLoading) setGlobalLoading(false);

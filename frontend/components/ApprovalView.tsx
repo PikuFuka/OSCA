@@ -25,7 +25,6 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
       setLoading(true);
       try {
         const response = await requestsAPI.getPending();
-        console.log('Approval API response:', response);
         const requestsData = response.data || response || [];
         if (Array.isArray(requestsData)) {
           const transformedRequests: PendingRequest[] = requestsData.map((r: any) => ({
@@ -66,7 +65,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
           setRequests(transformedRequests);
         }
       } catch (error) {
-        console.warn('API fetch failed, using localStorage:', error);
+
         // Fallback to localStorage
         const savedRequests = localStorage.getItem('pendingRequests');
         if (savedRequests) {
@@ -112,7 +111,6 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
         setSelectedRequest(null);
         notify(`Request ${type}d successfully.`, type === 'Approve' ? 'success' : 'info');
       } catch (error) {
-        console.warn('API action failed, updating locally:', error);
         setRequests(requests.filter(r => r.id !== id));
         notify(`Request ${type}d successfully.`, type === 'Approve' ? 'success' : 'info');
       } finally {

@@ -65,7 +65,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
       );
       setRecentSeniors(sorted.slice(0, 5));
     } catch (error) {
-      console.error('Failed to fetch recent seniors:', error);
+      // Silent fail on fetch
     } finally {
       setLoadingRecent(false);
     }
@@ -147,7 +147,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
             populateFormDataFromApi(data);
           }
         } catch (error) {
-          console.warn('Failed to fetch senior data from API:', error);
+          // Silent fail on API fetch
         }
       } else if (isPublicUser) {
         setMode('form');
@@ -209,7 +209,6 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
           clearPersonalData();
         }
       } catch (error) {
-        console.log('Senior not found in database:', oscaId);
         setIsMatchFound(false);
         clearPersonalData();
       } finally {
@@ -291,7 +290,6 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
         familyMembers: []
       });
     } catch (error) {
-      console.error('Failed to generate new ID from server:', error);
       // Block registration — do NOT generate a random ID for government records
       notify('Unable to connect to the server to generate an OSCA ID. Please check your internet connection and try again.', 'error');
       setFormData(prev => ({ ...prev, oscaId: '' }));
@@ -456,7 +454,6 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
         : 'Application successfully processed!';
       notify(msg, "success");
     } catch (error: any) {
-      console.error('Submission error:', error);
       notify(error.message || 'Failed to submit application. Please try again.', 'error');
     } finally {
       setLoading(false);

@@ -71,7 +71,7 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
         const data = await seniorsAPI.getById(currentUser.id as any);
         setMemberData(data);
       } catch (error) {
-        console.error('Failed to fetch senior data:', error);
+        // Silent fail
       } finally {
         setLoading(false);
       }
