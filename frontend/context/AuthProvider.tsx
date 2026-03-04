@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { authAPI, getToken, removeToken } from '../services/api';
+import { authAPI } from '../services/api';
 import { CurrentUser, UserRole } from '../types';
 import { AuthContext } from './AuthContext';
 
@@ -21,34 +21,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = useCallback(async () => {
     setLoading(true);
     try {
-      if (getToken()) {
-        await authAPI.logout();
-      }
+      await authAPI.logout();
     } catch (error) {
       // Silent fail on logout
     } finally {
       setUser(null);
-      removeToken();
       setLoading(false);
     }
   }, []);
 
   const checkAuth = useCallback(async () => {
-    const token = getToken();
-    if (!token) {
-      setUser(null);
-      setLoading(false);
-      return;
-    }
-
     try {
       const userData = await authAPI.getCurrentUser();
       setUser(mapUserToCurrentUser(userData));
     } catch (error: any) {
-      if (error.status === 401) {
-        removeToken();
-        setUser(null);
-      }
+      setUser(null);
     } finally {
       setLoading(false);
     }

@@ -233,8 +233,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
               <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div> <span className="text-[10px] font-black uppercase text-slate-400">Female</span></div>
             </div>
           </div>
-          <div className="h-[300px] min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[300px] w-full min-h-[300px] relative">
+            <ResponsiveContainer width="99%" height={300}>
               <AreaChart data={safeMonthlyStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
                   <linearGradient id="colorM" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#1e3a8a" stopOpacity={0.1}/><stop offset="95%" stopColor="#1e3a8a" stopOpacity={0}/></linearGradient>
@@ -254,8 +254,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
         {/* Gender Breakdown */}
         <div className="bg-white p-6 md:p-8 pb-4 md:pb-6 rounded-3xl md:rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
           <h3 className="text-xl font-black text-slate-900 mb-6">Gender Split</h3>
-          <div className="flex-grow h-[200px] md:h-[250px] min-h-[200px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="flex-grow min-h-[250px] w-full relative h-[250px]">
+            <ResponsiveContainer width="99%" height={250}>
               <PieChart>
                 <Pie
                   data={dashboardData.genders || []}
@@ -291,8 +291,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
         {/* Age Ranges Bar Chart */}
         <div className="bg-white p-6 md:p-8 pb-4 md:pb-6 rounded-3xl md:rounded-[2.5rem] border border-slate-100 shadow-sm">
           <h3 className="text-xl font-black text-slate-900 mb-10">Age Group Distribution</h3>
-          <div className="h-[300px] min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[300px] w-full min-h-[300px] relative">
+            <ResponsiveContainer width="99%" height={300}>
               <BarChart data={dashboardData.ageRanges || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10, fontWeight: 'bold'}} dy={5} />
@@ -313,8 +313,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
             </div>
             <span className="bg-rose-50 text-rose-600 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">System Audit</span>
           </div>
-          <div className="h-[300px] min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-[300px] w-full min-h-[300px] relative">
+            <ResponsiveContainer width="99%" height={300}>
               <LineChart data={safeMonthlyStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11}} dy={5} />
@@ -391,8 +391,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
             <h3 className="text-xl font-black text-slate-900">Population Density</h3>
             <p className="text-sm text-slate-500">Top 5 Barangays with highest senior population.</p>
           </div>
-          <div className="h-[300px] min-h-[300px]">
-            <ResponsiveContainer width="100%" height="100%" minHeight={300}>
+          <div className="h-[300px] w-full min-h-[300px] relative">
+            <ResponsiveContainer width="99%" height={300}>
               <BarChart 
                 layout="vertical" 
                 data={dashboardData.topBarangays || []} 

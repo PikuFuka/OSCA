@@ -4,11 +4,8 @@ import axios from 'axios';
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 /**
- * Token management functions
+ * Token management functions (Removed - Laravel Sanctum SPA auth used instead)
  */
-export const getToken = (): string | null => localStorage.getItem('osca_token');
-export const setToken = (token: string): void => localStorage.setItem('osca_token', token);
-export const removeToken = (): void => localStorage.removeItem('osca_token');
 
 // Create a configured axios instance
 const api = axios.create({
@@ -20,14 +17,15 @@ const api = axios.create({
 });
 
 // axios interceptor to attach Bearer token to every request
+api.defaults.withCredentials = true;
+
+// Add request interceptor to attach token from localStorage
 api.interceptors.request.use((config) => {
-  const token = getToken();
+  const token = localStorage.getItem('auth_token');
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    config.headers['Authorization'] = `Bearer ${token}`;
   }
   return config;
-}, (error) => {
-  return Promise.reject(error);
 });
 
 // axios interceptor to show a response immediately without artificial delay
@@ -36,15 +34,16 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
-      removeToken();
-    }
-    
     // Transform error for better UI display
     const errorMessage = error.response?.data?.message || error.message || 'An unexpected error occurred';
     const enhancedError = new Error(errorMessage);
     (enhancedError as any).status = error.response?.status;
     (enhancedError as any).data = error.response?.data;
+    
+    // If unauthorized, could clear token
+    if (error.response?.status === 401) {
+      localStorage.removeItem('auth_token');
+    }
     
     return Promise.reject(enhancedError);
   }
@@ -74,20 +73,38 @@ export const authAPI = {
   login: async (identifier: string, password: string) => {
     // Reset cache on login
     cache.clear();
-    const response = await api.post('/login', { identifier, password });
-    if (response.data.token) {
-      setToken(response.data.token);
+    // Pre-flight request for Sanctum CSRF cookie
+    const baseURL = API_BASE_URL.replace('/api', '');
+    try {
+      await axios.get(`${baseURL}/sanctum/csrf-cookie`, { withCredentials: true });
+    } catch (e) {
+      console.warn('CSRF cookie pre-flight failed', e);
     }
+    
+    const response = await api.post('/login', { identifier, password });
+    
+    // Store token if returned (fallback for Sanctum Session issues)
+    if (response.data.token) {
+      localStorage.setItem('auth_token', response.data.token);
+    }
+    
     return response.data;
   },
 
   logout: async () => {
     // Reset cache on logout
     cache.clear();
+    const token = localStorage.getItem('auth_token');
+    localStorage.removeItem('auth_token');
+    
     try {
-      if (getToken()) await api.post('/logout');
-    } finally {
-      removeToken();
+      // If we had a token, ensure it's used for the logout request
+      // even if interceptors were already cleared
+      await api.post('/logout', {}, {
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+      });
+    } catch (error) {
+      console.warn('Logout request failed, cleaning up local state anyway', error);
     }
   },
 
@@ -255,10 +272,9 @@ export const seniorsAPI = {
   },
 
   getDocumentUrl: (seniorId: number | string, documentId: number | string): string => {
-    const token = getToken();
-    // Use window.location.origin if API_BASE_URL is relative
+// Removed direct token passing; Sanctum handles Auth via HTTP-Only Cookies
     const base = API_BASE_URL.startsWith('http') ? API_BASE_URL : `${window.location.origin}${API_BASE_URL}`;
-    return `${base}/seniors/${seniorId}/documents/${documentId}?token=${token}`;
+    return `${base}/seniors/${seniorId}/documents/${documentId}`;
   },
 
   getNextOscaId: async () => {
@@ -350,9 +366,9 @@ export const activityLogsAPI = {
 
 // Backup API
 export const backupAPI = {
-  exportDB: (): string => {
-    const token = getToken();
-    return `${API_BASE_URL}/backup/export?token=${token}`; // Token as query param for direct download
+  exportDB: async (): Promise<Blob> => {
+    const response = await api.get('/backup/export', { responseType: 'blob' });
+    return response.data;
   },
 
   importDB: async (file: File) => {
@@ -372,9 +388,8 @@ export const reportsAPI = {
    * Open this URL in a new tab or use it as an anchor href to trigger the download.
    */
   getSeniorCitizensReportUrl: (params?: { barangay?: string; year?: string | number }): string => {
-    const token = getToken();
+    // Deprecated for direct links: Use downloadSeniorCitizensReport instead
     const searchParams = new URLSearchParams();
-    if (token) searchParams.append('token', token);
     if (params?.barangay) searchParams.append('barangay', params.barangay);
     if (params?.year) searchParams.append('year', String(params.year));
     const base = API_BASE_URL.startsWith('http') ? API_BASE_URL : `${window.location.origin}${API_BASE_URL}`;

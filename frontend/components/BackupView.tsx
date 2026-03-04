@@ -26,7 +26,8 @@ const BackupView: React.FC<BackupViewProps> = ({ notify }) => {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      const url = backupAPI.exportDB();
+      const blob = await backupAPI.exportDB();
+      const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
       const now = new Date();
@@ -35,6 +36,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify }) => {
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
       notify('Database export started — check your downloads.', 'success');
     } catch (error: any) {
       notify(error.message || 'Export failed.', 'error');

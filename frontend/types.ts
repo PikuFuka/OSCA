@@ -56,6 +56,15 @@ export const INITIAL_ID_CONFIG: IdConfig = {
   id: { x: 70, y: 273.5, fontSize: 16 }
 };
 
+export interface FamilyMember {
+  name: string;
+  relationship: string;
+  age: string | number;
+  civilStatus: string;
+  occupation: string;
+  income: string | number;
+}
+
 export interface SeniorCitizen {
   id: string;
   name: string;
@@ -82,7 +91,7 @@ export interface SeniorCitizen {
   rrn?: string;
   nationalId?: string;
   familyMembersCount?: number;
-  familyMembers?: any[];
+  familyMembers?: FamilyMember[];
 }
 
 export interface HistoryLog {
