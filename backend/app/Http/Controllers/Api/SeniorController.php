@@ -237,7 +237,22 @@ class SeniorController extends Controller
             abort(404);
         }
 
-        return response()->file($path);
+        $lastModified = filemtime($path);
+        $etag = md5($filename . $lastModified);
+
+        // Return 304 Not Modified if the client already has the current version
+        if (
+            request()->header('If-None-Match') === $etag ||
+            (request()->header('If-Modified-Since') && strtotime(request()->header('If-Modified-Since')) >= $lastModified)
+        ) {
+            return response('', 304);
+        }
+
+        return response()->file($path, [
+            'Cache-Control' => 'public, max-age=86400, immutable',
+            'ETag'          => $etag,
+            'Last-Modified' => gmdate('D, d M Y H:i:s', $lastModified) . ' GMT',
+        ]);
     }
 
     /**

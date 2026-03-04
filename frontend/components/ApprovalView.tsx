@@ -30,7 +30,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
           const transformedRequests: PendingRequest[] = requestsData.map((r: any) => ({
             id: r.id.toString(),
             senior_id: r.senior_id,
-            name: r.name || r.senior?.full_name || `${r.senior?.first_name || ''} ${r.senior?.last_name || ''}`.trim() || 'Unknown',
+            name: r.name || r.senior?.full_name || `${r.senior?.first_name || ''} ${r.senior?.last_name || ''}${r.senior?.extension_name ? ' ' + r.senior.extension_name : ''}`.trim() || 'Unknown',
             type: r.type || 'New Application',
             date: r.date || new Date(r.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
             status: r.status || 'Pending',
@@ -138,7 +138,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="text-center md:text-left">
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Pending Approvals</h2>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tight">For Approvals</h2>
           <p className="text-slate-500 font-medium">Review and process new ID applications and updates.</p>
         </div>
         {setView && (

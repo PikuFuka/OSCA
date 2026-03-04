@@ -30,6 +30,11 @@ const App: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
   
+  // Track auth globally for background API prevention
+  useEffect(() => {
+    (window as any).isAuthenticated = isAuthenticated;
+  }, [isAuthenticated]);
+
   // State for public registration flow
   const [isRegistering, setIsRegistering] = useState(false);
 

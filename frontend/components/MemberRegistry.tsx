@@ -484,7 +484,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                   <td className="px-6 py-5 align-middle">
                     <div className="flex items-center gap-4">
                       {senior.idPhoto ? (
-                        <img src={senior.idPhoto} alt={senior.name} className="w-10 h-10 rounded-2xl object-cover border-2 border-white shadow-sm shrink-0 bg-slate-100" />
+                        <img src={senior.idPhoto} alt={senior.name} loading="lazy" className="w-10 h-10 rounded-2xl object-cover border-2 border-white shadow-sm shrink-0 bg-slate-100" />
                       ) : (
                         <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-blue-900 font-black border-2 border-white shadow-sm shrink-0 text-sm">
                           {senior.name.split(' ').map(n => n[0]).join('')}
@@ -935,7 +935,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
             <div className="overflow-y-auto p-6 md:p-8">
               <div className="flex flex-col md:flex-row gap-8 mb-8 items-start">
                 {selectedSenior.idPhoto ? (
-                  <img src={selectedSenior.idPhoto} alt={selectedSenior.name} className="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] object-cover shadow-xl shadow-blue-100 mx-auto md:mx-0 bg-slate-100" />
+                  <img src={selectedSenior.idPhoto} alt={selectedSenior.name} loading="lazy" className="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] object-cover shadow-xl shadow-blue-100 mx-auto md:mx-0 bg-slate-100" />
                 ) : (
                   <div className="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] bg-blue-900 text-white flex items-center justify-center text-3xl md:text-4xl font-black shrink-0 shadow-xl shadow-blue-100 mx-auto md:mx-0">
                     {selectedSenior.name.split(' ').map(n => n[0]).join('')}
@@ -1036,7 +1036,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                       
                       <div className="space-y-2 text-center lg:text-left">
                         <h2 className="text-3xl font-black text-slate-900 leading-none">
-                          {selectedSeniorForView.firstName} {selectedSeniorForView.lastName}
+                          {selectedSeniorForView.firstName} {selectedSeniorForView.lastName}{selectedSeniorForView.extensionName ? ' ' + selectedSeniorForView.extensionName : ''}
                         </h2>
                         <p className="text-blue-600 font-black text-sm uppercase tracking-widest">{selectedSeniorForView.oscaId}</p>
                       </div>

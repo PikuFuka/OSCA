@@ -34,13 +34,16 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleS
 
   // Fetch senior status if role is Senior
   useEffect(() => {
-    if (currentUser.role === 'Senior') {
+    if (currentUser && currentUser.role === 'Senior') {
       const fetchStatus = async () => {
         try {
           const data = await seniorsAPI.getById(currentUser.id as any);
           setSeniorStatus(data.status || 'Pending');
-        } catch (error) {
-          // Silent fail
+        } catch (error: any) {
+          // If 401, AuthProvider will handle global redirect
+          if (error.status !== 401) {
+             console.error('Failed to fetch senior status', error);
+          }
         }
       };
       fetchStatus();

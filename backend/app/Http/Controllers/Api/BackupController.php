@@ -80,10 +80,52 @@ class BackupController extends Controller
             return response()->json(['success' => false, 'message' => 'Only .sql files are accepted.'], 422);
         }
 
-        $sql = file_get_contents($file->getRealPath());
+        $raw = file_get_contents($file->getRealPath());
+
+        // Strip UTF-8 BOM if present
+        if (str_starts_with($raw, "\xEF\xBB\xBF")) {
+            $raw = substr($raw, 3);
+        }
+
+        // Ensure the content is valid UTF-8; attempt conversion if not
+        if (!mb_check_encoding($raw, 'UTF-8')) {
+            $raw = mb_convert_encoding($raw, 'UTF-8', 'UTF-8, ISO-8859-1, Windows-1252');
+        }
+
+        $tempPath = storage_path('app/osca_import_' . time() . '.sql');
+        file_put_contents($tempPath, $raw);
 
         try {
-            DB::unprepared($sql);
+            $database = config('database.connections.mysql.database');
+            $username = config('database.connections.mysql.username');
+            $password = config('database.connections.mysql.password');
+            $host     = config('database.connections.mysql.host');
+            $port     = config('database.connections.mysql.port', 3306);
+
+            // Try mysql CLI first — it handles charsets natively with --default-character-set
+            $passwordArg = $password ? "-p\"{$password}\"" : '';
+            $command = "mysql --user=\"{$username}\" {$passwordArg} --host=\"{$host}\" --port={$port} --default-character-set=utf8mb4 \"{$database}\" < \"{$tempPath}\" 2>&1";
+            exec($command, $output, $returnCode);
+
+            if ($returnCode !== 0) {
+                // Fallback: PHP-based import with proper charset setup
+                DB::statement('SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci');
+                DB::statement('SET CHARACTER SET utf8mb4');
+                DB::statement('SET foreign_key_checks = 0');
+
+                // Split on statement boundaries (semicolons not inside quotes)
+                $statements = $this->splitSqlStatements($raw);
+                foreach ($statements as $stmt) {
+                    $stmt = trim($stmt);
+                    if ($stmt !== '' && !str_starts_with($stmt, '--')) {
+                        DB::unprepared($stmt);
+                    }
+                }
+
+                DB::statement('SET foreign_key_checks = 1');
+            }
+
+            @unlink($tempPath);
 
             ActivityLog::create([
                 'user_id' => $user->id,
@@ -99,11 +141,60 @@ class BackupController extends Controller
                 'message' => 'Database restored successfully from backup.',
             ]);
         } catch (\Exception $e) {
+            @unlink($tempPath);
             return response()->json([
                 'success' => false,
                 'message' => 'Import failed: ' . $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Split a SQL dump string into individual statements,
+     * correctly handling quoted strings and comments.
+     */
+    private function splitSqlStatements(string $sql): array
+    {
+        $statements = [];
+        $current    = '';
+        $len        = strlen($sql);
+        $inSingle   = false;
+        $inDouble   = false;
+        $inLineComment  = false;
+        $inBlockComment = false;
+
+        for ($i = 0; $i < $len; $i++) {
+            $c    = $sql[$i];
+            $next = $sql[$i + 1] ?? '';
+
+            if ($inLineComment) {
+                if ($c === "\n") $inLineComment = false;
+                continue;
+            }
+            if ($inBlockComment) {
+                if ($c === '*' && $next === '/') { $inBlockComment = false; $i++; }
+                continue;
+            }
+            if (!$inSingle && !$inDouble && $c === '-' && $next === '-') {
+                $inLineComment = true; continue;
+            }
+            if (!$inSingle && !$inDouble && $c === '/' && $next === '*') {
+                $inBlockComment = true; $i++; continue;
+            }
+            if ($c === "'" && !$inDouble) {
+                $inSingle = !$inSingle;
+            } elseif ($c === '"' && !$inSingle) {
+                $inDouble = !$inDouble;
+            }
+            if ($c === ';' && !$inSingle && !$inDouble) {
+                $statements[] = $current;
+                $current = '';
+            } else {
+                $current .= $c;
+            }
+        }
+        if (trim($current) !== '') $statements[] = $current;
+        return $statements;
     }
 
     /**
@@ -114,10 +205,13 @@ class BackupController extends Controller
         $sql = "-- OSCA System Database Backup\n";
         $sql .= "-- Generated: " . now()->toDateTimeString() . "\n";
         $sql .= "-- Database: {$database}\n\n";
+        $sql .= "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;\n";
+        $sql .= "SET CHARACTER SET utf8mb4;\n";
         $sql .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
 
+        $pdo    = DB::getPdo();
         $tables = DB::select('SHOW TABLES');
-        $key = "Tables_in_{$database}";
+        $key    = "Tables_in_{$database}";
 
         foreach ($tables as $table) {
             $tableName = $table->$key;
@@ -127,13 +221,38 @@ class BackupController extends Controller
             $sql .= "DROP TABLE IF EXISTS `{$tableName}`;\n";
             $sql .= $create[0]->{'Create Table'} . ";\n\n";
 
-            // INSERT rows
-            $rows = DB::table($tableName)->get();
+            // Detect BLOB columns — raw binary cannot be PDO::quote()'d safely
+            $columns  = DB::select("SHOW COLUMNS FROM `{$tableName}`");
+            $blobCols = [];
+            $colNames = [];
+            foreach ($columns as $col) {
+                $colNames[] = $col->Field;
+                if (stripos($col->Type, 'blob') !== false) {
+                    $blobCols[] = $col->Field;
+                }
+            }
+
+            // Build SELECT with HEX() for BLOB columns so binary data is safe
+            $selectParts = array_map(function ($colName) use ($blobCols) {
+                return in_array($colName, $blobCols)
+                    ? "HEX(`{$colName}`) as `{$colName}`"
+                    : "`{$colName}`";
+            }, $colNames);
+            $selectSql = 'SELECT ' . implode(', ', $selectParts) . " FROM `{$tableName}`";
+
+            // INSERT rows — BLOB values use UNHEX(), everything else uses PDO::quote()
+            $rows = DB::select($selectSql);
             foreach ($rows as $row) {
-                $values = collect((array) $row)->map(function ($v) {
+                $rowArr = (array) $row;
+                $values = implode(', ', array_map(function ($colName) use ($rowArr, $pdo, $blobCols) {
+                    $v = $rowArr[$colName];
                     if (is_null($v)) return 'NULL';
-                    return "'" . addslashes((string) $v) . "'";
-                })->implode(', ');
+                    if (in_array($colName, $blobCols)) {
+                        // HEX() returns uppercase hex string; wrap with UNHEX() for import
+                        return "UNHEX('" . $v . "')";
+                    }
+                    return $pdo->quote((string) $v);
+                }, $colNames));
                 $sql .= "INSERT INTO `{$tableName}` VALUES ({$values});\n";
             }
             $sql .= "\n";

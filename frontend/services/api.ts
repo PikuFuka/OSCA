@@ -40,9 +40,18 @@ api.interceptors.response.use(
     (enhancedError as any).status = error.response?.status;
     (enhancedError as any).data = error.response?.data;
     
-    // If unauthorized, could clear token
+    // If unauthorized (401), clear token and potentially redirect
     if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token');
+      // Don't trigger auto-logout if the error came from a login attempt
+      const isLoginRequest = error.config?.url?.includes('/login');
+      
+      const currentToken = localStorage.getItem('auth_token');
+      if (currentToken && !isLoginRequest) {
+        console.warn('Unauthorized error (401) detected. Clearing expired token.');
+        localStorage.removeItem('auth_token');
+        // Optional: Trigger a page reload or event to notify AuthProvider
+        window.dispatchEvent(new Event('auth-unauthorized'));
+      }
     }
     
     return Promise.reject(enhancedError);

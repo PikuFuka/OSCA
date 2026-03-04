@@ -58,6 +58,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check auth on mount
   useEffect(() => {
     checkAuth();
+    
+    // Global listener for 401 Unauthorized errors
+    const handleUnauthorized = () => {
+      setUser(null);
+    };
+    
+    window.addEventListener('auth-unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth-unauthorized', handleUnauthorized);
   }, [checkAuth]);
 
   return (

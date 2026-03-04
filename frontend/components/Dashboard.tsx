@@ -46,6 +46,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
 
   // Fetch statistics from API
   const fetchStats = async (isCancelled: () => boolean) => {
+    // Skip if not authenticated to avoid 401 on login screen background
+    if (!(window as any).isAuthenticated) return;
+    
     setError(null);
     // Only show full spinner on first load; subsequent changes show inline indicator
     if (!stats) setInitialLoading(true);
@@ -54,7 +57,11 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
       const data = await seniorsAPI.getStatistics(selectedBarangay, selectedYear);
       if (!isCancelled()) setStats(data);
     } catch (err: any) {
-      if (!isCancelled()) setError('Failed to load dashboard data. Please try again.');
+      if (!isCancelled()) {
+        if (err.status === 401) return; // AuthProvider handles logout
+        setError('Failed to load dashboard data. Please try again.');
+        console.error('Stats fetch error:', err);
+      }
     } finally {
       if (!isCancelled()) {
         setInitialLoading(false);
