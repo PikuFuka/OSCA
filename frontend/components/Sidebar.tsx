@@ -54,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleS
   const oscaNavItems = [
     // Admin / Staff Items
     { id: ViewType.DASHBOARD, label: 'Dashboard', icon: LayoutDashboard, roles: ['Admin', 'Staff'] },
-    { id: ViewType.APPROVAL, label: 'Approvals', icon: FileCheck, roles: ['Admin', 'Staff'] },
+    { id: ViewType.APPROVAL, label: 'For Approvals', icon: FileCheck, roles: ['Admin', 'Staff'] },
     { id: ViewType.ADD_MEMBER, label: 'Registration', icon: UserPlus, roles: ['Admin', 'Staff'] },
     { id: ViewType.MEMBER_REGISTRY, label: 'Members', icon: Users, roles: ['Admin', 'Staff'] },
     { id: ViewType.ARCHIVE, label: 'Archive', icon: Archive, roles: ['Admin', 'Staff'] },

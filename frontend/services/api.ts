@@ -123,6 +123,31 @@ export const authAPI = {
       return response.data;
     });
   },
+
+  register: async (seniorData: any, files?: { [key: string]: File }) => {
+    const formData = new FormData();
+    Object.entries(seniorData).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        if (typeof value === 'object') {
+          formData.append(key, JSON.stringify(value));
+        } else {
+          formData.append(key, String(value));
+        }
+      }
+    });
+
+    if (files) {
+      Object.entries(files).forEach(([key, file]) => {
+        if (file) formData.append(key, file);
+      });
+    }
+
+    const response = await api.post('/register', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    cache.clear(); // Clear cache after public registration
+    return response.data;
+  },
 };
 
 // Seniors API
@@ -180,6 +205,7 @@ export const seniorsAPI = {
     const response = await api.post('/seniors', formData, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
+    cache.clear(); // Clear cache after new member is created
     return response.data;
   },
 

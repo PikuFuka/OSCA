@@ -602,7 +602,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
               @media print {
                 @page { 
                   size: portrait;
-                  margin: 10mm; 
+                  margin: 15mm; 
                 }
                 body * { visibility: hidden; }
                 .print-container, .print-container * { visibility: visible; }
@@ -612,10 +612,11 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                   top: 0; 
                   width: 100%;
                   display: flex !important;
-                  flex-direction: column !important;
+                  flex-direction: row !important;
                   align-items: center !important;
+                  justify-content: center !important;
                   padding: 20px 0;
-                  gap: 15mm !important;
+                  gap: 0mm !important;
                 }
                 .print-card {
                   width: 85.6mm !important;
@@ -624,7 +625,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                   print-color-adjust: exact !important;
                   position: relative;
                   overflow: hidden;
-                  border: 0.1mm solid #eee;
+                  border: 0.1mm solid #ccc;
                 }
                 .print-content {
                   width: 480px;
@@ -636,7 +637,14 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
             `}</style>
             
             <div className="print-container">
-              {/* FRONT CARD (PRINT) */}
+              {/* BACK CARD (PRINT) - Left side */}
+              <div className="print-card">
+                <div className="print-content">
+                  <img src="img/BACK.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
+                </div>
+              </div>
+
+              {/* FRONT CARD (PRINT) - Right side */}
               <div className="print-card">
                  <div className="print-content">
                     {/* Background Image Tag for better print reliability */}
@@ -669,13 +677,6 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                         </div>
                     </div>
                  </div>
-              </div>
-
-              {/* BACK CARD (PRINT) */}
-              <div className="print-card">
-                <div className="print-content">
-                  <img src="img/BACK.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
-                </div>
               </div>
             </div>
           </div>

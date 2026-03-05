@@ -149,7 +149,7 @@ class SeniorController extends Controller
      */
     public function restore($id)
     {
-        $senior = Senior::onlyTrashed()->where('osca_id', $id)->orWhere('id', $id)->firstOrFail();
+        $senior = Senior::onlyTrashed()->where('osca_id', $id)->firstOrFail();
         $senior->restore();
 
         ActivityLog::create([
@@ -184,7 +184,6 @@ class SeniorController extends Controller
                             $query->select(['id', 'senior_id', 'document_type', 'file_name', 'mime_type', 'file_size']);
                         }])
                         ->where('osca_id', $id)
-                        ->orWhere('id', $id)
                         ->firstOrFail();
 
         return response()->json([
@@ -416,7 +415,7 @@ class SeniorController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $senior = Senior::where('osca_id', $id)->orWhere('id', $id)->firstOrFail();
+        $senior = Senior::where('osca_id', $id)->firstOrFail();
 
         $validated = $request->validate([
             'firstName' => 'sometimes|string|max:255',
@@ -467,7 +466,7 @@ class SeniorController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $senior = Senior::where('osca_id', $id)->orWhere('id', $id)->firstOrFail();
+        $senior = Senior::where('osca_id', $id)->firstOrFail();
         
         if ($request->user()) {
             $user = $request->user();
@@ -501,7 +500,7 @@ class SeniorController extends Controller
      */
     public function markDeceased(Request $request, $id)
     {
-        $senior = Senior::where('osca_id', $id)->orWhere('id', $id)->firstOrFail();
+        $senior = Senior::where('osca_id', $id)->firstOrFail();
         $senior->update(['status' => 'Deceased']);
 
         if ($request->user()) {
@@ -529,7 +528,7 @@ class SeniorController extends Controller
      */
     public function unDeceased(Request $request, $id)
     {
-        $senior = Senior::where('osca_id', $id)->orWhere('id', $id)->firstOrFail();
+        $senior = Senior::where('osca_id', $id)->firstOrFail();
         $senior->update(['status' => 'Active']);
 
         if ($request->user()) {
@@ -557,7 +556,7 @@ class SeniorController extends Controller
      */
     public function uploadDocument(Request $request, $id)
     {
-        $senior = Senior::where('osca_id', $id)->orWhere('id', $id)->firstOrFail();
+        $senior = Senior::where('osca_id', $id)->firstOrFail();
 
         $request->validate([
             'document' => 'required|file|max:10240', // 10MB max
@@ -616,7 +615,7 @@ class SeniorController extends Controller
      */
     public function updatePhoto(Request $request, $id)
     {
-        $senior = Senior::where('osca_id', $id)->orWhere('id', $id)->firstOrFail();
+        $senior = Senior::where('osca_id', $id)->firstOrFail();
 
         $request->validate([
             'photo' => 'required|string', // base64
@@ -701,7 +700,7 @@ class SeniorController extends Controller
 
         $document = SeniorDocument::where('id', $documentId)
                                   ->whereHas('senior', function($q) use ($seniorId) {
-                                      $q->where('osca_id', $seniorId)->orWhere('id', $seniorId);
+                                      $q->where('osca_id', $seniorId);
                                   })
                                   ->firstOrFail();
 
@@ -717,13 +716,13 @@ class SeniorController extends Controller
     {
         $document = SeniorDocument::where('id', $documentId)
                                   ->whereHas('senior', function($q) use ($seniorId) {
-                                      $q->where('osca_id', $seniorId)->orWhere('id', $seniorId);
+                                      $q->where('osca_id', $seniorId);
                                   })
                                   ->firstOrFail();
 
         // If it's an idPicture, we might want to also clear the profile_photo_path
         if ($document->document_type === 'idPicture') {
-            $senior = Senior::where('osca_id', $seniorId)->orWhere('id', $seniorId)->first();
+            $senior = Senior::where('osca_id', $seniorId)->first();
             if ($senior && $senior->profile_photo_path) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($senior->profile_photo_path);
                 $senior->update(['profile_photo_path' => null]);
