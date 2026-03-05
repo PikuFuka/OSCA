@@ -26,6 +26,7 @@ interface UserDashboardProps {
 const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) => {
   const [memberDetails, setMemberDetails] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   
   // Delete Modal State
@@ -43,10 +44,12 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
 
   const fetchMemberData = async () => {
     try {
-      const data = await seniorsAPI.getById(currentUser.id as any);
+      setFetchError(null);
+      // Always fetch fresh — stale cache would hide newly uploaded documents
+      const data = await seniorsAPI.getByIdFresh(currentUser.id as any);
       setMemberDetails(data);
-    } catch (error) {
-      // Silent fail
+    } catch (error: any) {
+      setFetchError(error?.message || 'Failed to load your data. Please refresh the page.');
     } finally {
       setLoading(false);
     }
@@ -101,6 +104,26 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
 
   if (loading) {
     return <UserDashboardSkeleton />;
+  }
+
+  if (fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+        <div className="p-6 bg-rose-50 rounded-full">
+          <AlertCircle className="text-rose-500" size={48} />
+        </div>
+        <div className="text-center max-w-md">
+          <h2 className="text-xl font-black text-slate-900 mb-2">Could not load your data</h2>
+          <p className="text-slate-500 font-medium text-sm mb-4">{fetchError}</p>
+          <button
+            onClick={fetchMemberData}
+            className="px-6 py-3 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-800 transition-all"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   const status = memberDetails?.status || 'Pending';

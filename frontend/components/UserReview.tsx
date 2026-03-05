@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { 
   User, MapPin, FileText, Phone, Calendar, HeartPulse, CreditCard,
-  AlertCircle, CheckCircle, Clock, RotateCw, QrCode, Eye, EyeOff
+  AlertCircle, CheckCircle, Clock, RotateCw, QrCode, Eye, EyeOff, Download, Paperclip
 } from 'lucide-react';
 import { CurrentUser, INITIAL_ID_CONFIG } from '../types';
 import { seniorsAPI } from '../services/api';
@@ -68,7 +68,8 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
   useEffect(() => {
     const fetchMemberData = async () => {
       try {
-        const data = await seniorsAPI.getById(currentUser.id as any);
+        // Always fetch fresh to avoid stale cache hiding uploaded documents
+        const data = await seniorsAPI.getByIdFresh(currentUser.id as any);
         setMemberData(data);
       } catch (error) {
         // Silent fail
@@ -283,6 +284,86 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
             <InfoField label="Emergency Contact" value={details.emergency} icon={AlertCircle} fullWidth />
             <InfoField label="Household Members" value={`${details.familyCount} Registered Members`} icon={User} />
           </InfoGroup>
+
+          {/* Uploaded Documents */}
+          {(
+            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="px-8 py-5 border-b border-slate-50 bg-slate-50/30">
+                <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                  <Paperclip size={14} /> Submitted Documents
+                </h3>
+              </div>
+              <div className="p-8">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {(!memberData.documents || memberData.documents.length === 0) && (
+                    <div className="col-span-2 text-center py-8 text-slate-400">
+                      <FileText size={32} className="mx-auto mb-2 opacity-30" />
+                      <p className="text-sm font-bold">No documents on file yet.</p>
+                      <p className="text-xs mt-1">Upload your documents from the Home screen.</p>
+                    </div>
+                  )}
+                  {(memberData.documents || []).map((doc: any) => {
+                    const isPdf = doc.mimeType?.includes('pdf') || doc.fileName?.endsWith('.pdf');
+                    const labelMap: Record<string, string> = {
+                      idPicture: 'ID Picture',
+                      birthCert: 'Birth Certificate',
+                      cedula: 'Cedula',
+                      brgyCert: 'Barangay Certificate',
+                    };
+                    const docLabel = labelMap[doc.type] || doc.type || 'Document';
+                    return (
+                      <div key={doc.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-blue-200 hover:shadow-md transition-all group">
+                        <div className={`p-2 rounded-lg border shrink-0 flex items-center justify-center ${
+                          isPdf ? 'bg-rose-50 border-rose-100 text-rose-500' : 'bg-blue-50 border-blue-100 text-blue-500'
+                        }`}>
+                          <FileText size={18} />
+                        </div>
+                        <div className="overflow-hidden min-w-0 flex-1">
+                          <p className="text-sm font-bold text-slate-700 truncate">{docLabel}</p>
+                          <p className="text-[10px] font-bold text-slate-400 truncate">{doc.fileName}</p>
+                        </div>
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity ml-auto">
+                          <button
+                            title="View"
+                            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600 transition-colors"
+                            onClick={async () => {
+                              try {
+                                const blob = await seniorsAPI.viewDocument(memberData.id, doc.id);
+                                const url = URL.createObjectURL(blob);
+                                window.open(url, '_blank');
+                                setTimeout(() => URL.revokeObjectURL(url), 60000);
+                              } catch { /* silent */ }
+                            }}
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button
+                            title="Download"
+                            className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-emerald-600 transition-colors"
+                            onClick={async () => {
+                              try {
+                                const blob = await seniorsAPI.viewDocument(memberData.id, doc.id);
+                                const url = URL.createObjectURL(blob);
+                                const link = document.createElement('a');
+                                link.href = url;
+                                link.setAttribute('download', doc.fileName || docLabel);
+                                document.body.appendChild(link);
+                                link.click();
+                                link.remove();
+                                setTimeout(() => URL.revokeObjectURL(url), 60000);
+                              } catch { /* silent */ }
+                            }}
+                          >
+                            <Download size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="p-6 bg-slate-50 rounded-3xl border border-slate-200 text-center space-y-2">
             <p className="text-slate-900 font-bold">Need to update your information?</p>

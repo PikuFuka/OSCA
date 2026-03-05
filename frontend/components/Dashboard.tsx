@@ -16,7 +16,7 @@ import {
   Line,
   LineChart,
 } from 'recharts';
-import { Users, TrendingUp, Skull, IdCard, MapPin, Grid, ClipboardList, Award, BarChart3, Calendar as CalendarIcon } from 'lucide-react';
+import { Users, TrendingUp, UserX, IdCard, MapPin, Grid, ClipboardList, Award, BarChart3, Calendar as CalendarIcon } from 'lucide-react';
 import { ViewType, BARANGAYS } from '../types';
 import { seniorsAPI } from '../services/api';
 import { DashboardSkeleton } from './SkeletonLoader';
@@ -183,11 +183,11 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
       {/* Stats Summary Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Total Members */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md">
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative">
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-blue-50 text-blue-900 rounded-2xl"><Users size={24} /></div>
-            <div className="flex items-center gap-1 text-emerald-600 font-bold text-xs">
-              <TrendingUp size={14} /> 8%
+            <div className="flex items-center gap-1 text-emerald-600 font-bold text-[10px] uppercase tracking-wider bg-emerald-50 px-2 py-1 rounded-lg">
+              <TrendingUp size={12} /> 8%
             </div>
           </div>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Members</p>
@@ -195,11 +195,15 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
         </div>
 
         {/* Pending Applications (Action Item) */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md">
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative">
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><ClipboardList size={24} /></div>
-            <div className="flex items-center gap-1 text-amber-600 font-bold text-xs">
-              Action Required
+            <div className={`flex items-center gap-1 font-bold text-[10px] uppercase tracking-wider px-2 py-1 rounded-lg ${
+              dashboardData.pendingApps > 0 
+                ? 'bg-amber-50 text-amber-600 animate-pulse' 
+                : 'bg-slate-50 text-slate-400'
+            }`}>
+              {dashboardData.pendingApps > 0 ? 'Action Required' : 'All Clear'}
             </div>
           </div>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Pending Applications</p>
@@ -207,20 +211,20 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
         </div>
 
         {/* Living Centenarians (VIP Group) */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md">
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative">
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl"><Award size={24} /></div>
-            <div className="flex items-center gap-1 text-purple-600 font-bold text-xs">VIP Status</div>
+            <div className="flex items-center gap-1 text-purple-600 font-bold text-[10px] uppercase tracking-wider bg-purple-50 px-2 py-1 rounded-lg">VIP Status</div>
           </div>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Living Centenarians (100+)</p>
           <h3 className={`text-3xl font-black text-slate-900 transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.centenarians.toLocaleString()}</h3>
         </div>
 
         {/* Total Deceased */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md">
+        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative">
           <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl"><Skull size={24} /></div>
-            <div className="flex items-center gap-1 text-rose-600 font-bold text-xs">Audit Active</div>
+            <div className="p-3 bg-slate-50 text-slate-600 rounded-2xl"><UserX size={24} /></div>
+            <div className="flex items-center gap-1 text-slate-500 font-bold text-[10px] uppercase tracking-wider bg-slate-50 px-2 py-1 rounded-lg">Archived</div>
           </div>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Deceased</p>
           <h3 className={`text-3xl font-black text-slate-900 transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.totalDeceased.toLocaleString()}</h3>

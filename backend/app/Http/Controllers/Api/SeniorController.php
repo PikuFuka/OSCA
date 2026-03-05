@@ -564,35 +564,51 @@ class SeniorController extends Controller
             'documentType' => 'required|string|in:birthCert,cedula,brgyCert,idPicture',
         ]);
 
-        $file = $request->file('document');
+        try {
+            $file = $request->file('document');
 
-        // Update existing document of this type or create new one to save space
-        SeniorDocument::updateOrCreate(
-            ['senior_id' => $senior->id, 'document_type' => $request->documentType],
-            [
-                'file_content' => file_get_contents($file->getRealPath()),
-                'file_name' => $file->getClientOriginalName(),
-                'mime_type' => $file->getMimeType(),
-                'file_size' => $file->getSize(),
-            ]
-        );
+            // Update existing document of this type or create new one to save space
+            SeniorDocument::updateOrCreate(
+                ['senior_id' => $senior->id, 'document_type' => $request->documentType],
+                [
+                    'file_content' => file_get_contents($file->getRealPath()),
+                    'file_name' => $file->getClientOriginalName(),
+                    'mime_type' => $file->getMimeType(),
+                    'file_size' => $file->getSize(),
+                ]
+            );
 
-        $path = null;
-        if ($request->documentType === 'idPicture') {
-            // Delete old photo if it exists
-            if ($senior->profile_photo_path) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($senior->profile_photo_path);
+            $path = null;
+            if ($request->documentType === 'idPicture') {
+                // Delete old photo if it exists
+                if ($senior->profile_photo_path) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($senior->profile_photo_path);
+                }
+
+                $path = $file->store('profile_photos', 'public');
+                $senior->update(['profile_photo_path' => $path]);
             }
 
-            $path = $file->store('profile_photos', 'public');
-            $senior->update(['profile_photo_path' => $path]);
-        }
+            return response()->json([
+                'success' => true,
+                'message' => 'Document uploaded successfully',
+                'path' => $request->documentType === 'idPicture' ? '/api/storage/profiles/' . basename($path) : null,
+            ]);
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Document uploaded successfully',
-            'path' => $request->documentType === 'idPicture' ? '/api/storage/profiles/' . basename($path) : null,
-        ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Log database error (stripped of binary/bindings) to prevent JSON encoding crashes
+            \Log::error("Database error during document upload: " . $e->getMessage());
+            
+            // Check for max_allowed_packet error
+            if (str_contains($e->getMessage(), 'packet') || str_contains($e->getMessage(), 'too large')) {
+                 return response()->json(['success' => false, 'message' => 'File too large for database setting (max_allowed_packet). Try a smaller file.'], 413);
+            }
+            return response()->json(['success' => false, 'message' => 'Database error while saving document.'], 500);
+
+        } catch (\Exception $e) {
+            \Log::error("Document upload failed: " . $e->getMessage());
+            return response()->json(['success' => false, 'message' => 'Upload failed: ' . $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -606,44 +622,61 @@ class SeniorController extends Controller
             'photo' => 'required|string', // base64
         ]);
 
-        $photoData = $request->photo;
-        $filename = 'profile_' . $senior->osca_id . '_' . time() . '.png';
+        try {
+            $photoData = $request->photo;
+            $filename = 'profile_' . $senior->osca_id . '_' . time() . '.png';
+            $image = null;
+            $path = null;
 
-        if (str_starts_with($photoData, 'data:image')) {
-            // Handle Base64
-            $imageParts = explode(";base64,", $photoData);
-            $image = str_replace(' ', '+', $imageParts[1]);
-            
-            // Delete old photo if it exists
-            if ($senior->profile_photo_path) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($senior->profile_photo_path);
+            if (str_starts_with($photoData, 'data:image')) {
+                // Handle Base64
+                $imageParts = explode(";base64,", $photoData);
+                $image = str_replace(' ', '+', $imageParts[1]);
+                $binaryImage = base64_decode($image);
+                
+                // Delete old photo if it exists
+                if ($senior->profile_photo_path) {
+                    \Illuminate\Support\Facades\Storage::disk('public')->delete($senior->profile_photo_path);
+                }
+
+                \Illuminate\Support\Facades\Storage::disk('public')->put('profile_photos/' . $filename, $binaryImage);
+                $path = 'profile_photos/' . $filename;
+            } else {
+                return response()->json(['success' => false, 'message' => 'Invalid photo format'], 422);
             }
 
-            \Illuminate\Support\Facades\Storage::disk('public')->put('profile_photos/' . $filename, base64_decode($image));
-            $path = 'profile_photos/' . $filename;
-        } else {
-            return response()->json(['success' => false, 'message' => 'Invalid photo format'], 422);
+            $senior->update(['profile_photo_path' => $path]);
+
+            // Also save to documents as idPicture
+            SeniorDocument::updateOrCreate(
+                ['senior_id' => $senior->id, 'document_type' => 'idPicture'],
+                [
+                    'file_content' => $binaryImage,
+                    'file_name' => $filename,
+                    'mime_type' => 'image/png',
+                    'file_size' => strlen($binaryImage),
+                ]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Profile photo updated successfully',
+                'path' => $path,
+                'url' => '/api/storage/profiles/' . $filename
+            ]);
+
+        } catch (\Illuminate\Database\QueryException $e) {
+            \Log::error("Database error updating photo: " . $e->getMessage());
+            
+            if (str_contains($e->getMessage(), 'packet') || str_contains($e->getMessage(), 'too large')) {
+                 return response()->json(['success' => false, 'message' => 'Image too large for database. Try a smaller one.'], 413);
+            }
+            return response()->json(['success' => false, 'message' => 'Database error while saving photo.'], 500);
+
+        } catch (\Exception $e) {
+             \Log::error("Photo update failed: " . $e->getMessage());
+             return response()->json(['success' => false, 'message' => 'Update failed: ' . $e->getMessage()], 500);
         }
-
-        $senior->update(['profile_photo_path' => $path]);
-
-        // Also save to documents as idPicture
-        SeniorDocument::updateOrCreate(
-            ['senior_id' => $senior->id, 'document_type' => 'idPicture'],
-            [
-                'file_content' => base64_decode($image),
-                'file_name' => $filename,
-                'mime_type' => 'image/png',
-                'file_size' => strlen(base64_decode($image)),
-            ]
-        );
-
-        return response()->json([
-            'success' => true,
-            'message' => 'Profile photo updated successfully',
-            'path' => $path,
-            'url' => '/api/storage/profiles/' . $filename
-        ]);
     }
 
     /**

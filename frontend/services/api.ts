@@ -144,6 +144,14 @@ export const seniorsAPI = {
     });
   },
 
+  // Same as getById but always fetches fresh (bypasses cache)
+  getByIdFresh: async (id: number | string) => {
+    const response = await api.get(`/seniors/${id}`);
+    // Update cache too so other components benefit
+    cache.set(`senior-detail-${id}`, { data: response.data, timestamp: Date.now() });
+    return response.data;
+  },
+
   getByOscaId: async (oscaId: string) => {
     return withCache(`senior-osca-${oscaId}`, async () => {
       const response = await api.get(`/seniors/osca/${oscaId}`);
@@ -281,9 +289,11 @@ export const seniorsAPI = {
   },
 
   getDocumentUrl: (seniorId: number | string, documentId: number | string): string => {
-// Removed direct token passing; Sanctum handles Auth via HTTP-Only Cookies
     const base = API_BASE_URL.startsWith('http') ? API_BASE_URL : `${window.location.origin}${API_BASE_URL}`;
-    return `${base}/seniors/${seniorId}/documents/${documentId}`;
+    const token = localStorage.getItem('auth_token');
+    const url = `${base}/seniors/${seniorId}/documents/${documentId}`;
+    // Append token for "Open in New Tab" functionality where headers aren't sent
+    return token ? `${url}?token=${token}` : url;
   },
 
   getNextOscaId: async () => {

@@ -130,10 +130,6 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
     </div>
   );
 
-  if (loading) {
-    return <TableSkeleton />;
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -167,7 +163,12 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left">
+          {loading ? (
+               <div className="p-20">
+                 <TableSkeleton />
+               </div>
+            ) : (
+              <table className="w-full text-left">
             <thead>
               <tr className="bg-white text-slate-400 uppercase text-[10px] font-black tracking-[0.2em] border-b border-slate-50">
                 <th className="px-10 py-6">Applicant</th>
@@ -179,16 +180,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {loading ? (
-                <tr>
-                  <td colSpan={5} className="px-10 py-20 text-center">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="w-8 h-8 border-4 border-blue-900 border-t-transparent rounded-full animate-spin"></div>
-                      <p className="text-slate-400 font-bold text-sm">Fetching real-time requests...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : filteredRequests.length > 0 ? filteredRequests.map((req) => (
+              {filteredRequests.length > 0 ? filteredRequests.map((req) => (
                 <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-10 py-6">
                     <div className="flex items-center gap-4">
@@ -273,7 +265,8 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                 </tr>
               )}
             </tbody>
-          </table>
+            </table>
+          )}
         </div>
       </div>
 
