@@ -437,6 +437,13 @@ export const reportsAPI = {
     const searchParams = new URLSearchParams();
     if (params?.barangay) searchParams.append('barangay', params.barangay);
     if (params?.year) searchParams.append('year', String(params.year));
+    
+    // Add auth token to URL if present
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      searchParams.append('token', token);
+    }
+
     const base = API_BASE_URL.startsWith('http') ? API_BASE_URL : `${window.location.origin}${API_BASE_URL}`;
     return `${base}/reports/senior-citizens?${searchParams.toString()}`;
   },
