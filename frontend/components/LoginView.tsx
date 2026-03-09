@@ -105,12 +105,14 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Email or OSCA ID</label>
+              <label htmlFor="login-identifier" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Email or OSCA ID</label>
               <div className="relative group">
                 <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-900 transition-colors">
                   <User size={20} />
                 </div>
                 <input 
+                  id="login-identifier"
+                  name="identifier"
                   type="text" 
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
@@ -121,12 +123,14 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
             </div>
 
             <div className="space-y-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Password</label>
+              <label htmlFor="login-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Password</label>
               <div className="relative group">
                 <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-900 transition-colors">
                   <KeyRound size={20} />
                 </div>
                 <input 
+                  id="login-password"
+                  name="password"
                   type="password" 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}

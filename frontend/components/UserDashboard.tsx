@@ -332,9 +332,11 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
                          </button>
                        </>
                      ) : (
-                       <label className="col-span-2 cursor-pointer flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-xl font-black text-base hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-[0.98]">
+                       <label htmlFor={`user-document-upload-${req.type}`} className="col-span-2 cursor-pointer flex items-center justify-center gap-2 py-3 bg-blue-600 text-white rounded-xl font-black text-base hover:bg-blue-700 transition-all shadow-xl shadow-blue-600/20 active:scale-[0.98]">
                          <Upload size={20} /> UPLOAD
                          <input 
+                           id={`user-document-upload-${req.type}`}
+                           name={`documentUpload-${req.type}`}
                            type="file" 
                            className="hidden" 
                            onChange={(e) => handleFileUpload(e, req.type)}

@@ -155,7 +155,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify }) => {
             }`}
             onClick={() => fileInputRef.current?.click()}
           >
-            <input ref={fileInputRef} type="file" accept=".sql" className="hidden" onChange={handleFileSelect} />
+            <input id="backup-sql-upload" name="backupSqlFile" ref={fileInputRef} type="file" accept=".sql" className="hidden" onChange={handleFileSelect} />
             {selectedFile ? (
               <div className="flex items-center justify-center gap-3">
                 <CheckCircle2 size={20} className="text-emerald-600" />

@@ -450,8 +450,11 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
       <div className="bg-white rounded-3xl md:rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
         <div className="p-4 md:p-8 border-b border-slate-50 flex flex-col lg:flex-row items-center justify-between gap-4 bg-slate-50/20">
           <div className="relative w-full lg:w-[450px]">
+            <label htmlFor="registry-search" className="sr-only">Search seniors by ID or name</label>
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
             <input 
+              id="registry-search"
+              name="registrySearch"
               type="text" 
               placeholder="Search by ID or Name..."
               className="w-full pl-14 pr-8 py-4 rounded-2xl md:rounded-[1.25rem] bg-white border border-slate-200 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all text-base font-medium shadow-sm"
@@ -461,8 +464,11 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
           </div>
           <div className="flex items-center gap-3 w-full lg:w-auto">
             <div className="flex-1 lg:flex-none flex items-center gap-3 px-6 py-4 border border-slate-200 rounded-2xl md:rounded-[1.25rem] bg-white shadow-sm">
+              <label htmlFor="registry-barangay-filter" className="sr-only">Filter registry by barangay</label>
               <MapPin size={20} className="text-blue-900 shrink-0" />
               <select 
+                id="registry-barangay-filter"
+                name="registryBarangayFilter"
                 value={filterBarangay}
                 onChange={(e) => { setFilterBarangay(e.target.value); setPage(1); }}
                 className="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer w-full min-w-[160px]"
@@ -753,7 +759,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                          <>
                            <button onClick={startWebcam} className="w-full py-3 bg-blue-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-800 transition-all"><Camera size={18} /> Open Webcam</button>
                            <div className="relative">
-                              <input type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileUpload} />
+                              <input id="member-id-upload" name="memberIdPhoto" type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileUpload} />
                               <button className="w-full py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-100 transition-all"><Upload size={18} /> Upload Image</button>
                            </div>
                          </>

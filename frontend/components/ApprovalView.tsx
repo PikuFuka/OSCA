@@ -475,8 +475,10 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                     <IdCard size={16} /> Assign OSCA ID
                   </h4>
                   <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2 block">OSCA ID Number</label>
+                    <label htmlFor="approval-request-osca-id" className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2 block">OSCA ID Number</label>
                     <input
+                      id="approval-request-osca-id"
+                      name="approvalOscaId"
                       type="text"
                       placeholder="Enter OSCA ID to assign"
                       className="w-full px-4 py-3 rounded-xl bg-white border border-blue-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all font-bold text-blue-900 text-lg tracking-wider"
@@ -527,8 +529,10 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
       >
         {confirmState.type === 'Approve' && (
           <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-            <label className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-2 block">Assign OSCA ID</label>
+            <label htmlFor="confirm-approval-osca-id" className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-2 block">Assign OSCA ID</label>
             <input
+              id="confirm-approval-osca-id"
+              name="confirmApprovalOscaId"
               type="text"
               placeholder="Enter OSCA ID"
               className="w-full px-4 py-3 rounded-xl bg-white border border-emerald-200 focus:ring-4 focus:ring-emerald-50 focus:border-emerald-500 transition-all font-bold text-emerald-900 text-lg tracking-wider"

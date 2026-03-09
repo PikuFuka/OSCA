@@ -4,6 +4,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import { AuthProvider } from './context/AuthProvider';
+import './index.css';
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {

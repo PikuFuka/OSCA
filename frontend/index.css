@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.01em;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: none;
+    border-color: #0038a8 !important;
+    box-shadow: 0 0 0 4px rgba(0, 56, 168, 0.1) !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  button {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  button:active {
+    transform: scale(0.97);
+  }
+
+  aside {
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+}
+
+@layer utilities {
+  .osca-blue {
+    background-color: #1e3a8a;
+  }
+
+  .osca-gold {
+    background-color: #eab308;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .view-enter {
+    animation: viewFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .stagger-in > * {
+    animation: staggerChild 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .stagger-in > *:nth-child(1) {
+    animation-delay: 0ms;
+  }
+
+  .stagger-in > *:nth-child(2) {
+    animation-delay: 40ms;
+  }
+
+  .stagger-in > *:nth-child(3) {
+    animation-delay: 80ms;
+  }
+
+  .stagger-in > *:nth-child(4) {
+    animation-delay: 120ms;
+  }
+
+  .stagger-in > *:nth-child(5) {
+    animation-delay: 160ms;
+  }
+
+  .stagger-in > *:nth-child(6) {
+    animation-delay: 200ms;
+  }
+
+  .stagger-in > *:nth-child(7) {
+    animation-delay: 240ms;
+  }
+
+  .stagger-in > *:nth-child(8) {
+    animation-delay: 280ms;
+  }
+
+  .content-ready {
+    animation: contentReady 0.2s ease-out both;
+  }
+}
+
+main {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+}
+
+.shadow-sm,
+.rounded-3xl,
+.rounded-\[2\.5rem\] {
+  will-change: auto;
+}
+
+@keyframes viewFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.99);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes staggerChild {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes contentReady {
+  from {
+    opacity: 0.6;
+  }
+
+  to {
+    opacity: 1;
+  }
+}

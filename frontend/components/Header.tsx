@@ -188,8 +188,10 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
                   </p>
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Password</label>
+                      <label htmlFor="account-current-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Password</label>
                       <input 
+                        id="account-current-password"
+                        name="currentPassword"
                         type="password"
                         className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"
                         value={passwordForm.currentPassword}
@@ -197,8 +199,10 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">New Password</label>
+                      <label htmlFor="account-new-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400">New Password</label>
                       <input 
+                        id="account-new-password"
+                        name="newPassword"
                         type="password"
                         className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"
                         value={passwordForm.newPassword}
@@ -206,8 +210,10 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Confirm New Password</label>
+                      <label htmlFor="account-confirm-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400">Confirm New Password</label>
                       <input 
+                        id="account-confirm-password"
+                        name="confirmPassword"
                         type="password"
                         className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"
                         value={passwordForm.confirmPassword}

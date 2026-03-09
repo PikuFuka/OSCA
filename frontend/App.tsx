@@ -315,8 +315,10 @@ const App: React.FC = () => {
 
           <form onSubmit={handlePasswordChange} className="space-y-4">
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-1 block">Current Password</label>
+              <label htmlFor="force-password-current" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-1 block">Current Password</label>
               <input
+                id="force-password-current"
+                name="currentPassword"
                 type="password"
                 value={pwForm.current}
                 onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))}
@@ -326,8 +328,10 @@ const App: React.FC = () => {
               />
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-1 block">New Password</label>
+              <label htmlFor="force-password-new" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-1 block">New Password</label>
               <input
+                id="force-password-new"
+                name="newPassword"
                 type="password"
                 value={pwForm.newPw}
                 onChange={e => setPwForm(p => ({ ...p, newPw: e.target.value }))}
@@ -338,8 +342,10 @@ const App: React.FC = () => {
               />
             </div>
             <div>
-              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-1 block">Confirm New Password</label>
+              <label htmlFor="force-password-confirm" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-1 block">Confirm New Password</label>
               <input
+                id="force-password-confirm"
+                name="confirmPassword"
                 type="password"
                 value={pwForm.confirm}
                 onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))}
