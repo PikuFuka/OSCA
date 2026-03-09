@@ -4,9 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\Request as SeniorRequest;
+use App\Models\Senior;
 use Illuminate\Http\Request;
+use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 
 class BackupController extends Controller
 {
@@ -118,12 +122,19 @@ class BackupController extends Controller
                 foreach ($statements as $stmt) {
                     $stmt = trim($stmt);
                     if ($stmt !== '' && !str_starts_with($stmt, '--')) {
-                        DB::unprepared($stmt);
+                        DB::unprepared($this->prepareStatementForImport($stmt));
                     }
                 }
 
                 DB::statement('SET foreign_key_checks = 1');
             }
+
+            $migrationExitCode = Artisan::call('migrate', ['--force' => true]);
+            if ($migrationExitCode !== 0) {
+                throw new \RuntimeException('Database restored, but schema sync failed: ' . trim(Artisan::output()));
+            }
+
+            $this->ensureImportedSchemaCompatibility();
 
             @unlink($tempPath);
 
@@ -195,6 +206,188 @@ class BackupController extends Controller
         }
         if (trim($current) !== '') $statements[] = $current;
         return $statements;
+    }
+
+    private function prepareStatementForImport(string $statement): string
+    {
+        if (!preg_match('/^INSERT\s+INTO\s+`?seniors`?/i', ltrim($statement))) {
+            return $statement;
+        }
+
+        if (preg_match('/\bON\s+DUPLICATE\s+KEY\s+UPDATE\b/i', $statement)) {
+            return $statement;
+        }
+
+        $columns = $this->extractInsertColumns($statement);
+        if ($columns === []) {
+            $columns = Schema::getColumnListing('seniors');
+        }
+
+        $updatableColumns = array_values(array_filter($columns, fn (string $column) => $column !== 'id'));
+        if ($updatableColumns === []) {
+            return $statement;
+        }
+
+        $assignments = implode(', ', array_map(function (string $column) {
+            $escapedColumn = str_replace('`', '', $column);
+
+            return "`{$escapedColumn}` = VALUES(`{$escapedColumn}`)";
+        }, $updatableColumns));
+
+        return rtrim($statement, "; \t\n\r\0\x0B") . ' ON DUPLICATE KEY UPDATE ' . $assignments;
+    }
+
+    private function extractInsertColumns(string $statement): array
+    {
+        if (!preg_match('/^INSERT\s+INTO\s+`?seniors`?\s*\(([^)]+)\)/i', ltrim($statement), $matches)) {
+            return [];
+        }
+
+        return array_values(array_filter(array_map(function (string $column) {
+            return trim($column, " `\t\n\r\0\x0B");
+        }, explode(',', $matches[1]))));
+    }
+
+    private function ensureImportedSchemaCompatibility(): void
+    {
+        if (!Schema::hasTable('seniors')) {
+            return;
+        }
+
+        if (!Schema::hasColumn('seniors', 'deleted_at')) {
+            Schema::table('seniors', function (Blueprint $table) {
+                $table->softDeletes();
+            });
+        }
+
+        // Ensure pension_status enum includes 'None' (needed for imported data)
+        try {
+            $colType = DB::selectOne("SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'seniors' AND COLUMN_NAME = 'pension_status'")->COLUMN_TYPE ?? '';
+            if (stripos($colType, "'None'") === false) {
+                DB::statement("ALTER TABLE seniors MODIFY COLUMN pension_status ENUM('Indigent','Pensioner','National Social Pensioner','Local Social Pensioner','None') DEFAULT 'Indigent'");
+            }
+        } catch (\Exception $e) {
+            // Silently continue — enum likely already correct
+        }
+
+        // Clean imported data: strip Excel float artifacts and normalize imported defaults.
+        $this->normalizeImportedOscaIds();
+        DB::statement("UPDATE seniors SET rrn = REPLACE(rrn, '.0', '') WHERE rrn LIKE '%.0'");
+        DB::statement("UPDATE seniors SET contact_number = REPLACE(contact_number, '.0', '') WHERE contact_number LIKE '%.0'");
+        DB::statement("UPDATE seniors SET created_at = '2025-06-30 00:00:00' WHERE created_at IS NULL");
+        DB::statement("UPDATE seniors SET updated_at = '2025-06-30 00:00:00' WHERE updated_at IS NULL");
+
+        // Seniors without an assigned OSCA ID should remain visible in approval.
+        DB::statement("UPDATE seniors SET status = 'Pending' WHERE (osca_id IS NULL OR TRIM(osca_id) = '') AND status = 'Active'");
+        $this->ensurePendingApprovalRequests();
+
+        // Set default password for imported seniors without one and require a password change.
+        if (!Schema::hasColumn('seniors', 'force_password_change')) {
+            Schema::table('seniors', function (Blueprint $table) {
+                $table->boolean('force_password_change')->default(false)->after('password');
+            });
+        }
+
+        $defaultHash = bcrypt('qwerty123.');
+        DB::update(
+            "UPDATE seniors SET password = ?, force_password_change = 1 WHERE password IS NULL OR TRIM(password) = ''",
+            [$defaultHash]
+        );
+    }
+
+    private function ensurePendingApprovalRequests(): void
+    {
+        $pendingSeniorIdsWithRequests = SeniorRequest::query()
+            ->where('status', 'Pending')
+            ->pluck('senior_id')
+            ->all();
+
+        Senior::query()
+            ->where('status', 'Pending')
+            ->where(function ($query) {
+                $query->whereNull('osca_id')
+                    ->orWhereRaw("TRIM(osca_id) = ''");
+            })
+            ->when($pendingSeniorIdsWithRequests !== [], function ($query) use ($pendingSeniorIdsWithRequests) {
+                $query->whereNotIn('id', $pendingSeniorIdsWithRequests);
+            })
+            ->orderBy('id')
+            ->get(['id'])
+            ->each(function (Senior $senior) {
+                SeniorRequest::create([
+                    'senior_id' => $senior->id,
+                    'type' => 'New Application',
+                    'status' => 'Pending',
+                ]);
+            });
+    }
+
+    private function normalizeImportedOscaIds(): void
+    {
+        $seniors = Senior::query()
+            ->orderBy('id')
+            ->get(['id', 'osca_id', 'status']);
+
+        $groupedByNormalizedOscaId = [];
+
+        foreach ($seniors as $senior) {
+            $normalizedOscaId = $senior->osca_id !== null
+                ? preg_replace('/\.0$/', '', trim((string) $senior->osca_id))
+                : null;
+
+            if ($normalizedOscaId === '') {
+                $normalizedOscaId = null;
+            }
+
+            $groupedByNormalizedOscaId[$normalizedOscaId ?? '__null__'][] = [
+                'id' => $senior->id,
+                'original' => $senior->osca_id,
+                'normalized' => $normalizedOscaId,
+                'status' => $senior->status,
+            ];
+        }
+
+        foreach ($groupedByNormalizedOscaId as $groupKey => $group) {
+            if ($groupKey === '__null__') {
+                foreach ($group as $row) {
+                    $updates = [];
+
+                    if ($row['original'] !== null) {
+                        $updates['osca_id'] = null;
+                    }
+
+                    if ($row['status'] === 'Active') {
+                        $updates['status'] = 'Pending';
+                    }
+
+                    if ($updates !== []) {
+                        DB::table('seniors')->where('id', $row['id'])->update($updates);
+                    }
+                }
+
+                continue;
+            }
+
+            $keeper = collect($group)->first(fn (array $row) => $row['original'] === $row['normalized'])
+                ?? $group[0];
+
+            foreach ($group as $row) {
+                $updates = [];
+
+                if ($row['id'] === $keeper['id']) {
+                    if ($row['original'] !== $row['normalized']) {
+                        $updates['osca_id'] = $row['normalized'];
+                    }
+                } else {
+                    $updates['osca_id'] = null;
+                    $updates['status'] = 'Pending';
+                }
+
+                if ($updates !== []) {
+                    DB::table('seniors')->where('id', $row['id'])->update($updates);
+                }
+            }
+        }
     }
 
     /**

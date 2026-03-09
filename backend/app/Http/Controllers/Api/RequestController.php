@@ -19,6 +19,8 @@ class RequestController extends Controller
      */
     public function index(Request $request)
     {
+        $this->ensurePendingApprovalRequests();
+
         $query = SeniorRequest::with(['senior', 'senior.documents' => function($q) {
             $q->select(['id', 'senior_id', 'document_type', 'file_name']);
         }]);
@@ -68,6 +70,33 @@ class RequestController extends Controller
         });
 
         return response()->json($requests);
+    }
+
+    private function ensurePendingApprovalRequests(): void
+    {
+        $pendingSeniorIdsWithRequests = SeniorRequest::query()
+            ->where('status', 'Pending')
+            ->pluck('senior_id')
+            ->all();
+
+        Senior::query()
+            ->where('status', 'Pending')
+            ->where(function ($query) {
+                $query->whereNull('osca_id')
+                    ->orWhereRaw("TRIM(osca_id) = ''");
+            })
+            ->when($pendingSeniorIdsWithRequests !== [], function ($query) use ($pendingSeniorIdsWithRequests) {
+                $query->whereNotIn('id', $pendingSeniorIdsWithRequests);
+            })
+            ->orderBy('id')
+            ->get(['id'])
+            ->each(function (Senior $senior) {
+                SeniorRequest::create([
+                    'senior_id' => $senior->id,
+                    'type' => 'New Application',
+                    'status' => 'Pending',
+                ]);
+            });
     }
 
     /**
@@ -164,6 +193,11 @@ class RequestController extends Controller
         $seniorRequest = SeniorRequest::with('senior')->findOrFail($id);
         $senior = $seniorRequest->senior;
 
+        // Validate OSCA ID for new applications
+        $validated = $request->validate([
+            'osca_id' => 'nullable|string|max:50',
+        ]);
+
         DB::beginTransaction();
         try {
             if ($seniorRequest->type === 'Information Update' && $seniorRequest->pending_data) {
@@ -210,8 +244,12 @@ class RequestController extends Controller
                     }
                 }
             } else {
-                // ---- NEW APPLICATION: just activate the already-created senior ----
-                $senior->update(['status' => 'Active']);
+                // ---- NEW APPLICATION: activate and assign OSCA ID ----
+                $updateData = ['status' => 'Active'];
+                if (!empty($validated['osca_id'])) {
+                    $updateData['osca_id'] = $validated['osca_id'];
+                }
+                $senior->update($updateData);
             }
 
             $seniorRequest->update([

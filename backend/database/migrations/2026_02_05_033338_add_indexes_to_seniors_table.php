@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -11,11 +12,23 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('seniors', function (Blueprint $table) {
-            $table->index('status');
-            $table->index(['last_name', 'first_name']);
-            $table->index('created_at');
-        });
+        if (! $this->indexExists('seniors', 'seniors_status_index')) {
+            Schema::table('seniors', function (Blueprint $table) {
+                $table->index('status');
+            });
+        }
+
+        if (! $this->indexExists('seniors', 'seniors_last_name_first_name_index')) {
+            Schema::table('seniors', function (Blueprint $table) {
+                $table->index(['last_name', 'first_name']);
+            });
+        }
+
+        if (! $this->indexExists('seniors', 'seniors_created_at_index')) {
+            Schema::table('seniors', function (Blueprint $table) {
+                $table->index('created_at');
+            });
+        }
     }
 
     /**
@@ -23,10 +36,31 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('seniors', function (Blueprint $table) {
-            $table->dropIndex(['status']);
-            $table->dropIndex(['last_name', 'first_name']);
-            $table->dropIndex(['created_at']);
-        });
+        if ($this->indexExists('seniors', 'seniors_status_index')) {
+            Schema::table('seniors', function (Blueprint $table) {
+                $table->dropIndex('seniors_status_index');
+            });
+        }
+
+        if ($this->indexExists('seniors', 'seniors_last_name_first_name_index')) {
+            Schema::table('seniors', function (Blueprint $table) {
+                $table->dropIndex('seniors_last_name_first_name_index');
+            });
+        }
+
+        if ($this->indexExists('seniors', 'seniors_created_at_index')) {
+            Schema::table('seniors', function (Blueprint $table) {
+                $table->dropIndex('seniors_created_at_index');
+            });
+        }
+    }
+
+    private function indexExists(string $table, string $indexName): bool
+    {
+        return DB::table('information_schema.statistics')
+            ->where('table_schema', DB::raw('DATABASE()'))
+            ->where('table_name', $table)
+            ->where('index_name', $indexName)
+            ->exists();
     }
 };

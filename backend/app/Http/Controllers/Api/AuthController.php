@@ -90,6 +90,7 @@ class AuthController extends Controller
                     'role' => 'Senior',
                     'barangay' => $senior->barangay,
                     'idPhoto' => $senior->profile_photo_path ? asset('storage/' . $senior->profile_photo_path) : null,
+                    'force_password_change' => (bool) $senior->force_password_change,
                 ],
                 'token' => $token,
             ]);
@@ -123,6 +124,7 @@ class AuthController extends Controller
                 'name' => $user->full_name,
                 'role' => 'Senior',
                 'barangay' => $user->barangay,
+                'force_password_change' => (bool) $user->force_password_change,
             ]);
         }
 
@@ -150,5 +152,34 @@ class AuthController extends Controller
         }
 
         return response()->json(['success' => true, 'message' => 'Logged out successfully']);
+    }
+
+    /**
+     * Change password (for forced password change after first login)
+     */
+    public function changePassword(Request $request)
+    {
+        $request->validate([
+            'current_password' => 'required|string',
+            'new_password' => 'required|string|min:8|confirmed',
+        ]);
+
+        $user = $request->user();
+
+        if (!$user || !Hash::check($request->current_password, $user->password)) {
+            throw ValidationException::withMessages([
+                'current_password' => ['The current password is incorrect.'],
+            ]);
+        }
+
+        $user->update([
+            'password' => $request->new_password,
+            'force_password_change' => false,
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Password changed successfully.',
+        ]);
     }
 }

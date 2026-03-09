@@ -72,7 +72,7 @@ class SeniorController extends Controller
             'age' => $senior->age,
             'gender' => $senior->sex,
             'status' => in_array($senior->status, ['deceased', 'Deceased']) ? 'Deceased' : (in_array($senior->status, ['approved', 'Active']) ? 'Active' : $senior->status),
-            'joinedDate' => $senior->created_at->format('M d, Y'),
+            'joinedDate' => $senior->created_at?->format('M d, Y') ?? 'N/A',
             'pensionStatus' => $senior->pension_status,
             'barangay' => $senior->barangay,
             'idConfig' => $senior->id_config,
@@ -168,10 +168,9 @@ class SeniorController extends Controller
      */
     public function getNextId()
     {
-        $nextId = $this->generateOscaId();
+        // OSCA ID is now assigned by admin during approval
         return response()->json([
-            'nextId' => $nextId,
-            'next_id' => $nextId,
+            'message' => 'OSCA ID is assigned by admin during approval.',
         ]);
     }
 
@@ -260,7 +259,6 @@ class SeniorController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'oscaId' => 'nullable|string',
             'firstName' => 'required|string|max:255',
             'middleName' => 'nullable|string|max:255',
             'lastName' => 'required|string|max:255',
@@ -298,16 +296,9 @@ class SeniorController extends Controller
                 ], 409);
             }
 
-            // Generate OSCA ID if not provided or empty
-            $oscaId = (!empty($validated['oscaId'])) ? $validated['oscaId'] : $this->generateOscaId();
-            
-            // Check if already exists (anti-collision)
-            while (Senior::where('osca_id', $oscaId)->exists()) {
-                $oscaId = $this->generateOscaId();
-            }
-
+            // OSCA ID is assigned by admin during approval — not auto-generated
             $senior = Senior::create([
-                'osca_id' => $oscaId,
+                'osca_id' => null,
                 'first_name' => $validated['firstName'],
                 'middle_name' => $validated['middleName'] ?? null,
                 'last_name' => $validated['lastName'],
@@ -386,7 +377,7 @@ class SeniorController extends Controller
                 'action' => 'REGISTERED_SENIOR',
                 'target_type' => 'Senior',
                 'target_id' => $senior->id,
-                'details' => ['osca_id' => $oscaId, 'name' => $senior->full_name],
+                'details' => ['name' => $senior->full_name],
                 'ip_address' => $request->ip(),
             ]);
 
@@ -394,9 +385,9 @@ class SeniorController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Senior registered successfully',
+                'message' => 'Senior registered successfully. OSCA ID will be assigned upon approval.',
                 'senior' => [
-                    'id' => $senior->osca_id,
+                    'id' => $senior->id,
                     'name' => $senior->full_name,
                 ],
             ], 201);
@@ -755,7 +746,9 @@ class SeniorController extends Controller
 
         if (!$isAllYears) {
             $endOfYear = "$year-12-31 23:59:59";
-            $populationQuery->where('created_at', '<=', $endOfYear);
+            $populationQuery->where(function($q) use ($endOfYear) {
+                $q->where('created_at', '<=', $endOfYear)->orWhereNull('created_at');
+            });
             $growthQuery->whereYear('created_at', $year);
         }
 
@@ -827,22 +820,5 @@ class SeniorController extends Controller
         ];
 
         return response()->json($stats);
-    }
-
-
-    /**
-     * Generate unique OSCA ID
-     */
-    private function generateOscaId()
-    {
-        // Find the max ID that is strictly 4 digits to avoid year-prefixed ones
-        $maxId = Senior::whereRaw('LENGTH(osca_id) = 4')->max('osca_id');
-        
-        $sequence = 1;
-        if ($maxId) {
-            $sequence = (int)$maxId + 1;
-        }
-        
-        return str_pad($sequence, 4, '0', STR_PAD_LEFT);
     }
 }

@@ -60,7 +60,10 @@ class MasterlistSheet implements WithTitle, WithEvents
 
                 $query = Senior::query();
                 if ($this->year) {
-                    $query->whereYear('created_at', $this->year);
+                    $query->where(function ($q) {
+                        $q->whereYear('created_at', $this->year)
+                          ->orWhereNull('created_at');
+                    });
                 }
                 if ($this->barangay && $this->barangay !== 'All Barangays') {
                     $query->where('barangay', $this->barangay);

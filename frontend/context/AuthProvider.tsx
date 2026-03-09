@@ -10,7 +10,8 @@ const mapUserToCurrentUser = (user: any): CurrentUser => {
     role: user.role as UserRole,
     barangay: user.barangay_assignment || user.barangay || '',
     email: user.email || `${user.osca_id || user.id}@osca.ph`,
-    idPhoto: user.idPhoto || null
+    idPhoto: user.idPhoto || null,
+    forcePasswordChange: user.force_password_change || false
   };
 };
 

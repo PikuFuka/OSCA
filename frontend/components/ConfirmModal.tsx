@@ -15,6 +15,7 @@ interface ConfirmModalProps {
   cancelLabel?: string;
   variant?: ConfirmVariant;
   loading?: boolean;
+  children?: React.ReactNode;
 }
 
 const ConfirmModal: React.FC<ConfirmModalProps> = ({
@@ -26,7 +27,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   variant = 'primary',
-  loading = false
+  loading = false,
+  children
 }) => {
   useEffect(() => {
     if (!isOpen) return;
@@ -98,6 +100,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
           <div className="space-y-3 mb-10">
             <h3 className={`text-3xl font-black ${styles.titleColor} tracking-tight leading-tight`}>{title}</h3>
             <p className="text-slate-500 text-lg font-medium leading-relaxed max-w-sm mx-auto">{message}</p>
+            {children && <div className="mt-4 text-left">{children}</div>}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 w-full px-2 sm:px-0">

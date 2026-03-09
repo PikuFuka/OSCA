@@ -423,6 +423,20 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
       default: return 'bg-slate-100 text-slate-600';
     }
   };
+
+  const formatIdDisplayName = (senior: SeniorCitizen) => {
+    const lastName = senior.lastName?.trim() || '';
+    const firstName = senior.firstName?.trim() || '';
+    const middleName = senior.middleName?.trim() || '';
+
+    const orderedName = [
+      lastName ? `${lastName},` : '',
+      firstName,
+      middleName,
+    ].filter(Boolean).join(' ');
+
+    return orderedName || senior.name;
+  };
   
   return (
     <div className="space-y-6">
@@ -811,7 +825,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                                 <div className="absolute inset-0 z-20" onClick={() => setSelectedField(null)}>
                                   <DraggableLabel 
                                     id="name" 
-                                    text={idGenerationSenior.name} 
+                                    text={formatIdDisplayName(idGenerationSenior)} 
                                     config={textConfig.name} 
                                     updateConfig={updateTextConfig}
                                     isSelected={selectedField === 'name'}

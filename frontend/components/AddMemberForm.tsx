@@ -152,7 +152,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
       } else if (isPublicUser) {
         setMode('form');
         setApplicantType('new');
-        generateNewId();
+        resetFormForNewApplicant();
       }
     };
     
@@ -192,7 +192,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
 
     // Debounce and fetch from database when ID is complete (e.g., 4+ chars or year-format)
     const fetchSeniorByOscaId = async (oscaId: string) => {
-      if (!oscaId || oscaId.length < 4) {
+      if (!oscaId || oscaId.length < 1) {
         setIsMatchFound(false);
         clearPersonalData();
         return;
@@ -260,40 +260,30 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
     }
   };
 
-  const generateNewId = async () => {
-    try {
-      // Try to get the next ID from the database
-      const response = await seniorsAPI.getNextOscaId();
-      const nextId = response.nextId || response.next_id;
-      
-      setFormData({ 
-        oscaId: nextId,
-        lastName: '',
-        firstName: '',
-        middleName: '',
-        extensionName: '',
-        dateOfBirth: '',
-        age: '',
-        sex: 'Male',
-        placeOfBirth: '',
-        streetAddress: '',
-        barangay: BARANGAYS[0],
-        contactNumber: '',
-        pensionStatus: 'Indigent',
-        rrn: '',
-        nationalId: '',
-        mothersMaidenName: '',
-        emergencyName: '',
-        emergencyContact: '',
-        password: '',
-        confirmPassword: '',
-        familyMembers: []
-      });
-    } catch (error) {
-      // Block registration — do NOT generate a random ID for government records
-      notify('Unable to connect to the server to generate an OSCA ID. Please check your internet connection and try again.', 'error');
-      setFormData(prev => ({ ...prev, oscaId: '' }));
-    }
+  const resetFormForNewApplicant = () => {
+    setFormData({ 
+      oscaId: '',
+      lastName: '',
+      firstName: '',
+      middleName: '',
+      extensionName: '',
+      dateOfBirth: '',
+      age: '',
+      sex: 'Male',
+      placeOfBirth: '',
+      streetAddress: '',
+      barangay: BARANGAYS[0],
+      contactNumber: '',
+      pensionStatus: 'Indigent',
+      rrn: '',
+      nationalId: '',
+      mothersMaidenName: '',
+      emergencyName: '',
+      emergencyContact: '',
+      password: '',
+      confirmPassword: '',
+      familyMembers: []
+    });
   };
 
   useEffect(() => {
@@ -315,7 +305,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
     setStep(1);
     setErrors([]);
     if (type === 'new') {
-      generateNewId();
+      resetFormForNewApplicant();
     } else {
       setFormData({
         oscaId: '', lastName: '', firstName: '', middleName: '', extensionName: '',
@@ -360,9 +350,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   const validateStep = (currentStep: number): string[] => {
     const newErrors: string[] = [];
     if (currentStep === 1) {
-      if (!formData.oscaId.trim()) newErrors.push("OSCA ID is required. Please ensure the server is reachable.");
       if (applicantType === 'existing' && !formData.oscaId.trim()) newErrors.push("OSCA ID is required");
-      if (applicantType === 'existing' && formData.oscaId.length !== 4) newErrors.push("OSCA ID must be exactly 4 digits");
       if (!formData.lastName.trim()) newErrors.push("Last Name is required");
       if (!formData.firstName.trim()) newErrors.push("First Name is required");
       if (!formData.dateOfBirth) newErrors.push("Date of Birth is required");
@@ -450,7 +438,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
 
       onSuccess();
       const msg = isPublicUser 
-        ? `Application Submitted! Reference: ${formData.oscaId}.`
+        ? 'Application submitted! Your OSCA ID will be assigned upon approval.'
         : 'Application successfully processed!';
       notify(msg, "success");
     } catch (error: any) {
@@ -550,7 +538,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
           <button onClick={() => handleStart('existing')} className="group relative bg-white p-10 rounded-[2.5rem] border-2 border-slate-100 hover:border-emerald-600 transition-all text-left shadow-xl shadow-slate-100 hover:shadow-2xl hover:shadow-emerald-900/10">
             <div className="w-20 h-20 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform"><UserCheck size={40} /></div>
             <h3 className="text-2xl font-black text-slate-900 mb-3 group-hover:text-emerald-700 transition-colors">Existing Applicant</h3>
-            <p className="text-slate-500 font-medium leading-relaxed">For replacement or updates. Input the existing 4-digit OSCA ID.</p>
+            <p className="text-slate-500 font-medium leading-relaxed">For replacement or updates. Input the existing OSCA ID.</p>
           </button>
         </div>
 
@@ -705,18 +693,26 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
               
               {/* Fields ... (Rest of Step 1 form structure) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {(applicantType === 'existing' || isSeniorRole) ? (
                 <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 relative">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">OSCA ID Number</label>
                   <div className="flex items-center gap-3">
-                    <input type="text" readOnly={applicantType === 'new' || isSeniorRole} disabled={applicantType === 'new' || isSeniorRole} maxLength={4}
-                      className={`w-full text-4xl font-black tracking-widest bg-transparent border-none outline-none ${applicantType === 'new' || isSeniorRole ? 'text-blue-900 opacity-60' : 'text-emerald-700'}`}
-                      value={formData.oscaId} onChange={e => setFormData({...formData, oscaId: e.target.value.replace(/\D/g,'')})} />
+                    <input type="text" readOnly={isSeniorRole} disabled={isSeniorRole}
+                      className={`w-full text-4xl font-black tracking-widest bg-transparent border-none outline-none ${isSeniorRole ? 'text-blue-900 opacity-60' : 'text-emerald-700'}`}
+                      value={formData.oscaId} onChange={e => setFormData({...formData, oscaId: e.target.value})} />
                     {lookupLoading && (
                       <div className="w-6 h-6 border-2 border-blue-200 rounded-full border-t-blue-600 animate-spin"></div>
                     )}
                   </div>
-                  <p className="text-xs text-slate-400 font-bold mt-2">{isSeniorRole ? 'ID locked to your profile.' : applicantType === 'new' ? 'Sequentially generated from last record.' : 'Enter 4-digit ID (e.g., 0001)'}</p>
+                  <p className="text-xs text-slate-400 font-bold mt-2">{isSeniorRole ? 'ID locked to your profile.' : 'Enter the OSCA ID to look up an existing member.'}</p>
                 </div>
+                ) : (
+                <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 relative">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2 block">OSCA ID Number</label>
+                  <p className="text-lg font-black text-blue-900 mt-1">Assigned upon approval</p>
+                  <p className="text-xs text-blue-400 font-bold mt-2">The admin will assign an OSCA ID when this application is approved.</p>
+                </div>
+                )}
                 
                 <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 relative">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block flex items-center gap-2">

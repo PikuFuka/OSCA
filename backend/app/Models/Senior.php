@@ -33,7 +33,8 @@ class Senior extends Authenticatable
         'profile_photo_path',
         'id_config',
         'status',
-        'password'
+        'password',
+        'force_password_change'
     ];
 
     protected $hidden = [

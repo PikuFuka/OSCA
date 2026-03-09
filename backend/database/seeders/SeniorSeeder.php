@@ -37,8 +37,8 @@ class SeniorSeeder extends Seeder
 
         $sequence = 1;
         
-        // Get existing max ID to continue sequence if needed
-        $maxId = Senior::whereRaw('LENGTH(osca_id) = 4')->max('osca_id');
+        // Get existing max numeric ID to continue sequence if needed
+        $maxId = Senior::whereNotNull('osca_id')->max('osca_id');
         if ($maxId) {
             $sequence = (int)$maxId + 1;
         }
@@ -52,7 +52,7 @@ class SeniorSeeder extends Seeder
                 $age = \Carbon\Carbon::parse($dob)->age;
 
                 Senior::create([
-                    'osca_id' => str_pad($sequence++, 4, '0', STR_PAD_LEFT),
+                    'osca_id' => (string) $sequence++,
                     'first_name' => $firstName,
                     'middle_name' => $faker->lastName,
                     'last_name' => $lastName,

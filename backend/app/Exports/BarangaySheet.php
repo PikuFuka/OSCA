@@ -75,13 +75,19 @@ class BarangaySheet implements WithTitle, WithEvents
                 // Data
                 $baseQuery = Senior::query()->where('barangay', $this->barangay);
                 if ($this->year) {
-                    $baseQuery->whereYear('created_at', $this->year);
+                    $baseQuery->where(function ($q) {
+                        $q->whereYear('created_at', $this->year)
+                          ->orWhereNull('created_at');
+                    });
                 }
                 $registeredInPeriod = (clone $baseQuery)->get();
 
                 $populationQuery = Senior::query()->where('barangay', $this->barangay);
                 if ($this->year) {
-                    $populationQuery->where('created_at', '<=', Carbon::create($this->year, 12, 31, 23, 59, 59));
+                    $populationQuery->where(function ($q) {
+                        $q->where('created_at', '<=', Carbon::create($this->year, 12, 31, 23, 59, 59))
+                          ->orWhereNull('created_at');
+                    });
                 }
                 $population = $populationQuery->get();
 
@@ -184,7 +190,7 @@ class BarangaySheet implements WithTitle, WithEvents
         $sheet->setCellValue('A' . $row, 'Count');
         $total = 0;
         for ($m = 1; $m <= 12; $m++) {
-            $count = $seniors->filter(fn ($s) => (int) $s->created_at->format('m') === $m)->count();
+            $count = $seniors->filter(fn ($s) => $s->created_at && (int) $s->created_at->format('m') === $m)->count();
             $total += $count;
             $col = chr(ord('A') + $m); // B..M
             $sheet->setCellValue("{$col}{$row}", $count);
@@ -277,7 +283,7 @@ class BarangaySheet implements WithTitle, WithEvents
         $sheet->setCellValue("A{$row}", 'Count');
         $total = 0;
         for ($m = 1; $m <= 12; $m++) {
-            $count = $deceased->filter(fn ($s) => (int) $s->updated_at->format('m') === $m)->count();
+            $count = $deceased->filter(fn ($s) => $s->updated_at && (int) $s->updated_at->format('m') === $m)->count();
             $total += $count;
             $col = chr(ord('A') + $m); // B..M
             $sheet->setCellValue("{$col}{$row}", $count);

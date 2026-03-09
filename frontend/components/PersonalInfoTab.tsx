@@ -28,18 +28,26 @@ const PersonalInfoTab: React.FC<PersonalInfoTabProps> = ({ formData, setFormData
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {(applicantType === 'existing' || isSeniorRole) ? (
         <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">OSCA ID Number</label>
           <div className="flex items-center gap-3">
-            <input type="text" readOnly={applicantType === 'new' || isSeniorRole} disabled={applicantType === 'new' || isSeniorRole} maxLength={4}
-              className={`w-full text-4xl font-black tracking-widest bg-transparent border-none outline-none ${applicantType === 'new' || isSeniorRole ? 'text-blue-900 opacity-60' : 'text-emerald-700'}`}
-              value={formData.oscaId} onChange={e => setFormData({...formData, oscaId: e.target.value.replace(/\D/g,'')})} />
+            <input type="text" readOnly={isSeniorRole} disabled={isSeniorRole}
+              className={`w-full text-4xl font-black tracking-widest bg-transparent border-none outline-none ${isSeniorRole ? 'text-blue-900 opacity-60' : 'text-emerald-700'}`}
+              value={formData.oscaId} onChange={e => setFormData({...formData, oscaId: e.target.value})} />
             {lookupLoading && (
               <div className="w-6 h-6 border-2 border-blue-200 rounded-full border-t-blue-600 animate-spin"></div>
             )}
           </div>
-          <p className="text-xs text-slate-400 font-bold mt-2">{isSeniorRole ? 'ID locked to your profile.' : applicantType === 'new' ? 'Sequentially generated from last record.' : 'Enter 4-digit ID (e.g., 0001)'}</p>
+          <p className="text-xs text-slate-400 font-bold mt-2">{isSeniorRole ? 'ID locked to your profile.' : 'Enter the OSCA ID to look up an existing member.'}</p>
         </div>
+        ) : (
+        <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 relative">
+          <label className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2 block">OSCA ID Number</label>
+          <p className="text-lg font-black text-blue-900 mt-1">Assigned upon approval</p>
+          <p className="text-xs text-blue-400 font-bold mt-2">The admin will assign an OSCA ID when this application is approved.</p>
+        </div>
+        )}
         
         <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 relative">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block flex items-center gap-2">

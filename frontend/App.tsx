@@ -20,15 +20,21 @@ import { ViewType } from './types';
 import { 
   ArrowLeft, 
   Loader2,
-  Clock 
+  Clock,
+  KeyRound 
 } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
+import { authAPI } from './services/api';
 
 const App: React.FC = () => {
-  const { user: currentUser, loading, logout, isAuthenticated } = useAuth();
+  const { user: currentUser, loading, logout, isAuthenticated, checkAuth } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.DASHBOARD);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
+
+  // Force password change state
+  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+  const [pwLoading, setPwLoading] = useState(false);
   
   // Track auth globally for background API prevention
   useEffect(() => {
@@ -263,6 +269,99 @@ const App: React.FC = () => {
   }
 
   // Authenticated View
+
+  // Force password change modal for seniors with default password
+  if (currentUser?.forcePasswordChange) {
+    const handlePasswordChange = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (pwForm.newPw !== pwForm.confirm) {
+        notify('New passwords do not match.', 'error');
+        return;
+      }
+      if (pwForm.newPw.length < 8) {
+        notify('New password must be at least 8 characters.', 'error');
+        return;
+      }
+      setPwLoading(true);
+      try {
+        await authAPI.changePassword(pwForm.current, pwForm.newPw, pwForm.confirm);
+        notify('Password changed successfully!', 'success');
+        setPwForm({ current: '', newPw: '', confirm: '' });
+        await checkAuth();
+      } catch (error: any) {
+        notify(error.message || 'Failed to change password.', 'error');
+      } finally {
+        setPwLoading(false);
+      }
+    };
+
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 relative overflow-hidden">
+        <Toast message={toast.message} type={toast.type} isVisible={toast.show} onClose={closeToast} />
+        <div className="absolute inset-0 z-0 opacity-30">
+          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-200 rounded-full blur-[120px]"></div>
+          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-100 rounded-full blur-[120px]"></div>
+        </div>
+        <div className="relative z-10 w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 md:p-10 border border-slate-100">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
+              <KeyRound className="w-6 h-6 text-amber-600" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">Change Your Password</h2>
+              <p className="text-sm text-slate-500">You must change your default password before continuing.</p>
+            </div>
+          </div>
+
+          <form onSubmit={handlePasswordChange} className="space-y-4">
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-1 block">Current Password</label>
+              <input
+                type="password"
+                value={pwForm.current}
+                onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))}
+                placeholder="Enter your current password"
+                required
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-1 block">New Password</label>
+              <input
+                type="password"
+                value={pwForm.newPw}
+                onChange={e => setPwForm(p => ({ ...p, newPw: e.target.value }))}
+                placeholder="At least 8 characters"
+                required
+                minLength={8}
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-1 block">Confirm New Password</label>
+              <input
+                type="password"
+                value={pwForm.confirm}
+                onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))}
+                placeholder="Repeat new password"
+                required
+                minLength={8}
+                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700"
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={pwLoading}
+              className="w-full bg-blue-900 text-white py-3 rounded-xl font-bold text-lg hover:bg-blue-800 transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-2"
+            >
+              {pwLoading ? 'Changing...' : 'Change Password'}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900 relative">
       <Toast 

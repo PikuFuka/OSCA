@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle, XCircle, Search, Clock, FileText, User, Eye, MapPin, Calendar, CreditCard, X, Paperclip, Download, Loader2, UserPlus } from 'lucide-react';
+import { CheckCircle, XCircle, Search, Clock, FileText, User, Eye, MapPin, Calendar, CreditCard, X, Paperclip, Download, Loader2, UserPlus, IdCard } from 'lucide-react';
 import ConfirmModal, { ConfirmVariant } from './ConfirmModal';
 import { PendingRequest, ViewType } from '../types';
 import { requestsAPI, seniorsAPI } from '../services/api';
@@ -18,66 +18,101 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<PendingRequest | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    lastPage: 1,
+    perPage: 15,
+    total: 0,
+    from: 0,
+    to: 0,
+  });
+
+  const fetchRequests = async (page = currentPage) => {
+    setLoading(true);
+    try {
+      const response = await requestsAPI.getPending(page, pagination.perPage);
+      const requestsData = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : [];
+
+      const transformedRequests: PendingRequest[] = requestsData.map((r: any) => ({
+        id: r.id.toString(),
+        senior_id: r.senior_id,
+        name: r.name || r.senior?.full_name || `${r.senior?.first_name || ''} ${r.senior?.last_name || ''}${r.senior?.extension_name ? ' ' + r.senior.extension_name : ''}`.trim() || 'Unknown',
+        type: r.type || 'New Application',
+        date: r.date || new Date(r.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
+        status: r.status || 'Pending',
+        details: r.details ? {
+          ...r.details,
+          dateOfBirth: r.details.dateOfBirth || r.senior?.date_of_birth,
+          gender: r.details.gender || r.senior?.sex,
+          address: r.details.streetAddress || r.senior?.street_address || 'N/A',
+          documents: (r.details.documents || r.senior?.documents || []).map((d: any) => ({
+            id: d.id,
+            name: d.name || d.type || d.document_type || 'Document',
+            filename: d.filename || d.fileName || d.file_name || 'unknown.file',
+            type: d.type || (d.fileName?.endsWith('.pdf') ? 'pdf' : 'image')
+          }))
+        } : {
+          dateOfBirth: r.senior?.date_of_birth || '',
+          gender: r.senior?.sex || '',
+          age: r.senior?.age || 0,
+          address: r.senior?.street_address || 'N/A',
+          barangay: r.senior?.barangay || 'N/A',
+          rrn: r.senior?.rrn || '',
+          emergency: r.senior?.emergency_name || '',
+          profilePicture: r.senior?.profile_photo_path ? `${import.meta.env.VITE_API_URL || '/api'}/../storage/${r.senior.profile_photo_path}` : '',
+          documents: (r.senior?.documents || []).map((d: any) => ({
+            id: d.id,
+            name: d.document_type || 'Document',
+            filename: d.file_name || 'unknown.file',
+            type: d.mime_type?.includes('pdf') ? 'pdf' : 'image'
+          })),
+        },
+      }));
+
+      setRequests(transformedRequests);
+      setCurrentPage(response?.current_page ?? page);
+      setPagination({
+        currentPage: response?.current_page ?? page,
+        lastPage: response?.last_page ?? 1,
+        perPage: Number(response?.per_page ?? pagination.perPage),
+        total: response?.total ?? transformedRequests.length,
+        from: response?.from ?? (transformedRequests.length ? ((page - 1) * pagination.perPage) + 1 : 0),
+        to: response?.to ?? ((page - 1) * pagination.perPage) + transformedRequests.length,
+      });
+    } catch (error) {
+      const savedRequests = localStorage.getItem('pendingRequests');
+      if (savedRequests) {
+        const parsed = JSON.parse(savedRequests);
+        setRequests(parsed);
+        setPagination(prev => ({
+          ...prev,
+          currentPage: 1,
+          lastPage: 1,
+          total: parsed.length,
+          from: parsed.length ? 1 : 0,
+          to: parsed.length,
+        }));
+      } else {
+        setRequests([]);
+        setPagination(prev => ({
+          ...prev,
+          currentPage: 1,
+          lastPage: 1,
+          total: 0,
+          from: 0,
+          to: 0,
+        }));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
   
   // Real-time data fetching from Laravel API
   useEffect(() => {
-    const fetchRequests = async () => {
-      setLoading(true);
-      try {
-        const response = await requestsAPI.getPending();
-        const requestsData = response.data || response || [];
-        if (Array.isArray(requestsData)) {
-          const transformedRequests: PendingRequest[] = requestsData.map((r: any) => ({
-            id: r.id.toString(),
-            senior_id: r.senior_id,
-            name: r.name || r.senior?.full_name || `${r.senior?.first_name || ''} ${r.senior?.last_name || ''}${r.senior?.extension_name ? ' ' + r.senior.extension_name : ''}`.trim() || 'Unknown',
-            type: r.type || 'New Application',
-            date: r.date || new Date(r.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
-            status: r.status || 'Pending',
-            details: r.details ? {
-              ...r.details,
-              dateOfBirth: r.details.dateOfBirth || r.senior?.date_of_birth,
-              gender: r.details.gender || r.senior?.sex,
-              address: r.details.streetAddress || r.senior?.street_address || 'N/A',
-              documents: (r.details.documents || r.senior?.documents || []).map((d: any) => ({
-                id: d.id,
-                name: d.name || d.type || d.document_type || 'Document',
-                filename: d.filename || d.fileName || d.file_name || 'unknown.file',
-                type: d.type || (d.fileName?.endsWith('.pdf') ? 'pdf' : 'image')
-              }))
-            } : {
-              dateOfBirth: r.senior?.date_of_birth || '',
-              gender: r.senior?.sex || '',
-              age: r.senior?.age || 0,
-              address: r.senior?.street_address || 'N/A',
-              barangay: r.senior?.barangay || 'N/A',
-              rrn: r.senior?.rrn || '',
-              emergency: r.senior?.emergency_name || '',
-              profilePicture: r.senior?.profile_photo_path ? `${import.meta.env.VITE_API_URL || '/api'}/../storage/${r.senior.profile_photo_path}` : '',
-              documents: (r.senior?.documents || []).map((d: any) => ({
-                id: d.id,
-                name: d.document_type || 'Document',
-                filename: d.file_name || 'unknown.file',
-                type: d.mime_type?.includes('pdf') ? 'pdf' : 'image'
-              })),
-            },
-          }));
-          setRequests(transformedRequests);
-        }
-      } catch (error) {
-
-        // Fallback to localStorage
-        const savedRequests = localStorage.getItem('pendingRequests');
-        if (savedRequests) {
-          setRequests(JSON.parse(savedRequests));
-        }
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchRequests();
-  }, []);
+    fetchRequests(currentPage);
+  }, [currentPage]);
   
   // Confirmation state
   const [confirmState, setConfirmState] = useState<{
@@ -85,6 +120,9 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
     type: 'Approve' | 'Reject' | null;
     id: string | null;
   }>({ isOpen: false, type: null, id: null });
+
+  // OSCA ID input for approval
+  const [approvalOscaId, setApprovalOscaId] = useState('');
 
   // Filter requests based on search term
   const filteredRequests = requests.filter(req => 
@@ -94,6 +132,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
   );
 
   const triggerConfirm = (id: string, action: 'Approve' | 'Reject') => {
+    if (action === 'Approve') setApprovalOscaId('');
     setConfirmState({ isOpen: true, type: action, id });
   };
 
@@ -103,18 +142,20 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
       setIsProcessing(true);
       try {
         if (type === 'Approve') {
-          await requestsAPI.approve(parseInt(id));
+          await requestsAPI.approve(parseInt(id), approvalOscaId || undefined);
         } else {
           await requestsAPI.reject(parseInt(id));
         }
-        setRequests(requests.filter(r => r.id !== id));
+        const nextPage = requests.length === 1 && currentPage > 1 ? currentPage - 1 : currentPage;
+        setCurrentPage(nextPage);
+        await fetchRequests(nextPage);
         setSelectedRequest(null);
         notify(`Request ${type}d successfully.`, type === 'Approve' ? 'success' : 'info');
       } catch (error) {
-        setRequests(requests.filter(r => r.id !== id));
-        notify(`Request ${type}d successfully.`, type === 'Approve' ? 'success' : 'info');
+        notify(`Failed to ${type?.toLowerCase()} request.`, 'error');
       } finally {
         setIsProcessing(false);
+        setApprovalOscaId('');
         setConfirmState({ isOpen: false, type: null, id: null });
       }
     }
@@ -159,6 +200,9 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
+          </div>
+          <div className="text-xs font-black uppercase tracking-widest text-slate-400 text-center md:text-right">
+            {pagination.total > 0 ? `Showing ${pagination.from}-${pagination.to} of ${pagination.total}` : 'No records'}
           </div>
         </div>
 
@@ -268,6 +312,32 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
             </table>
           )}
         </div>
+
+        {!loading && pagination.lastPage > 1 && (
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-8 py-6 border-t border-slate-100 bg-slate-50/30">
+            <p className="text-sm font-semibold text-slate-500">
+              Page {pagination.currentPage} of {pagination.lastPage}
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={pagination.currentPage <= 1}
+                className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:border-blue-200 hover:text-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setCurrentPage(prev => Math.min(pagination.lastPage, prev + 1))}
+                disabled={pagination.currentPage >= pagination.lastPage}
+                className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:border-blue-200 hover:text-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Detail Modal */}
@@ -397,6 +467,26 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                     </div>
                 </div>
               )}
+
+              {/* OSCA ID Assignment (for new applications) */}
+              {selectedRequest.type === 'New Application' && (
+                <div className="pt-6 border-t border-slate-100">
+                  <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
+                    <IdCard size={16} /> Assign OSCA ID
+                  </h4>
+                  <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2 block">OSCA ID Number</label>
+                    <input
+                      type="text"
+                      placeholder="Enter OSCA ID to assign"
+                      className="w-full px-4 py-3 rounded-xl bg-white border border-blue-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all font-bold text-blue-900 text-lg tracking-wider"
+                      value={approvalOscaId}
+                      onChange={e => setApprovalOscaId(e.target.value)}
+                    />
+                    <p className="text-xs text-blue-400 font-bold mt-2">This ID will be assigned to the member upon approval.</p>
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="p-4 sm:p-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-3 bg-white z-10">
@@ -432,9 +522,23 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
         variant={confirmState.type === 'Approve' ? 'success' : 'danger'}
         confirmLabel={confirmState.type === 'Approve' ? 'Confirm Approval' : 'Confirm Rejection'}
         onConfirm={handleAction}
-        onCancel={() => setConfirmState({ isOpen: false, type: null, id: null })}
+        onCancel={() => { setApprovalOscaId(''); setConfirmState({ isOpen: false, type: null, id: null }); }}
         loading={isProcessing}
-      />
+      >
+        {confirmState.type === 'Approve' && (
+          <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
+            <label className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-2 block">Assign OSCA ID</label>
+            <input
+              type="text"
+              placeholder="Enter OSCA ID"
+              className="w-full px-4 py-3 rounded-xl bg-white border border-emerald-200 focus:ring-4 focus:ring-emerald-50 focus:border-emerald-500 transition-all font-bold text-emerald-900 text-lg tracking-wider"
+              value={approvalOscaId}
+              onChange={e => setApprovalOscaId(e.target.value)}
+            />
+            <p className="text-xs text-emerald-500 font-bold mt-2">Enter the OSCA ID to assign to this member.</p>
+          </div>
+        )}
+      </ConfirmModal>
     </div>
   );
 };

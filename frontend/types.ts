@@ -108,6 +108,7 @@ export interface CurrentUser {
   barangay: string;
   email?: string;
   idPhoto?: string | null;
+  forcePasswordChange?: boolean;
 }
 
 export interface PendingRequest {

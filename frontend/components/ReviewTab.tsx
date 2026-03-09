@@ -34,7 +34,7 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ formData, applicantType }) => {
       </div>
        <div className="bg-slate-50/50 rounded-3xl p-8 border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-10">
         <div className="space-y-6">
-          <ReviewField label="OSCA ID" value={formData.oscaId} highlight={true} />
+          <ReviewField label="OSCA ID" value={formData.oscaId || 'Assigned upon approval'} highlight={true} />
           <ReviewField label="Applicant Name" value={`${formData.lastName}, ${formData.firstName} ${formData.middleName}${formData.extensionName ? ' ' + formData.extensionName : ''}`.trim()} fullWidth={true} />
           <ReviewField label="Details" value={`${formData.sex} • ${formData.age} Years Old • Born ${formData.dateOfBirth}`} />
           <ReviewField label="Mother's Maiden Name" value={formData.mothersMaidenName} fullWidth={true} />

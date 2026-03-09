@@ -124,6 +124,16 @@ export const authAPI = {
     });
   },
 
+  changePassword: async (currentPassword: string, newPassword: string, newPasswordConfirmation: string) => {
+    const response = await api.post('/change-password', {
+      current_password: currentPassword,
+      new_password: newPassword,
+      new_password_confirmation: newPasswordConfirmation,
+    });
+    cache.delete('user-me');
+    return response.data;
+  },
+
   register: async (seniorData: any, files?: { [key: string]: File }) => {
     const formData = new FormData();
     Object.entries(seniorData).forEach(([key, value]) => {
@@ -330,8 +340,13 @@ export const seniorsAPI = {
 
 // Requests API
 export const requestsAPI = {
-  getPending: async () => {
-    const response = await api.get('/requests');
+  getPending: async (page = 1, perPage = 15) => {
+    const response = await api.get('/requests', {
+      params: {
+        page,
+        per_page: perPage,
+      },
+    });
     return response.data;
   },
 
@@ -357,8 +372,8 @@ export const requestsAPI = {
     return response.data;
   },
 
-  approve: async (id: number) => {
-    const response = await api.put(`/requests/${id}/approve`);
+  approve: async (id: number, oscaId?: string) => {
+    const response = await api.put(`/requests/${id}/approve`, oscaId ? { osca_id: oscaId } : {});
     return response.data;
   },
 
