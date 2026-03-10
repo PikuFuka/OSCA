@@ -186,6 +186,51 @@ class BackupController extends Controller
                 if ($c === '*' && $next === '/') { $inBlockComment = false; $i++; }
                 continue;
             }
+
+            if ($inSingle) {
+                $current .= $c;
+
+                if ($c === '\\' && $next !== '') {
+                    $current .= $next;
+                    $i++;
+                    continue;
+                }
+
+                if ($c === "'") {
+                    if ($next === "'") {
+                        $current .= $next;
+                        $i++;
+                        continue;
+                    }
+
+                    $inSingle = false;
+                }
+
+                continue;
+            }
+
+            if ($inDouble) {
+                $current .= $c;
+
+                if ($c === '\\' && $next !== '') {
+                    $current .= $next;
+                    $i++;
+                    continue;
+                }
+
+                if ($c === '"') {
+                    if ($next === '"') {
+                        $current .= $next;
+                        $i++;
+                        continue;
+                    }
+
+                    $inDouble = false;
+                }
+
+                continue;
+            }
+
             if (!$inSingle && !$inDouble && $c === '-' && $next === '-') {
                 $inLineComment = true; continue;
             }
@@ -193,9 +238,14 @@ class BackupController extends Controller
                 $inBlockComment = true; $i++; continue;
             }
             if ($c === "'" && !$inDouble) {
-                $inSingle = !$inSingle;
-            } elseif ($c === '"' && !$inSingle) {
-                $inDouble = !$inDouble;
+                $inSingle = true;
+                $current .= $c;
+                continue;
+            }
+            if ($c === '"' && !$inSingle) {
+                $inDouble = true;
+                $current .= $c;
+                continue;
             }
             if ($c === ';' && !$inSingle && !$inDouble) {
                 $statements[] = $current;
