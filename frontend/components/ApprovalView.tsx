@@ -28,8 +28,10 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
     to: 0,
   });
 
-  const fetchRequests = async (page = currentPage) => {
-    setLoading(true);
+  const fetchRequests = async (page = currentPage, background = false) => {
+    if (!background) {
+      setLoading(true);
+    }
     try {
       const response = await requestsAPI.getPending(page, pagination.perPage);
       const requestsData = Array.isArray(response?.data) ? response.data : Array.isArray(response) ? response : [];
@@ -105,7 +107,9 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
         }));
       }
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   };
   
@@ -113,6 +117,22 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
   useEffect(() => {
     fetchRequests(currentPage);
   }, [currentPage]);
+
+  useEffect(() => {
+    const refreshRequests = () => {
+      if (document.visibilityState === 'visible') {
+        fetchRequests(currentPage, true);
+      }
+    };
+
+    const intervalId = window.setInterval(refreshRequests, 10000);
+    window.addEventListener('focus', refreshRequests);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshRequests);
+    };
+  }, [currentPage, pagination.perPage]);
   
   // Confirmation state
   const [confirmState, setConfirmState] = useState<{
@@ -465,28 +485,6 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                             </div>
                         ))}
                     </div>
-                </div>
-              )}
-
-              {/* OSCA ID Assignment (for new applications) */}
-              {selectedRequest.type === 'New Application' && (
-                <div className="pt-6 border-t border-slate-100">
-                  <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
-                    <IdCard size={16} /> Assign OSCA ID
-                  </h4>
-                  <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100">
-                    <label htmlFor="approval-request-osca-id" className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2 block">OSCA ID Number</label>
-                    <input
-                      id="approval-request-osca-id"
-                      name="approvalOscaId"
-                      type="text"
-                      placeholder="Enter OSCA ID to assign"
-                      className="w-full px-4 py-3 rounded-xl bg-white border border-blue-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all font-bold text-blue-900 text-lg tracking-wider"
-                      value={approvalOscaId}
-                      onChange={e => setApprovalOscaId(e.target.value)}
-                    />
-                    <p className="text-xs text-blue-400 font-bold mt-2">This ID will be assigned to the member upon approval.</p>
-                  </div>
                 </div>
               )}
             </div>

@@ -33,6 +33,18 @@ interface FamilyMember {
   income: string;
 }
 
+type UppercaseFormField =
+  | 'oscaId'
+  | 'lastName'
+  | 'firstName'
+  | 'middleName'
+  | 'placeOfBirth'
+  | 'streetAddress'
+  | 'rrn'
+  | 'nationalId'
+  | 'mothersMaidenName'
+  | 'emergencyName';
+
 const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, notify }) => {
   const [mode, setMode] = useState<ApplicationMode>('selection');
   const [applicantType, setApplicantType] = useState<ApplicantType>('new');
@@ -52,12 +64,15 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   const [recentSeniors, setRecentSeniors] = useState<any[]>([]);
   const [loadingRecent, setLoadingRecent] = useState(false);
 
+  const isPublicUser = !currentUser;
+  const isSeniorRole = currentUser?.role === 'Senior';
+
   const fetchRecentSeniors = async () => {
     if (isPublicUser) return;
     setLoadingRecent(true);
     try {
       // Get most recent pending or newly created seniors
-      const response = await seniorsAPI.getAll({ per_page: 5 });
+      const response = await seniorsAPI.getAll({ per_page: 5, fresh: true });
       const seniors = response.data || response || [];
       // Sort by joinedDate desc since the API might not support it yet
       const sorted = [...seniors].sort((a, b) => 
@@ -75,7 +90,27 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
     if (mode === 'selection' && !isPublicUser) {
       fetchRecentSeniors();
     }
-  }, [mode]);
+  }, [mode, isPublicUser]);
+
+  useEffect(() => {
+    if (mode !== 'selection' || isPublicUser) {
+      return;
+    }
+
+    const refreshRecentSeniors = () => {
+      if (document.visibilityState === 'visible') {
+        fetchRecentSeniors();
+      }
+    };
+
+    const intervalId = window.setInterval(refreshRecentSeniors, 15000);
+    window.addEventListener('focus', refreshRecentSeniors);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshRecentSeniors);
+    };
+  }, [mode, isPublicUser]);
   
   const [formData, setFormData] = useState({
     oscaId: '',
@@ -124,12 +159,18 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
     name: '', relationship: '', age: '', civilStatus: '', education: '', occupation: '', income: ''
   });
 
-  const isPublicUser = !currentUser;
-  const isSeniorRole = currentUser?.role === 'Senior';
-
   const passwordHasMin = formData.password.length >= 8;
   const passwordHasNumber = /[0-9]/.test(formData.password);
   const passwordHasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password);
+
+  const normalizeUppercaseValue = (value: string) => value.toUpperCase();
+
+  const setUppercaseFormField = (field: UppercaseFormField, value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: normalizeUppercaseValue(value)
+    }));
+  };
 
   // Initialization Logic
   useEffect(() => {
@@ -227,22 +268,22 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   const populateFormDataFromApi = (data: any) => {
     setFormData(prev => ({
       ...prev,
-      firstName: data.firstName || data.first_name || '',
-      middleName: data.middleName || data.middle_name || '',
-      lastName: data.lastName || data.last_name || '',
+      firstName: normalizeUppercaseValue(data.firstName || data.first_name || ''),
+      middleName: normalizeUppercaseValue(data.middleName || data.middle_name || ''),
+      lastName: normalizeUppercaseValue(data.lastName || data.last_name || ''),
       extensionName: data.extensionName || data.extension_name || '',
       barangay: data.barangay || prev.barangay,
       dateOfBirth: data.dateOfBirth || data.date_of_birth || '',
       age: data.age?.toString() || '',
       sex: data.sex || data.gender || 'Male',
-      placeOfBirth: data.placeOfBirth || data.place_of_birth || '',
-      streetAddress: data.streetAddress || data.street_address || '',
+      placeOfBirth: normalizeUppercaseValue(data.placeOfBirth || data.place_of_birth || ''),
+      streetAddress: normalizeUppercaseValue(data.streetAddress || data.street_address || ''),
       contactNumber: data.contactNumber || data.contact_number || '',
       pensionStatus: data.pensionStatus || data.pension_status || 'Indigent',
-      rrn: data.rrn || '',
-      nationalId: data.nationalId || data.national_id || '',
-      mothersMaidenName: data.mothersMaidenName || data.mothers_maiden_name || '',
-      emergencyName: data.emergencyName || data.emergency_name || '',
+      rrn: normalizeUppercaseValue(data.rrn || ''),
+      nationalId: normalizeUppercaseValue(data.nationalId || data.national_id || ''),
+      mothersMaidenName: normalizeUppercaseValue(data.mothersMaidenName || data.mothers_maiden_name || ''),
+      emergencyName: normalizeUppercaseValue(data.emergencyName || data.emergency_name || ''),
       emergencyContact: data.emergencyContact || data.emergency_contact || '',
       familyMembers: data.familyMembers || []
     }));
@@ -324,9 +365,17 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
       notify("Name and Relationship are required for family members.", "warning");
       return;
     }
+
+    const normalizedMember = {
+      ...tempMember,
+      name: normalizeUppercaseValue(tempMember.name),
+      education: normalizeUppercaseValue(tempMember.education),
+      occupation: normalizeUppercaseValue(tempMember.occupation)
+    };
+
     setFormData(prev => ({
       ...prev,
-      familyMembers: [...prev.familyMembers, tempMember]
+      familyMembers: [...prev.familyMembers, normalizedMember]
     }));
     setTempMember({ name: '', relationship: '', age: '', civilStatus: '', education: '', occupation: '', income: '' });
   };
@@ -699,7 +748,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                   <div className="flex items-center gap-3">
                     <input type="text" readOnly={isSeniorRole} disabled={isSeniorRole}
                       className={`w-full text-4xl font-black tracking-widest bg-transparent border-none outline-none ${isSeniorRole ? 'text-blue-900 opacity-60' : 'text-emerald-700'}`}
-                      value={formData.oscaId} onChange={e => setFormData({...formData, oscaId: e.target.value})} />
+                      value={formData.oscaId} onChange={e => setUppercaseFormField('oscaId', e.target.value)} />
                     {lookupLoading && (
                       <div className="w-6 h-6 border-2 border-blue-200 rounded-full border-t-blue-600 animate-spin"></div>
                     )}
@@ -739,12 +788,12 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Last Name *</label>
                   <input type="text" className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700"
-                    value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} />
+                    value={formData.lastName} onChange={e => setUppercaseFormField('lastName', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">First Name *</label>
                   <input type="text" className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700"
-                    value={formData.firstName} onChange={e => setFormData({...formData, firstName: e.target.value})} />
+                    value={formData.firstName} onChange={e => setUppercaseFormField('firstName', e.target.value)} />
                 </div>
               </div>
               {/* ... Other Step 1 inputs ... */}
@@ -752,7 +801,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Middle Name</label>
                   <input type="text" className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700"
-                    value={formData.middleName} onChange={e => setFormData({...formData, middleName: e.target.value})} />
+                    value={formData.middleName} onChange={e => setUppercaseFormField('middleName', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Extension (Jr, Sr, etc.)</label>
@@ -792,7 +841,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Place of Birth</label>
                   <input type="text" className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-slate-700"
-                    value={formData.placeOfBirth} onChange={e => setFormData({...formData, placeOfBirth: e.target.value})} />
+                    value={formData.placeOfBirth} onChange={e => setUppercaseFormField('placeOfBirth', e.target.value)} />
                 </div>
               </div>
             </div>
@@ -808,7 +857,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Street Address *</label>
                 <input type="text" placeholder="House No., Street Name" className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-slate-700"
-                  value={formData.streetAddress} onChange={e => setFormData({...formData, streetAddress: e.target.value})} />
+                  value={formData.streetAddress} onChange={e => setUppercaseFormField('streetAddress', e.target.value)} />
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
@@ -866,7 +915,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                         <div className="md:col-span-4 space-y-2">
                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Full Name</label>
                            <input className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 outline-none transition-all placeholder:text-slate-300"
-                              placeholder="e.g. Juan Dela Cruz" value={tempMember.name} onChange={e => setTempMember({...tempMember, name: e.target.value})} />
+                          placeholder="e.g. Juan Dela Cruz" value={tempMember.name} onChange={e => setTempMember({...tempMember, name: normalizeUppercaseValue(e.target.value)})} />
                         </div>
                         <div className="md:col-span-3 space-y-2">
                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Relationship</label>
@@ -901,7 +950,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                         <div className="md:col-span-4 space-y-2">
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Occupation</label>
                             <input className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 outline-none transition-all placeholder:text-slate-300"
-                              placeholder="Work / Job" value={tempMember.occupation} onChange={e => setTempMember({...tempMember, occupation: e.target.value})} />
+                          placeholder="Work / Job" value={tempMember.occupation} onChange={e => setTempMember({...tempMember, occupation: normalizeUppercaseValue(e.target.value)})} />
                         </div>
                         <div className="md:col-span-4 space-y-2">
                             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Monthly Income</label>
@@ -974,18 +1023,18 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">RRN No. (Optional)</label>
                   <input type="text" className="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 outline-none"
-                    value={formData.rrn} onChange={e => setFormData({...formData, rrn: e.target.value})} />
+                    value={formData.rrn} onChange={e => setUppercaseFormField('rrn', e.target.value)} />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">National ID (Optional)</label>
                   <input type="text" className="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 outline-none"
-                    value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value})} />
+                    value={formData.nationalId} onChange={e => setUppercaseFormField('nationalId', e.target.value)} />
                 </div>
               </div>
               <div className="space-y-2">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Mother's Maiden Name</label>
                   <input type="text" className="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 outline-none"
-                    value={formData.mothersMaidenName} onChange={e => setFormData({...formData, mothersMaidenName: e.target.value})} />
+                    value={formData.mothersMaidenName} onChange={e => setUppercaseFormField('mothersMaidenName', e.target.value)} />
               </div>
               
               {/* Password Section - Only for New Applicants */}
@@ -1072,7 +1121,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                    <input type="text" placeholder="Contact Name" className="w-full px-6 py-4 rounded-2xl bg-rose-50/30 border border-rose-100 font-bold text-slate-700 outline-none focus:border-rose-300"
-                    value={formData.emergencyName} onChange={e => setFormData({...formData, emergencyName: e.target.value})} />
+                    value={formData.emergencyName} onChange={e => setUppercaseFormField('emergencyName', e.target.value)} />
                   <input
                     type="tel"
                     placeholder="Contact Number"

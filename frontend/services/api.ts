@@ -65,9 +65,13 @@ const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 /**
  * Cache helper to wrap API calls with simple caching
  */
-const withCache = async (key: string, fetcher: () => Promise<any>) => {
+const withCache = async (
+  key: string,
+  fetcher: () => Promise<any>,
+  options?: { forceRefresh?: boolean }
+) => {
   const cached = cache.get(key);
-  if (cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
+  if (!options?.forceRefresh && cached && (Date.now() - cached.timestamp < CACHE_DURATION)) {
     // Return from cache immediately, but we could also background refresh
     return cached.data;
   }
@@ -165,11 +169,15 @@ export const seniorsAPI = {
   clearCache: () => cache.clear(),
 
   getAll: async (params?: any) => {
-    const key = `seniors-all-${JSON.stringify(params || {})}`;
+    const requestParams = { ...(params || {}) };
+    const forceRefresh = Boolean(requestParams.fresh);
+    delete requestParams.fresh;
+
+    const key = `seniors-all-${JSON.stringify(requestParams)}`;
     return withCache(key, async () => {
-      const response = await api.get('/seniors', { params } as any);
+      const response = await api.get('/seniors', { params: requestParams } as any);
       return response.data;
-    });
+    }, { forceRefresh });
   },
 
   getById: async (id: number | string) => {
@@ -306,7 +314,7 @@ export const seniorsAPI = {
     return response.data;
   },
 
-  getStatistics: async (barangay?: string, year?: string | number) => {
+  getStatistics: async (barangay?: string, year?: string | number, options?: { fresh?: boolean }) => {
     const key = `stats-${barangay}-${year}`;
     return withCache(key, async () => {
       const params: any = {};
@@ -314,7 +322,7 @@ export const seniorsAPI = {
       if (year) params.year = year;
       const response = await api.get('/seniors/statistics', { params });
       return response.data;
-    });
+    }, { forceRefresh: Boolean(options?.fresh) });
   },
 
   viewDocument: async (seniorId: string | number, documentId: string | number) => {
@@ -369,16 +377,19 @@ export const requestsAPI = {
     const response = await api.post('/requests/update', fd, {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
+    cache.clear();
     return response.data;
   },
 
   approve: async (id: number, oscaId?: string) => {
     const response = await api.put(`/requests/${id}/approve`, oscaId ? { osca_id: oscaId } : {});
+    cache.clear();
     return response.data;
   },
 
   reject: async (id: number, reason?: string) => {
     const response = await api.put(`/requests/${id}/reject`, { reason });
+    cache.clear();
     return response.data;
   },
 };

@@ -54,7 +54,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
     if (!stats) setInitialLoading(true);
     else setRefreshing(true);
     try {
-      const data = await seniorsAPI.getStatistics(selectedBarangay, selectedYear);
+      const data = await seniorsAPI.getStatistics(selectedBarangay, selectedYear, { fresh: true });
       if (!isCancelled()) setStats(data);
     } catch (err: any) {
       if (!isCancelled()) {
@@ -75,6 +75,25 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
     fetchStats(() => cancelled);
     return () => { cancelled = true; };
   }, [selectedBarangay, selectedYear]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const refreshStats = () => {
+      if (document.visibilityState === 'visible') {
+        fetchStats(() => cancelled);
+      }
+    };
+
+    const intervalId = window.setInterval(refreshStats, 15000);
+    window.addEventListener('focus', refreshStats);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshStats);
+    };
+  }, [selectedBarangay, selectedYear, stats]);
 
 
   const dashboardData = useMemo(() => {

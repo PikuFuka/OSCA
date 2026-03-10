@@ -36,65 +36,81 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [page, setPage] = useState(1);
   const itemsPerPage = 8;
+
+  const fetchAccounts = async (background = false) => {
+    if (!background) {
+      setLoading(true);
+    }
+    setError(null);
+    try {
+      const [usersResponse, seniorsResponse] = await Promise.all([
+        usersAPI.getAll(),
+        seniorsAPI.getAll({ per_page: -1, fresh: true })
+      ]);
+
+      const usersData = Array.isArray(usersResponse)
+        ? usersResponse
+        : (usersResponse?.data || []);
+      const seniorsData = Array.isArray(seniorsResponse)
+        ? seniorsResponse
+        : (seniorsResponse?.data || []);
+
+      const unifiedAccounts: UnifiedAccount[] = [
+        ...(Array.isArray(usersData) ? usersData : []).filter(u => u && typeof u === 'object').map((u: any) => ({
+          id: `user-${u.id || Math.random()}`,
+          name: String(u.name || 'Unknown'),
+          role: String(u.role || 'Staff'),
+          barangay: String(u.barangay_assignment || u.barangay || 'All'),
+          status: String(u.status || 'Active'),
+          email: String(u.email || ''),
+          type: 'User' as const,
+          originalData: u
+        })),
+        ...(Array.isArray(seniorsData) ? seniorsData : []).filter(s => s && typeof s === 'object').map((s: any) => ({
+          id: `senior-${s.osca_id || s.id || Math.random()}`,
+          name: String(s.name || `${s.firstName || s.first_name || ''} ${s.lastName || s.last_name || ''}`.trim() || 'Unknown'),
+          role: 'Senior Citizen',
+          barangay: String(s.barangay || 'Unknown'),
+          status: (s.status === 'approved' || s.status === 'Active') ? 'Active' : String(s.status || 'Pending'),
+          email: String(s.email || `senior-${s.osca_id || s.id}@osca.ph`),
+          type: 'Senior' as const,
+          originalData: s
+        }))
+      ];
+
+      setAccounts(unifiedAccounts);
+    } catch (err: any) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      setError(errorMessage);
+      if (!background) {
+        notify("Could not sync with database. Please check your connection.", "error");
+      }
+    } finally {
+      if (!background) {
+        setLoading(false);
+      }
+    }
+  };
   
   // Fetch accounts from API
   useEffect(() => {
-    let isMounted = true;
-    const fetchAccounts = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const [usersResponse, seniorsResponse] = await Promise.all([
-          usersAPI.getAll(),
-          seniorsAPI.getAll({ per_page: -1 })
-        ]);
-        
-        if (!isMounted) return;
+    fetchAccounts();
+  }, []);
 
-        // ... rest of logic
-        const usersData = Array.isArray(usersResponse) 
-          ? usersResponse 
-          : (usersResponse?.data || []);
-        const seniorsData = Array.isArray(seniorsResponse) 
-          ? seniorsResponse 
-          : (seniorsResponse?.data || []);
-        
-        const unifiedAccounts: UnifiedAccount[] = [
-          ...(Array.isArray(usersData) ? usersData : []).filter(u => u && typeof u === 'object').map((u: any) => ({
-            id: `user-${u.id || Math.random()}`,
-            name: String(u.name || 'Unknown'),
-            role: String(u.role || 'Staff'),
-            barangay: String(u.barangay_assignment || u.barangay || 'All'),
-            status: String(u.status || 'Active'),
-            email: String(u.email || ''),
-            type: 'User' as const,
-            originalData: u
-          })),
-          ...(Array.isArray(seniorsData) ? seniorsData : []).filter(s => s && typeof s === 'object').map((s: any) => ({
-            id: `senior-${s.osca_id || s.id || Math.random()}`,
-            name: String(s.name || `${s.firstName || s.first_name || ''} ${s.lastName || s.last_name || ''}`.trim() || 'Unknown'),
-            role: 'Senior Citizen',
-            barangay: String(s.barangay || 'Unknown'),
-            status: (s.status === 'approved' || s.status === 'Active') ? 'Active' : String(s.status || 'Pending'),
-            email: String(s.email || `senior-${s.osca_id || s.id}@osca.ph`),
-            type: 'Senior' as const,
-            originalData: s
-          }))
-        ];
-        
-        setAccounts(unifiedAccounts);
-      } catch (err: any) {
-        if (!isMounted) return;
-        const errorMessage = err instanceof Error ? err.message : String(err);
-        setError(errorMessage);
-        notify("Could not sync with database. Please check your connection.", "error");
-      } finally {
-        if (isMounted) setLoading(false);
+  useEffect(() => {
+    const refreshAccounts = () => {
+      if (document.visibilityState === 'visible') {
+        fetchAccounts(true);
       }
     };
 
-    fetchAccounts();
-    return () => { isMounted = false; };
+    const intervalId = window.setInterval(refreshAccounts, 30000);
+    window.addEventListener('focus', refreshAccounts);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshAccounts);
+    };
   }, []);
   
   // Confirmation state

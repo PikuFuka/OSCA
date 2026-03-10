@@ -127,13 +127,16 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
   const [selectedSenior, setSelectedSenior] = useState<SeniorCitizen | null>(null);
 
   // Fetch seniors from API
-  const fetchSeniors = async () => {
-    setLoading(true);
+  const fetchSeniors = async (background = false) => {
+    if (!background) {
+      setLoading(true);
+    }
     try {
       const response = await seniorsAPI.getAll({
         search: debouncedSearch,
         barangay: filterBarangay === 'All Barangays' ? undefined : filterBarangay,
         page: page,
+        fresh: true,
       });
       
       if (response && response.data) {
@@ -147,14 +150,34 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
         setTotalCount(Array.isArray(response) ? response.length : 0);
       }
     } catch (error: any) {
-      notify('Failed to load member records from the server.', 'error');
+      if (!background) {
+        notify('Failed to load member records from the server.', 'error');
+      }
     } finally {
-      setLoading(false);
+      if (!background) {
+        setLoading(false);
+      }
     }
   };
 
   useEffect(() => {
     fetchSeniors();
+  }, [debouncedSearch, filterBarangay, page]);
+
+  useEffect(() => {
+    const refreshSeniors = () => {
+      if (document.visibilityState === 'visible') {
+        fetchSeniors(true);
+      }
+    };
+
+    const intervalId = window.setInterval(refreshSeniors, 10000);
+    window.addEventListener('focus', refreshSeniors);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener('focus', refreshSeniors);
+    };
   }, [debouncedSearch, filterBarangay, page]);
 
   const [idModalOpen, setIdModalOpen] = useState(false);
@@ -378,7 +401,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
             target_id: idGenerationSenior.id,
             details: {
               osca_id: idGenerationSenior.id,
-              name: idGenerationSenior.name
+              name: formatIdDisplayName(idGenerationSenior)
             }
           });
         } catch (err) {
@@ -428,11 +451,13 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
     const lastName = senior.lastName?.trim() || '';
     const firstName = senior.firstName?.trim() || '';
     const middleName = senior.middleName?.trim() || '';
+    const extensionName = senior.extensionName?.trim() || '';
 
     const orderedName = [
       lastName ? `${lastName},` : '',
       firstName,
       middleName,
+      extensionName,
     ].filter(Boolean).join(' ');
 
     return orderedName || senior.name;
@@ -676,7 +701,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                         </div>
                         
                         <div className="absolute inset-0 z-20">
-                          <StaticLabel text={idGenerationSenior.name} config={textConfig.name} className="font-black text-slate-900 uppercase" />
+                          <StaticLabel text={formatIdDisplayName(idGenerationSenior)} config={textConfig.name} className="font-black text-slate-900 uppercase" />
                           <StaticLabel text={`Brgy. ${idGenerationSenior.barangay}`} config={textConfig.barangay} className="font-black text-slate-900 uppercase" />
                           <StaticLabel text="Pagsanjan, Laguna" config={textConfig.city} className="font-black text-slate-900 uppercase" />
                           <StaticLabel text={String(idGenerationSenior.age)} config={textConfig.age} className="font-black text-slate-900" />
@@ -966,7 +991,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                 )}
                 <div className="flex-1 space-y-4 text-center md:text-left w-full">
                   <div>
-                    <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-2">{selectedSenior.name}</h2>
+                    <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-2">{formatIdDisplayName(selectedSenior)}</h2>
                     <div className="flex flex-wrap gap-2 justify-center md:justify-start">
                       <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wide ${
                         selectedSenior.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
@@ -1059,7 +1084,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                       
                       <div className="space-y-2 text-center lg:text-left">
                         <h2 className="text-3xl font-black text-slate-900 leading-none">
-                          {selectedSeniorForView.firstName} {selectedSeniorForView.lastName}{selectedSeniorForView.extensionName ? ' ' + selectedSeniorForView.extensionName : ''}
+                          {formatIdDisplayName(selectedSeniorForView)}
                         </h2>
                         <p className="text-blue-600 font-black text-sm uppercase tracking-widest">{selectedSeniorForView.oscaId}</p>
                       </div>

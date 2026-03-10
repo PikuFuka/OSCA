@@ -44,8 +44,7 @@ class SeniorController extends Controller
         $perPage = $request->get('per_page', 15);
         
         if ($perPage == -1) {
-            // Safety cap - don't allow literal unlimited, but enough for most LGU lists
-            $seniors = $query->orderBy('last_name')->limit(1000)->get();
+            $seniors = $query->orderBy('last_name')->get();
             $transformed = $seniors->map(function($senior) {
                 return $this->transformSenior($senior);
             });
