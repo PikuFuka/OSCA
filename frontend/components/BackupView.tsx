@@ -1,22 +1,29 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, Upload, AlertTriangle, CheckCircle2, RefreshCw, FileDown, FileUp, ShieldCheck, LogOut, Calendar, Clock } from 'lucide-react';
+import { Download, Upload, AlertTriangle, CheckCircle2, RefreshCw, FileDown, FileUp, ShieldCheck, LogOut, Calendar, Archive as ArchiveIcon } from 'lucide-react';
 import { backupAPI } from '../services/api';
 import ConfirmModal from './ConfirmModal';
+import ArchiveView from './ArchiveView';
 
 interface BackupViewProps {
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+    initialSection?: 'backup' | 'archive';
 }
 
-const BackupView: React.FC<BackupViewProps> = ({ notify }) => {
+const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backup' }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [confirmImport, setConfirmImport] = useState(false);
   const [isRefreshRequired, setIsRefreshRequired] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [activeSection, setActiveSection] = useState<'backup' | 'archive'>(initialSection);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setActiveSection(initialSection);
+  }, [initialSection]);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -77,6 +84,38 @@ const BackupView: React.FC<BackupViewProps> = ({ notify }) => {
         <h2 className="text-3xl font-black text-slate-900 tracking-tight">Backup & Recovery</h2>
         <p className="text-slate-500 font-medium mt-1">Export or restore the OSCA database. Always download a backup before importing.</p>
       </div>
+
+      <div className="flex flex-col gap-4 rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Protected Tools</p>
+          <p className="mt-1 text-sm font-medium text-slate-500">Archive access is nested here to reduce accidental record actions.</p>
+        </div>
+        <div className="flex items-center gap-2 rounded-2xl bg-slate-100 p-1">
+          <button
+            onClick={() => setActiveSection('backup')}
+            className={`px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeSection === 'backup' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            Backup Tools
+          </button>
+          <button
+            onClick={() => setActiveSection('archive')}
+            className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all ${activeSection === 'archive' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+          >
+            <ArchiveIcon size={16} /> Archive Records
+          </button>
+        </div>
+      </div>
+
+      {activeSection === 'archive' ? (
+        <>
+          <div className="rounded-[2rem] border border-amber-100 bg-amber-50/80 p-5">
+            <p className="text-[10px] font-black uppercase tracking-widest text-amber-700">Restricted Area</p>
+            <p className="mt-1 text-sm font-medium text-amber-900">Restore and deceased-status correction tools are kept under Backup to lessen mistakes.</p>
+          </div>
+          <ArchiveView notify={notify} embedded={true} />
+        </>
+      ) : (
+        <>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Export Card */}
@@ -197,6 +236,9 @@ const BackupView: React.FC<BackupViewProps> = ({ notify }) => {
         <ShieldCheck size={18} className="text-slate-400 shrink-0" />
         <p className="text-xs text-slate-500 font-bold">All backup operations are logged in the Activity History for audit purposes.</p>
       </div>
+
+        </>
+      )}
 
       <ConfirmModal
         isOpen={confirmImport}

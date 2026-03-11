@@ -7,9 +7,10 @@ import ConfirmModal from './ConfirmModal';
 
 interface ArchiveViewProps {
   notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+  embedded?: boolean;
 }
 
-const ArchiveView: React.FC<ArchiveViewProps> = ({ notify }) => {
+const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) => {
   const [deletedSeniors, setDeletedSeniors] = useState<SeniorCitizen[]>([]);
   const [deceasedSeniors, setDeceasedSeniors] = useState<SeniorCitizen[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,12 +81,14 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify }) => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Archive</h2>
-          <p className="text-slate-500 font-medium">Manage deleted and deceased member records.</p>
+      {!embedded && (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Archive</h2>
+            <p className="text-slate-500 font-medium">Manage deleted and deceased member records.</p>
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
         <div className="p-6 border-b border-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50/30">

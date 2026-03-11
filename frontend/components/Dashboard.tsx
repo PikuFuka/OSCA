@@ -76,25 +76,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
     return () => { cancelled = true; };
   }, [selectedBarangay, selectedYear]);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const refreshStats = () => {
-      if (document.visibilityState === 'visible') {
-        fetchStats(() => cancelled);
-      }
-    };
-
-    const intervalId = window.setInterval(refreshStats, 15000);
-    window.addEventListener('focus', refreshStats);
-
-    return () => {
-      cancelled = true;
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', refreshStats);
-    };
-  }, [selectedBarangay, selectedYear, stats]);
-
 
   const dashboardData = useMemo(() => {
     if (!stats) return null;

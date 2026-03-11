@@ -96,22 +96,6 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   useEffect(() => {
     fetchAccounts();
   }, []);
-
-  useEffect(() => {
-    const refreshAccounts = () => {
-      if (document.visibilityState === 'visible') {
-        fetchAccounts(true);
-      }
-    };
-
-    const intervalId = window.setInterval(refreshAccounts, 30000);
-    window.addEventListener('focus', refreshAccounts);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', refreshAccounts);
-    };
-  }, []);
   
   // Confirmation state
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);

@@ -91,26 +91,6 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
       fetchRecentSeniors();
     }
   }, [mode, isPublicUser]);
-
-  useEffect(() => {
-    if (mode !== 'selection' || isPublicUser) {
-      return;
-    }
-
-    const refreshRecentSeniors = () => {
-      if (document.visibilityState === 'visible') {
-        fetchRecentSeniors();
-      }
-    };
-
-    const intervalId = window.setInterval(refreshRecentSeniors, 15000);
-    window.addEventListener('focus', refreshRecentSeniors);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', refreshRecentSeniors);
-    };
-  }, [mode, isPublicUser]);
   
   const [formData, setFormData] = useState({
     oscaId: '',

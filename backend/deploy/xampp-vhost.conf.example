@@ -1,0 +1,13 @@
+<VirtualHost *:80>
+    ServerName osca.local
+    DocumentRoot "C:/path/to/OSCA/backend/public"
+
+    <Directory "C:/path/to/OSCA/backend/public">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+
+    ErrorLog "logs/osca-error.log"
+    CustomLog "logs/osca-access.log" common
+</VirtualHost>

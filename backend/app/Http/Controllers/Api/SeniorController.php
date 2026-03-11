@@ -9,11 +9,51 @@ use App\Models\SeniorDocument;
 use App\Models\Request as SeniorRequest;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class SeniorController extends Controller
 {
+    private function applySeniorSearch($query, string $search): void
+    {
+        $search = trim($search);
+        if ($search === '') {
+            return;
+        }
+
+        $terms = preg_split('/\s+/', $search) ?: [];
+
+        $query->where(function ($q) use ($search, $terms) {
+            $q->where('osca_id', 'like', "%{$search}%")
+                ->orWhere(function ($nameQuery) use ($terms) {
+                    foreach ($terms as $term) {
+                        $nameQuery->where(function ($termQuery) use ($term) {
+                            $termQuery->where('first_name', 'like', "%{$term}%")
+                                ->orWhere('middle_name', 'like', "%{$term}%")
+                                ->orWhere('last_name', 'like', "%{$term}%")
+                                ->orWhere('extension_name', 'like', "%{$term}%");
+                        });
+                    }
+                });
+        });
+    }
+
+    private function findSeniorByIdentifier($identifier): Senior
+    {
+        $senior = Senior::where('osca_id', (string) $identifier)->first();
+
+        if (!$senior && is_numeric($identifier)) {
+            $senior = Senior::find($identifier);
+        }
+
+        if (!$senior) {
+            abort(404, 'Senior not found.');
+        }
+
+        return $senior;
+    }
+
     /**
      * Get all seniors with optional filtering
      */
@@ -21,14 +61,13 @@ class SeniorController extends Controller
     {
         $query = Senior::withCount('familyMembers');
 
+        if (!$request->has('status')) {
+            $query->whereIn('status', ['Active', 'approved', 'active']);
+        }
+
         // Search by name or OSCA ID
         if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('osca_id', 'like', "%{$search}%")
-                  ->orWhere('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%");
-            });
+            $this->applySeniorSearch($query, (string) $request->search);
         }
 
         // Filter by barangay
@@ -101,12 +140,7 @@ class SeniorController extends Controller
         $query = Senior::onlyTrashed();
 
         if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('osca_id', 'like', "%{$search}%")
-                  ->orWhere('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%");
-            });
+            $this->applySeniorSearch($query, (string) $request->search);
         }
 
         $seniors = $query->orderBy('deleted_at', 'desc')->get();
@@ -127,12 +161,7 @@ class SeniorController extends Controller
         $query = Senior::where('status', 'Deceased');
 
         if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('osca_id', 'like', "%{$search}%")
-                  ->orWhere('first_name', 'like', "%{$search}%")
-                  ->orWhere('last_name', 'like', "%{$search}%");
-            });
+            $this->applySeniorSearch($query, (string) $request->search);
         }
 
         $seniors = $query->orderBy('updated_at', 'desc')->get();
@@ -546,7 +575,7 @@ class SeniorController extends Controller
      */
     public function uploadDocument(Request $request, $id)
     {
-        $senior = Senior::where('osca_id', $id)->firstOrFail();
+        $senior = $this->findSeniorByIdentifier($id);
 
         $request->validate([
             'document' => 'required|file|max:10240', // 10MB max
@@ -688,10 +717,10 @@ class SeniorController extends Controller
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
+        $senior = $this->findSeniorByIdentifier($seniorId);
+
         $document = SeniorDocument::where('id', $documentId)
-                                  ->whereHas('senior', function($q) use ($seniorId) {
-                                      $q->where('osca_id', $seniorId);
-                                  })
+                                  ->where('senior_id', $senior->id)
                                   ->firstOrFail();
 
         return response($document->file_content)
@@ -704,15 +733,14 @@ class SeniorController extends Controller
      */
     public function deleteDocument($seniorId, $documentId)
     {
+        $senior = $this->findSeniorByIdentifier($seniorId);
+
         $document = SeniorDocument::where('id', $documentId)
-                                  ->whereHas('senior', function($q) use ($seniorId) {
-                                      $q->where('osca_id', $seniorId);
-                                  })
+                                  ->where('senior_id', $senior->id)
                                   ->firstOrFail();
 
         // If it's an idPicture, we might want to also clear the profile_photo_path
         if ($document->document_type === 'idPicture') {
-            $senior = Senior::where('osca_id', $seniorId)->first();
             if ($senior && $senior->profile_photo_path) {
                 \Illuminate\Support\Facades\Storage::disk('public')->delete($senior->profile_photo_path);
                 $senior->update(['profile_photo_path' => null]);
@@ -734,89 +762,95 @@ class SeniorController extends Controller
     {
         $barangay = $request->query('barangay');
         $year = $request->query('year');
-        
-        $isAllYears = !$year || $year === 'All Years';
-        
-        // Base query for the WHOLE TOWN or selected BARANGAY
-        $populationQuery = Senior::query();
-        
-        // Growth query for registrations (for charts)
-        $growthQuery = Senior::query();
 
-        if (!$isAllYears) {
-            $endOfYear = "$year-12-31 23:59:59";
-            $populationQuery->where(function($q) use ($endOfYear) {
-                $q->where('created_at', '<=', $endOfYear)->orWhereNull('created_at');
+        $cacheKey = sprintf(
+            'dashboard_stats:%s:%s',
+            $barangay && $barangay !== 'All Barangays' ? $barangay : 'all-barangays',
+            $year && $year !== 'All Years' ? $year : 'all-years'
+        );
+
+        $stats = Cache::remember($cacheKey, now()->addSeconds(30), function () use ($barangay, $year) {
+            $isAllYears = !$year || $year === 'All Years';
+
+            // Base query for the WHOLE TOWN or selected BARANGAY
+            $populationQuery = Senior::query();
+
+            // Growth query for registrations (for charts)
+            $growthQuery = Senior::query();
+
+            if (!$isAllYears) {
+                $endOfYear = "$year-12-31 23:59:59";
+                $populationQuery->where(function($q) use ($endOfYear) {
+                    $q->where('created_at', '<=', $endOfYear)->orWhereNull('created_at');
+                });
+                $growthQuery->whereYear('created_at', $year);
+            }
+
+            if ($barangay && $barangay !== 'All Barangays') {
+                $populationQuery->where('barangay', $barangay);
+                $growthQuery->where('barangay', $barangay);
+            }
+
+            $monthlyStats = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $monthName = date('M', mktime(0, 0, 0, $m, 1));
+
+                $baseForMonth = (clone $growthQuery)->whereMonth('created_at', $m);
+
+                $monthlyStats[] = [
+                    'name' => $monthName,
+                    'male' => (clone $baseForMonth)->where(function($q) {
+                        $q->where('sex', 'like', 'M%')->orWhere('sex', 'like', 'm%');
+                    })->count(),
+                    'female' => (clone $baseForMonth)->where(function($q) {
+                        $q->where('sex', 'like', 'F%')->orWhere('sex', 'like', 'f%');
+                    })->count(),
+                    'deceased' => (clone $baseForMonth)->where(function($q) {
+                        $q->where('status', 'like', 'D%')->orWhere('status', 'like', 'd%');
+                    })->count(),
+                ];
+            }
+
+            $heatmapQuery = clone $populationQuery;
+            $allBarangayStats = $heatmapQuery->select('barangay as name', DB::raw('count(*) as count'))
+                                    ->groupBy('barangay')
+                                    ->orderByDesc('count')
+                                    ->get();
+
+            $maxDensity = $allBarangayStats->max('count') ?: 1;
+            $allBarangayStats = $allBarangayStats->map(function($stat) use ($maxDensity) {
+                $stat->intensity = $stat->count / $maxDensity;
+                return $stat;
             });
-            $growthQuery->whereYear('created_at', $year);
-        }
 
-        if ($barangay && $barangay !== 'All Barangays') {
-            $populationQuery->where('barangay', $barangay);
-            $growthQuery->where('barangay', $barangay);
-        }
-
-        $monthlyStats = [];
-        for ($m = 1; $m <= 12; $m++) {
-            $monthName = date('M', mktime(0, 0, 0, $m, 1));
-            
-            // Extract the base queries to avoid repetitive cloning logic complexity
-            $baseForMonth = (clone $growthQuery)->whereMonth('created_at', $m);
-
-            $monthlyStats[] = [
-                'name' => $monthName,
-                'male' => (clone $baseForMonth)->where(function($q) {
-                    $q->where('sex', 'like', 'M%')->orWhere('sex', 'like', 'm%');
-                })->count(),
-                'female' => (clone $baseForMonth)->where(function($q) {
-                    $q->where('sex', 'like', 'F%')->orWhere('sex', 'like', 'f%');
-                })->count(),
-                'deceased' => (clone $baseForMonth)->where(function($q) {
-                    $q->where('status', 'like', 'D%')->orWhere('status', 'like', 'd%');
-                })->count(),
+            return [
+                'total' => (clone $populationQuery)->count(),
+                'active' => (clone $populationQuery)->whereIn('status', ['Active', 'active', 'approved'])->count(),
+                'pending' => (clone $populationQuery)->whereIn('status', ['Pending', 'pending'])->count(),
+                'deceased' => (clone $populationQuery)->whereIn('status', ['Deceased', 'deceased'])->count(),
+                'centenarians' => (clone $populationQuery)->where('age', '>=', 100)->whereNotIn('status', ['Deceased', 'deceased'])->count(),
+                'monthlyStats' => $monthlyStats,
+                'ageRanges' => [
+                    ['range' => '60-65', 'count' => (clone $populationQuery)->whereBetween('age', [60, 65])->count()],
+                    ['range' => '66-70', 'count' => (clone $populationQuery)->whereBetween('age', [66, 70])->count()],
+                    ['range' => '71-75', 'count' => (clone $populationQuery)->whereBetween('age', [71, 75])->count()],
+                    ['range' => '76-80', 'count' => (clone $populationQuery)->whereBetween('age', [76, 80])->count()],
+                    ['range' => '81-85', 'count' => (clone $populationQuery)->whereBetween('age', [81, 85])->count()],
+                    ['range' => '86-90', 'count' => (clone $populationQuery)->whereBetween('age', [86, 90])->count()],
+                    ['range' => '91+', 'count' => (clone $populationQuery)->where('age', '>', 90)->count()],
+                ],
+                'genders' => [
+                    ['name' => 'Male', 'value' => (clone $populationQuery)->where(function($q) {
+                        $q->where('sex', 'like', 'M%')->orWhere('sex', 'like', 'm%');
+                    })->count()],
+                    ['name' => 'Female', 'value' => (clone $populationQuery)->where(function($q) {
+                        $q->where('sex', 'like', 'F%')->orWhere('sex', 'like', 'f%');
+                    })->count()],
+                ],
+                'topBarangays' => $allBarangayStats->take(5),
+                'allBarangayStats' => $allBarangayStats,
             ];
-        }
-
-        // Heatmap: Show population based on filters
-        $heatmapQuery = clone $populationQuery;
-        $allBarangayStats = $heatmapQuery->select('barangay as name', DB::raw('count(*) as count'))
-                                ->groupBy('barangay')
-                                ->orderByDesc('count')
-                                ->get();
-
-        $maxDensity = $allBarangayStats->max('count') ?: 1;
-        $allBarangayStats = $allBarangayStats->map(function($stat) use ($maxDensity) {
-            $stat->intensity = $stat->count / $maxDensity;
-            return $stat;
         });
-
-        $stats = [
-            'total' => (clone $populationQuery)->count(),
-            'active' => (clone $populationQuery)->whereIn('status', ['Active', 'active', 'approved'])->count(),
-            'pending' => (clone $populationQuery)->whereIn('status', ['Pending', 'pending'])->count(),
-            'deceased' => (clone $populationQuery)->whereIn('status', ['Deceased', 'deceased'])->count(),
-            'centenarians' => (clone $populationQuery)->where('age', '>=', 100)->whereNotIn('status', ['Deceased', 'deceased'])->count(),
-            'monthlyStats' => $monthlyStats,
-            'ageRanges' => [
-                ['range' => '60-65', 'count' => (clone $populationQuery)->whereBetween('age', [60, 65])->count()],
-                ['range' => '66-70', 'count' => (clone $populationQuery)->whereBetween('age', [66, 70])->count()],
-                ['range' => '71-75', 'count' => (clone $populationQuery)->whereBetween('age', [71, 75])->count()],
-                ['range' => '76-80', 'count' => (clone $populationQuery)->whereBetween('age', [76, 80])->count()],
-                ['range' => '81-85', 'count' => (clone $populationQuery)->whereBetween('age', [81, 85])->count()],
-                ['range' => '86-90', 'count' => (clone $populationQuery)->whereBetween('age', [86, 90])->count()],
-                ['range' => '91+', 'count' => (clone $populationQuery)->where('age', '>', 90)->count()],
-            ],
-            'genders' => [
-                ['name' => 'Male', 'value' => (clone $populationQuery)->where(function($q) {
-                    $q->where('sex', 'like', 'M%')->orWhere('sex', 'like', 'm%');
-                })->count()],
-                ['name' => 'Female', 'value' => (clone $populationQuery)->where(function($q) {
-                    $q->where('sex', 'like', 'F%')->orWhere('sex', 'like', 'f%');
-                })->count()],
-            ],
-            'topBarangays' => $allBarangayStats->take(5),
-            'allBarangayStats' => $allBarangayStats,
-        ];
 
         return response()->json($stats);
     }

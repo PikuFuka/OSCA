@@ -47,6 +47,7 @@ class RequestController extends Controller
                 'date' => $req->created_at->format('Y-m-d H:i'),
                 'status' => $req->status,
                 'senior_id' => $req->senior_id,
+                'senior_osca_id' => $req->senior?->osca_id,
                 'pending_data' => $pendingData,
                 'details' => [
                     'profilePicture' => $photoPath ? asset('storage/' . $photoPath) : null,
@@ -293,26 +294,46 @@ class RequestController extends Controller
             'reason' => 'nullable|string|max:500',
         ]);
 
-        $seniorRequest = SeniorRequest::findOrFail($id);
-        
-        $seniorRequest->update([
-            'status' => 'Rejected',
-            'rejection_reason' => $validated['reason'] ?? null,
-            'action_by' => $request->user()->id,
-        ]);
+        $seniorRequest = SeniorRequest::with('senior')->findOrFail($id);
 
-        ActivityLog::create([
-            'user_id' => $request->user()->id,
-            'action' => 'REJECTED_REQUEST',
-            'target_type' => 'Request',
-            'target_id' => $seniorRequest->id,
-            'details' => [
-                'senior_id' => $seniorRequest->senior->osca_id,
-                'senior_name' => $seniorRequest->senior->full_name,
-                'reason' => $validated['reason'] ?? 'No reason provided',
-            ],
-            'ip_address' => $request->ip(),
-        ]);
+        DB::beginTransaction();
+        try {
+            $senior = $seniorRequest->senior;
+            $seniorOscaId = $senior?->osca_id;
+            $seniorName = $senior?->full_name ?? 'Unknown';
+
+            $seniorRequest->update([
+                'status' => 'Rejected',
+                'rejection_reason' => $validated['reason'] ?? null,
+                'action_by' => $request->user()->id,
+            ]);
+
+            ActivityLog::create([
+                'user_id' => $request->user()->id,
+                'action' => 'REJECTED_REQUEST',
+                'target_type' => 'Request',
+                'target_id' => $seniorRequest->id,
+                'details' => [
+                    'senior_id' => $seniorOscaId,
+                    'senior_name' => $seniorName,
+                    'reason' => $validated['reason'] ?? 'No reason provided',
+                ],
+                'ip_address' => $request->ip(),
+            ]);
+
+            if ($seniorRequest->type === 'New Application' && $senior) {
+                $senior->forceDelete();
+            }
+
+            DB::commit();
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Rejection failed: ' . $e->getMessage(),
+            ], 500);
+        }
 
         return response()->json([
             'success' => true,

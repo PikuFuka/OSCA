@@ -15,8 +15,7 @@ import {
   FileCheck,
   Home,
   FileText,
-  Edit,
-  Archive
+  Edit
 } from 'lucide-react';
 import { ViewType, CurrentUser } from '../types';
 import { seniorsAPI } from '../services/api';
@@ -57,7 +56,6 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleS
     { id: ViewType.APPROVAL, label: 'For Approvals', icon: FileCheck, roles: ['Admin', 'Staff'] },
     { id: ViewType.ADD_MEMBER, label: 'Registration', icon: UserPlus, roles: ['Admin', 'Staff'] },
     { id: ViewType.MEMBER_REGISTRY, label: 'Members', icon: Users, roles: ['Admin', 'Staff'] },
-    { id: ViewType.ARCHIVE, label: 'Archive', icon: Archive, roles: ['Admin', 'Staff'] },
     { id: ViewType.FINAL_REPORT, label: 'Reports', icon: FileSpreadsheet, roles: ['Admin', 'Staff'] },
     { id: ViewType.ACCOUNT, label: 'Accounts', icon: UserCircle, roles: ['Admin', 'Staff'] }, 
     { id: ViewType.HISTORY, label: 'System Logs', icon: History, roles: ['Admin'] },

@@ -125,6 +125,61 @@ cd OSCA
 
 ---
 
+## Recommended Local Production Setup
+
+For multi-device access on your local network, do not run the system with `php artisan serve` or the Vite dev server.
+
+Use this layout instead:
+
+- Apache from XAMPP serves the Laravel app from `backend/public`
+- MySQL from XAMPP stores the data
+- The React frontend is built into `backend/public/app`
+- Users open the system through Apache at `http://<your-laptop-ip>/app`
+
+### One-time frontend production build
+
+From the project root:
+
+```bash
+npm install
+npm run build:frontend
+```
+
+This writes the built frontend files to `backend/public/app`.
+
+### Apache document root
+
+Point Apache to:
+
+```text
+.../OSCA/backend/public
+```
+
+If you prefer a VirtualHost in XAMPP, use that same folder as the `DocumentRoot`.
+You can start from [backend/deploy/xampp-vhost.conf.example](backend/deploy/xampp-vhost.conf.example).
+
+### What Apache serves
+
+- `/api/*` continues to hit Laravel routes
+- `/app` serves the built React frontend
+- `/` redirects to `/app`
+
+### Rebuild after frontend changes
+
+Whenever you change React or Tailwind files, rebuild before using Apache:
+
+```bash
+npm run build:frontend
+```
+
+### Notes for local network use
+
+- Keep `APP_URL` aligned with the host you actually use from other devices
+- Open the Apache port in Windows Firewall if other devices cannot connect
+- Prefer laptop-to-router Ethernet if available, and let client devices use Wi-Fi
+
+---
+
 ### Step 3 — Backend Setup (Laravel)
 
 Open a terminal and navigate to the `backend` folder:

@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { CheckCircle2, XCircle, AlertCircle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -13,6 +13,11 @@ interface ToastProps {
 
 const Toast: React.FC<ToastProps> = ({ message, type, isVisible, onClose }) => {
   const [progress, setProgress] = React.useState(100);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (isVisible) {
@@ -26,13 +31,13 @@ const Toast: React.FC<ToastProps> = ({ message, type, isVisible, onClose }) => {
         setProgress(remaining);
         
         if (remaining === 0) {
-          onClose();
+          onCloseRef.current();
         }
       }, 10);
 
       return () => clearInterval(timer);
     }
-  }, [isVisible, onClose]);
+  }, [isVisible, message, type]);
 
   if (!isVisible) return null;
 

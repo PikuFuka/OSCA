@@ -38,7 +38,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
 
       const transformedRequests: PendingRequest[] = requestsData.map((r: any) => ({
         id: r.id.toString(),
-        senior_id: r.senior_id,
+        senior_id: r.senior_osca_id || r.senior?.osca_id || r.senior_id,
         name: r.name || r.senior?.full_name || `${r.senior?.first_name || ''} ${r.senior?.last_name || ''}${r.senior?.extension_name ? ' ' + r.senior.extension_name : ''}`.trim() || 'Unknown',
         type: r.type || 'New Application',
         date: r.date || new Date(r.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
@@ -117,22 +117,6 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
   useEffect(() => {
     fetchRequests(currentPage);
   }, [currentPage]);
-
-  useEffect(() => {
-    const refreshRequests = () => {
-      if (document.visibilityState === 'visible') {
-        fetchRequests(currentPage, true);
-      }
-    };
-
-    const intervalId = window.setInterval(refreshRequests, 10000);
-    window.addEventListener('focus', refreshRequests);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', refreshRequests);
-    };
-  }, [currentPage, pagination.perPage]);
   
   // Confirmation state
   const [confirmState, setConfirmState] = useState<{

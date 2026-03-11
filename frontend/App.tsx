@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
@@ -14,7 +14,6 @@ import LoginView from './components/LoginView';
 import ConfirmModal from './components/ConfirmModal';
 import UserDashboard from './components/UserDashboard';
 import UserReview from './components/UserReview';
-import ArchiveView from './components/ArchiveView';
 import Toast, { ToastType } from './components/Toast';
 import { ViewType } from './types';
 import { 
@@ -54,13 +53,13 @@ const App: React.FC = () => {
     type: 'success'
   });
 
-  const notify = (message: string, type: ToastType = 'success') => {
+  const notify = useCallback((message: string, type: ToastType = 'success') => {
     setToast({ show: true, message, type });
-  };
+  }, []);
 
-  const closeToast = () => {
+  const closeToast = useCallback(() => {
     setToast(prev => ({ ...prev, show: false }));
-  };
+  }, []);
 
   // Responsive Sidebar Logic
   useEffect(() => {
@@ -183,7 +182,7 @@ const App: React.FC = () => {
       case ViewType.APPROVAL:
         return <ApprovalView notify={notify} setView={setCurrentView} />;
       case ViewType.ARCHIVE:
-        return <ArchiveView notify={notify} />;
+        return <BackupView notify={notify} initialSection="archive" />;
       
       // Senior User Views
       case ViewType.USER_DASHBOARD:

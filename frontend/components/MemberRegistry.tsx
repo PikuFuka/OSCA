@@ -164,22 +164,6 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
     fetchSeniors();
   }, [debouncedSearch, filterBarangay, page]);
 
-  useEffect(() => {
-    const refreshSeniors = () => {
-      if (document.visibilityState === 'visible') {
-        fetchSeniors(true);
-      }
-    };
-
-    const intervalId = window.setInterval(refreshSeniors, 10000);
-    window.addEventListener('focus', refreshSeniors);
-
-    return () => {
-      window.clearInterval(intervalId);
-      window.removeEventListener('focus', refreshSeniors);
-    };
-  }, [debouncedSearch, filterBarangay, page]);
-
   const [idModalOpen, setIdModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
   const [selectedSeniorForView, setSelectedSeniorForView] = useState<any>(null);
