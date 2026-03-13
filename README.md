@@ -1,5 +1,366 @@
 # OSCA Senior Citizen ID System
 
+OSCA is a full-stack records management system for the Office of the Senior Citizen Affairs in Pagsanjan, Laguna. It handles senior citizen registration, review and approval, document storage, reporting, audit logs, and ID-related workflows.
+
+This repository contains:
+
+- A Laravel 12 backend API in `backend/`
+- A React 19 + TypeScript frontend in `frontend/`
+- Root scripts for local startup and frontend production builds
+- A Windows launcher in `APP/start.bat`
+
+## Features
+
+- Senior citizen registration and profile management
+- Approval workflow for new and updated records
+- Role-based access for Admin, Staff, and Senior users
+- Dashboard statistics and reports
+- Document upload and profile photo handling
+- Archived and deceased record views
+- Backup export and import
+- Activity logging for user actions
+
+## Tech Stack
+
+### Backend
+
+- PHP 8.2+
+- Laravel 12
+- Laravel Sanctum
+- maatwebsite/excel
+- MySQL or SQLite
+
+### Frontend
+
+- React 19
+- TypeScript
+- Vite 6
+- Tailwind CSS
+- Axios
+- Recharts
+
+## Repository Layout
+
+```text
+OSCA/
+|-- APP/                     # Windows launcher
+|   `-- start.bat
+|-- backend/                 # Laravel API and production web entrypoint
+|   |-- app/
+|   |-- config/
+|   |-- database/
+|   |-- public/
+|   |-- routes/
+|   `-- composer.json
+|-- frontend/                # React app
+|   |-- components/
+|   |-- context/
+|   |-- services/
+|   |-- utils/
+|   `-- package.json
+|-- package.json             # Root helper scripts
+|-- REQUIREMENTS.txt         # Short install checklist
+`-- README.md
+```
+
+## Requirements
+
+Install these before setup:
+
+- XAMPP with Apache, MySQL, and PHP 8.2 or newer
+- Node.js 22 LTS or newer
+- Composer 2.x
+- Git optional, but recommended
+
+### PHP Extensions
+
+These are expected to be available in the PHP runtime used by Laravel:
+
+- `pdo_mysql` or `pdo_sqlite`
+- `mbstring`
+- `openssl`
+- `fileinfo`
+- `gd` or `imagick`
+- `zip`
+- `xml`
+- `tokenizer`
+
+## Quick Start
+
+### 1. Clone or extract the project
+
+```bash
+git clone https://github.com/PikuFuka/OSCA.git
+cd OSCA
+```
+
+### 2. Install root tool dependencies
+
+This only installs the root helper package used for concurrent startup.
+
+```bash
+npm install
+```
+
+### 3. Install backend dependencies
+
+```bash
+cd backend
+composer install
+copy .env.example .env
+php artisan key:generate
+```
+
+If you are on macOS or Linux, use `cp .env.example .env` instead of `copy`.
+
+### 4. Configure the database
+
+Open `backend/.env` and choose one database option.
+
+#### Option A: MySQL with XAMPP
+
+```dotenv
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=osca_db
+DB_USERNAME=root
+DB_PASSWORD=
+```
+
+Create the `osca_db` database in phpMyAdmin before running migrations.
+
+#### Option B: SQLite
+
+```dotenv
+DB_CONNECTION=sqlite
+```
+
+Then create an empty file at `backend/database/database.sqlite`.
+
+### 5. Run migrations and optional seeders
+
+From `backend/`:
+
+```bash
+php artisan migrate
+php artisan storage:link
+php artisan db:seed
+```
+
+Seeding creates default accounts and sample senior data.
+
+### 6. Install frontend dependencies
+
+```bash
+cd ..\frontend
+npm install
+```
+
+### 7. Start the app for development
+
+Return to the repository root and run:
+
+```bash
+cd ..
+npm run dev
+```
+
+This root command starts:
+
+- MySQL through the hardcoded XAMPP path in `package.json`
+- Laravel at `http://127.0.0.1:8000`
+- Vite at `http://localhost:3000`
+
+### Development URLs
+
+- Frontend: `http://localhost:3000`
+- Backend API: `http://127.0.0.1:8000/api`
+- phpMyAdmin: `http://localhost/phpmyadmin`
+
+## Default Seeded Accounts
+
+If you run `php artisan db:seed`, these defaults are used unless overridden in `backend/.env`:
+
+- Admin email: `admin@osca.gov.ph`
+- Admin password: `admin123`
+- Staff email: `staff@osca.gov.ph`
+- Staff password: `staff123`
+
+The seeded users are marked for forced password change on first login. Change these credentials immediately outside of local testing.
+
+## Development Notes
+
+### Frontend dev server
+
+- Vite runs on port `3000`
+- API calls to `/api` are proxied to `http://127.0.0.1:8000`
+
+### Root startup script caveat
+
+The root `npm run dev` script assumes MySQL is installed at:
+
+```text
+C:\xampp\mysql\bin\mysqld.exe
+```
+
+If XAMPP is installed elsewhere, either:
+
+- Update the `mysql` script in the root `package.json`, or
+- Start MySQL manually from XAMPP and run the backend and frontend separately
+
+### Windows launcher
+
+`APP/start.bat`:
+
+- Creates a desktop shortcut the first time it runs
+- Installs only the root `node_modules` folder if missing
+- Starts `npm run dev` in a minimized window
+- Waits for the backend health path to respond
+- Opens `http://localhost:3000`
+
+It does not install Composer dependencies or frontend dependencies for you. Run the manual setup steps first.
+
+## Apache / XAMPP Deployment
+
+Use this mode when the app should be reachable from other devices on the same network.
+
+### Build the frontend for Laravel to serve
+
+From the repository root:
+
+```bash
+npm run build:frontend
+```
+
+This outputs the frontend to:
+
+```text
+backend/public/app
+```
+
+### What Laravel serves in production mode
+
+- `/` redirects to `/app`
+- `/app` serves the built SPA from `backend/public/app/index.html`
+- `/api/*` continues to use Laravel API routes
+
+### Apache document root
+
+Point Apache to:
+
+```text
+OSCA/backend/public
+```
+
+A sample XAMPP VirtualHost file is included at:
+
+- `backend/deploy/xampp-vhost.conf.example`
+
+### Local network reminders
+
+- Keep `APP_URL` in `backend/.env` aligned with the hostname or IP you actually use
+- Open the Apache port in Windows Firewall if other devices cannot connect
+- Rebuild the frontend after any React or Tailwind changes
+
+## Useful Commands
+
+### Root
+
+```bash
+npm install
+npm run dev
+npm run build:frontend
+npm run deploy:apache
+```
+
+### Backend
+
+```bash
+cd backend
+composer install
+php artisan migrate
+php artisan db:seed
+php artisan serve
+php artisan test
+```
+
+### Frontend
+
+```bash
+cd frontend
+npm install
+npm run dev
+npm run build
+npm run preview
+```
+
+## Troubleshooting
+
+### `composer` is not recognized
+
+Install Composer and make sure its bin directory is in your system `PATH`.
+
+### `php` is not recognized
+
+Add your PHP directory, commonly `C:\xampp\php`, to your system `PATH`.
+
+### `npm run dev` fails because MySQL is already running
+
+Start only the services you need instead:
+
+```bash
+cd backend
+php artisan serve
+```
+
+In a second terminal:
+
+```bash
+cd frontend
+npm run dev
+```
+
+### Frontend production page returns 503
+
+The Apache/Laravel route for `/app` expects a built frontend in `backend/public/app`. Run:
+
+```bash
+npm run build:frontend
+```
+
+### Uploaded files are missing
+
+Create the Laravel storage symlink:
+
+```bash
+cd backend
+php artisan storage:link
+```
+
+### CORS errors in development
+
+Confirm the frontend is running on port `3000` and the backend on `8000`. The current CORS config already allows common local frontend origins.
+
+## Testing
+
+Backend tests:
+
+```bash
+cd backend
+php artisan test
+```
+
+There is currently no root test runner configured for the frontend.
+
+## Notes
+
+- The root README is the authoritative project setup guide for this repository.
+- `backend/README.md` and `frontend/README.md` still contain framework boilerplate and are not project-specific.
+
+Last updated: March 13, 2026
+# OSCA Senior Citizen ID System
+
 The **OSCA Senior Citizen ID System** is a full-stack web application for the **Office of the Senior Citizen Affairs (OSCA) — Pagsanjan, Laguna**. It manages and streamlines record-keeping and ID generation for registered Senior Citizens under Republic Act No. 9257.
 
 ## 🚀 System Overview
