@@ -440,8 +440,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
     const orderedName = [
       lastName ? `${lastName},` : '',
       firstName,
-      middleName,
       extensionName,
+      middleName,
     ].filter(Boolean).join(' ');
 
     return orderedName || senior.name;
