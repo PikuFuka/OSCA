@@ -532,7 +532,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
               <thead>
                 <tr className="bg-white text-slate-400 uppercase text-xs font-black tracking-[0.2em] border-b border-slate-50">
                   <th className="px-6 py-6 w-[30%]">Member Profile</th>
-                  <th className="px-6 py-6 w-[10%]">Age / Area</th>
+                  <th className="px-6 py-6 w-[10%]">Age / Barangay</th>
                   <th className="px-6 py-6 w-[10%]">Category</th>
                   <th className="px-6 py-6 w-[10%]">Status</th>
                   <th className="px-9 py-6 w-[16%]">Last Updated</th>
