@@ -349,13 +349,15 @@ export const seniorsAPI = {
 // Requests API
 export const requestsAPI = {
   getPending: async (page = 1, perPage = 15) => {
-    const response = await api.get('/requests', {
-      params: {
-        page,
-        per_page: perPage,
-      },
+    return withCache(`requests-pending-${page}-${perPage}`, async () => {
+      const response = await api.get('/requests', {
+        params: {
+          page,
+          per_page: perPage,
+        },
+      });
+      return response.data;
     });
-    return response.data;
   },
 
   submitUpdate: async (formData: any, files?: { [key: string]: File }) => {
@@ -397,22 +399,27 @@ export const requestsAPI = {
 // Users API
 export const usersAPI = {
   getAll: async () => {
-    const response = await api.get('/users');
-    return response.data;
+    return withCache('users-all', async () => {
+      const response = await api.get('/users');
+      return response.data;
+    });
   },
 
   create: async (userData: any) => {
     const response = await api.post('/users', userData);
+    cache.clear();
     return response.data;
   },
 
   update: async (id: number, userData: any) => {
     const response = await api.put(`/users/${id}`, userData);
+    cache.clear();
     return response.data;
   },
 
   delete: async (id: number) => {
     const response = await api.delete(`/users/${id}`);
+    cache.clear();
     return response.data;
   },
 };
@@ -420,17 +427,22 @@ export const usersAPI = {
 // Activity Logs API
 export const activityLogsAPI = {
   getAll: async (params?: any) => {
-    const response = await api.get('/activity-logs', { params });
-    return response.data;
+    const key = `activity-logs-${JSON.stringify(params || {})}`;
+    return withCache(key, async () => {
+      const response = await api.get('/activity-logs', { params });
+      return response.data;
+    });
   },
 
   clear: async () => {
     const response = await api.delete('/activity-logs');
+    cache.clear();
     return response.data;
   },
 
   log: async (logData: any) => {
     const response = await api.post('/activity-logs', logData);
+    cache.clear();
     return response.data;
   }
 };

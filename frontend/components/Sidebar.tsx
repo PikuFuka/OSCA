@@ -15,7 +15,8 @@ import {
   FileCheck,
   Home,
   FileText,
-  Edit
+  Edit,
+  Printer
 } from 'lucide-react';
 import { ViewType, CurrentUser } from '../types';
 import { seniorsAPI } from '../services/api';
@@ -60,6 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleS
     { id: ViewType.ACCOUNT, label: 'Accounts', icon: UserCircle, roles: ['Admin', 'Staff'] }, 
     { id: ViewType.HISTORY, label: 'System Logs', icon: History, roles: ['Admin'] },
     { id: ViewType.BACKUP, label: 'Backup', icon: DatabaseBackup, roles: ['Admin'] },
+    { id: ViewType.BATCH_PRINT, label: 'Batch Print', icon: Printer, roles: ['Admin', 'Staff'] },
 
     // Senior User Items
     { id: ViewType.USER_DASHBOARD, label: 'Home', icon: Home, roles: ['Senior'] },

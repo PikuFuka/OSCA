@@ -75,6 +75,12 @@ class RequestController extends Controller
 
     private function ensurePendingApprovalRequests(): void
     {
+        // Force status to Pending if osca_id is null or empty
+        Senior::where(function ($query) {
+            $query->whereNull('osca_id')
+                ->orWhereRaw("TRIM(osca_id) = ''");
+        })->where('status', '!=', 'Pending')->update(['status' => 'Pending']);
+
         $pendingSeniorIdsWithRequests = SeniorRequest::query()
             ->where('status', 'Pending')
             ->pluck('senior_id')
@@ -199,6 +205,16 @@ class RequestController extends Controller
             'osca_id' => 'nullable|string|max:50',
         ]);
 
+        if (!empty($validated['osca_id'])) {
+            $exists = Senior::where('osca_id', $validated['osca_id'])->where('id', '!=', $senior->id)->exists();
+            if ($exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The provided OSCA ID is already in use by another member.'
+                ], 422);
+            }
+        }
+
         DB::beginTransaction();
         try {
             if ($seniorRequest->type === 'Information Update' && $seniorRequest->pending_data) {
@@ -206,6 +222,7 @@ class RequestController extends Controller
                 $data = $seniorRequest->pending_data;
 
                 $senior->update([
+                    'osca_id'            => !empty($validated['osca_id']) ? $validated['osca_id'] : $senior->osca_id,
                     'first_name'         => $data['firstName']        ?? $senior->first_name,
                     'middle_name'        => $data['middleName']       ?? $senior->middle_name,
                     'last_name'          => $data['lastName']         ?? $senior->last_name,

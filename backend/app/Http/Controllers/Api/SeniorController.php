@@ -129,6 +129,7 @@ class SeniorController extends Controller
             'rrn' => $senior->rrn,
             'nationalId' => $senior->national_id,
             'familyMembersCount' => $senior->family_members_count ?? 0,
+            'updatedAt' => $senior->updated_at?->format('M d, Y h:i A') ?? null,
         ];
     }
 
@@ -434,21 +435,35 @@ class SeniorController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $senior = Senior::where('osca_id', $id)->firstOrFail();
+        // Try OSCA ID first, then fallback to database ID if needed
+        $senior = Senior::where('osca_id', $id)->orWhere('id', $id)->firstOrFail();
 
         $validated = $request->validate([
+            'oscaId' => 'sometimes|nullable|string|max:255',
             'firstName' => 'sometimes|string|max:255',
             'middleName' => 'nullable|string|max:255',
             'lastName' => 'sometimes|string|max:255',
             'status' => 'sometimes|in:Active,Pending,Deceased,Inactive',
-            'pensionStatus' => 'sometimes|in:Indigent,Pensioner,National Social Pensioner,Local Social Pensioner',
+            'pensionStatus' => 'sometimes|in:Indigent,Pensioner,National Social Pensioner,Local Social Pensioner,None',
             'barangay' => 'sometimes|string|max:255',
             'streetAddress' => 'sometimes|string',
             'contactNumber' => 'nullable|string|max:20',
             'idConfig' => 'nullable|array',
         ]);
 
+        // Check if oscaId is being updated and already exists for another senior
+        if (isset($validated['oscaId']) && $validated['oscaId'] !== $senior->osca_id) {
+            $exists = Senior::where('osca_id', $validated['oscaId'])->where('id', '!=', $senior->id)->exists();
+            if ($exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The provided OSCA ID is already in use by another member.'
+                ], 422);
+            }
+        }
+
         $senior->update([
+            'osca_id' => array_key_exists('oscaId', $validated) ? $validated['oscaId'] : $senior->osca_id,
             'first_name' => $validated['firstName'] ?? $senior->first_name,
             'middle_name' => $validated['middleName'] ?? $senior->middle_name,
             'last_name' => $validated['lastName'] ?? $senior->last_name,

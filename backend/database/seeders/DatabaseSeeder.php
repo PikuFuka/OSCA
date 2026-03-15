@@ -35,6 +35,19 @@ class DatabaseSeeder extends Seeder
             'force_password_change' => true,
         ]);
 
+        // Create a dedicated print station account for batch ID printing
+        User::firstOrCreate(
+            ['email' => env('PRINT_EMAIL', 'print@osca.gov.ph')],
+            [
+                'name' => 'Print Station',
+                'password' => Hash::make(env('PRINT_PASSWORD', 'print123')),
+                'role' => 'Staff',
+                'barangay_assignment' => 'Municipal Hall',
+                'status' => 'Active',
+                'force_password_change' => true,
+            ]
+        );
+
         // Seed Senior Citizens
         $this->call(LargeSeniorSeeder::class);
     }

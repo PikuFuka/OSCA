@@ -38,7 +38,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
 
       const transformedRequests: PendingRequest[] = requestsData.map((r: any) => ({
         id: r.id.toString(),
-        senior_id: r.senior_osca_id || r.senior?.osca_id || r.senior_id,
+        senior_id: r.senior_osca_id || r.senior?.osca_id || null,
         name: r.name || r.senior?.full_name || `${r.senior?.first_name || ''} ${r.senior?.last_name || ''}${r.senior?.extension_name ? ' ' + r.senior.extension_name : ''}`.trim() || 'Unknown',
         type: r.type || 'New Application',
         date: r.date || new Date(r.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
@@ -220,6 +220,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
             <thead>
               <tr className="bg-white text-slate-400 uppercase text-[10px] font-black tracking-[0.2em] border-b border-slate-50">
                 <th className="px-10 py-6">Applicant</th>
+                <th className="px-10 py-6">OSCA ID</th>
                 <th className="px-10 py-6">Request Type</th>
                 <th className="px-10 py-6">Reason for ID</th>
                 <th className="px-10 py-6">Date Submitted</th>
@@ -246,6 +247,11 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                         <p className="text-xs text-slate-400 font-medium">{req.id}</p>
                       </div>
                     </div>
+                  </td>
+                  <td className="px-10 py-6">
+                    <span className={`text-sm font-bold ${req.senior_id ? 'text-blue-900' : 'text-slate-400 italic'}`}>
+                      {req.senior_id || 'To be assigned'}
+                    </span>
                   </td>
                   <td className="px-10 py-6">
                     <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wide ${
@@ -304,7 +310,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={5} className="px-10 py-20 text-center">
+                  <td colSpan={6} className="px-10 py-20 text-center">
                     <div className="flex flex-col items-center gap-4">
                       <div className="p-4 bg-slate-50 rounded-full text-slate-300"><CheckCircle size={32} /></div>
                       <p className="text-slate-400 font-bold text-sm">No pending requests at the moment</p>

@@ -10,6 +10,7 @@ import HistoryLogView from './components/HistoryLogView';
 import ReportView from './components/ReportView';
 import BackupView from './components/BackupView';
 import ApprovalView from './components/ApprovalView';
+import BatchPrint from './components/BatchPrint';
 import LoginView from './components/LoginView';
 import ConfirmModal from './components/ConfirmModal';
 import UserDashboard from './components/UserDashboard';
@@ -84,6 +85,8 @@ const App: React.FC = () => {
     if (currentUser) {
       if (currentUser.role === 'Senior') {
         setCurrentView(ViewType.USER_DASHBOARD);
+      } else if (currentUser.email === 'print@osca.gov.ph') {
+        setCurrentView(ViewType.BATCH_PRINT);
       } else {
         setCurrentView(ViewType.DASHBOARD);
       }
@@ -170,7 +173,7 @@ const App: React.FC = () => {
           }} 
         />;
       case ViewType.MEMBER_REGISTRY:
-        return <MemberRegistry currentUser={currentUser} notify={notify} />;
+        return <MemberRegistry currentUser={currentUser} notify={notify} setView={setCurrentView} />;
       case ViewType.ACCOUNT:
         return <Account currentUser={currentUser} notify={notify} />;
       case ViewType.HISTORY:
@@ -183,6 +186,8 @@ const App: React.FC = () => {
         return <ApprovalView notify={notify} setView={setCurrentView} />;
       case ViewType.ARCHIVE:
         return <BackupView notify={notify} initialSection="archive" />;
+      case ViewType.BATCH_PRINT:
+        return <BatchPrint currentUser={currentUser} notify={notify} />;
       
       // Senior User Views
       case ViewType.USER_DASHBOARD:

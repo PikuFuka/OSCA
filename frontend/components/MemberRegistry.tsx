@@ -1,8 +1,8 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText } from 'lucide-react';
-import { BARANGAYS, SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG } from '../types';
+import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock } from 'lucide-react';
+import { BARANGAYS, SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } from '../types';
 import { seniorsAPI, activityLogsAPI } from '../services/api';
 import { TableSkeleton } from './SkeletonLoader';
 import ConfirmModal from './ConfirmModal';
@@ -84,6 +84,7 @@ const DraggableLabel = ({
 interface RegistryProps {
   currentUser: CurrentUser;
   notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
+  setView?: (view: ViewType) => void;
 }
 
 const StaticLabel = ({ 
@@ -114,7 +115,7 @@ const InfoField = ({ label, value, className = "" }: { label: string, value: str
   </div>
 );
 
-const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
+const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView }) => {
   const [seniors, setSeniors] = useState<SeniorCitizen[]>([]);
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -125,6 +126,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
   const [selectedSenior, setSelectedSenior] = useState<SeniorCitizen | null>(null);
+  const [editFormData, setEditFormData] = useState<Partial<SeniorCitizen>>({});
 
   // Fetch seniors from API
   const fetchSeniors = async (background = false) => {
@@ -375,7 +377,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
 
   const handlePrint = async () => {
       notify("Opening print preview...", "info");
-      
+
       // Log the printing action
       if (idGenerationSenior) {
         try {
@@ -392,6 +394,18 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
           // Silent fail on log action
         }
       }
+
+      // Set document title to senior's name for the print dialog / "Save as PDF"
+      const originalTitle = document.title;
+      if (idGenerationSenior) {
+        document.title = formatIdDisplayName(idGenerationSenior);
+      }
+
+      const restoreTitle = () => {
+        document.title = originalTitle;
+        window.removeEventListener('afterprint', restoreTitle);
+      };
+      window.addEventListener('afterprint', restoreTitle);
 
       setTimeout(() => {
         window.print();
@@ -455,6 +469,25 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
           <p className="text-slate-500 font-medium">Official masterlist of registered Senior Citizens in the municipality.</p>
         </div>
       </div>
+
+      {/* Note banner directing admin/staff to For Approvals */}
+      {setView && (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
+          <div className="p-2 bg-amber-100 rounded-xl text-amber-600 shrink-0">
+            <FileCheck size={20} />
+          </div>
+          <p className="text-sm font-medium text-amber-800">
+            <span className="font-bold">Note:</span> Only approved members are shown here. New registrations awaiting approval can be found in the{' '}
+            <button
+              onClick={() => setView(ViewType.APPROVAL)}
+              className="text-blue-700 font-bold underline hover:text-blue-900"
+            >
+              For Approvals
+            </button>{' '}
+            section.
+          </p>
+        </div>
+      )}
       
       <div className="bg-white rounded-3xl md:rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
         <div className="p-4 md:p-8 border-b border-slate-50 flex flex-col lg:flex-row items-center justify-between gap-4 bg-slate-50/20">
@@ -491,19 +524,19 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto w-full">
           {loading ? (
             <TableSkeleton />
           ) : (
-            <table className="w-full text-left border-collapse min-w-[800px]">
+            <table className="w-full text-left border-collapse table-fixed min-w-[800px]">
               <thead>
                 <tr className="bg-white text-slate-400 uppercase text-xs font-black tracking-[0.2em] border-b border-slate-50">
                   <th className="px-6 py-6 w-[30%]">Member Profile</th>
-                  <th className="px-6 py-6 w-[20%]">Age / Area</th>
-                  <th className="px-6 py-6 w-[15%]">Family Members</th>
-                  <th className="px-6 py-6 w-[15%]">Category</th>
+                  <th className="px-6 py-6 w-[10%]">Age / Area</th>
+                  <th className="px-6 py-6 w-[10%]">Category</th>
                   <th className="px-6 py-6 w-[10%]">Status</th>
-                  <th className="px-6 py-6 w-[25%] text-center">Actions</th>
+                  <th className="px-9 py-6 w-[16%]">Last Updated</th>
+                  <th className="px-6 py-6 w-[20%] text-center">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -520,8 +553,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                             {senior.name.split(' ').map(n => n[0]).join('')}
                           </div>
                         )}
-                        <div className="min-w-0 overflow-hidden">
-                          <p className="font-bold text-slate-900 text-lg truncate max-w-[200px]">{senior.name}</p>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 text-base md:text-lg truncate lg:whitespace-normal lg:break-words">{senior.name}</p>
                           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 truncate">{senior.id}</p>
                         </div>
                       </div>
@@ -530,16 +563,6 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                       <div className="flex flex-col">
                         <span className="text-base font-bold text-slate-700">{senior.age} yrs</span>
                         <span className="text-xs text-slate-400 font-bold uppercase tracking-widest truncate">{senior.barangay}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-5 align-middle">
-                      <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
-                          <Users size={14} />
-                        </div>
-                        <span className="text-sm font-bold text-slate-700">
-                          {(senior as any).familyMembersCount ?? 0}
-                        </span>
                       </div>
                     </td>
                     <td className="px-6 py-5 align-middle">
@@ -560,14 +583,44 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                       </span>
                     </td>
                     <td className="px-6 py-5 align-middle">
+                      <div className="flex items-center gap-1.5">
+                        <Clock size={12} className="text-slate-400 shrink-0" />
+                        <span className="text-xs font-semibold text-slate-500">
+                          {senior.updatedAt || 'N/A'}
+                        </span>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 align-middle">
                       <div className="flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                        <button 
-                           onClick={() => handleViewDetails(senior)} 
+                        <button
+                           onClick={() => handleViewDetails(senior)}
                            className="p-2 bg-white border border-slate-200 text-slate-500 hover:text-blue-900 hover:bg-blue-50 hover:border-blue-200 rounded-xl transition-all shadow-sm"
                            title="View Details"
                         >
                            <Eye size={18} />
                         </button>
+
+                        {canGenerateID && (
+                          <button
+                            onClick={() => {
+                              setSelectedSenior(senior);
+                              setEditFormData({
+                                oscaId: senior.id || '',
+                                firstName: senior.firstName || '',
+                                middleName: senior.middleName || '',
+                                lastName: senior.lastName || '',
+                                pensionStatus: senior.pensionStatus || '',
+                                barangay: senior.barangay || '',
+                                streetAddress: senior.streetAddress || '',
+                                contactNumber: senior.contactNumber || '',
+                              });
+                            }}
+                            className="p-2 bg-white border border-slate-200 text-slate-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200 rounded-xl transition-all shadow-sm"
+                            title="Edit Profile"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                        )}
 
                         {canGenerateID && (
                           <button 
@@ -600,7 +653,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
                   );
                 }) : (
                    <tr>
-                    <td colSpan={6} className="px-10 py-32 text-center">
+                    <td colSpan={7} className="px-10 py-32 text-center">
                       <div className="flex flex-col items-center gap-4">
                         <div className="p-6 bg-slate-50 rounded-full text-slate-200"><Search size={48} /></div>
                         <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-xs">No records found for this criteria</p>
@@ -947,7 +1000,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
         document.getElementById('modal-root') || document.body
       )}
 
-      {/* Senior Profile Modal (View/Edit) */}
+      {/* Senior Profile Modal (Edit) */}
       {selectedSenior && createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
           <div className="bg-white rounded-[2.5rem] w-full max-w-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col my-auto max-h-full">
@@ -963,7 +1016,6 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
               </div>
               <button onClick={() => setSelectedSenior(null)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-full transition-colors"><X size={24} /></button>
             </div>
-            {/* ... Profile Modal Body ... */}
             <div className="overflow-y-auto p-6 md:p-8">
               <div className="flex flex-col md:flex-row gap-8 mb-8 items-start">
                 {selectedSenior.idPhoto ? (
@@ -990,11 +1042,48 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
               </div>
               <div className="space-y-6">
                 <div>
-                  <h4 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-500 mb-4 border-b border-slate-100 pb-2"><User size={16} /> Personal Information</h4>
+                  <h4 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-500 mb-4 border-b border-slate-100 pb-2"><Edit2 size={16} /> Edit Information</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <ProfileDetail icon={Calendar} label="Age" value={`${selectedSenior.age} years old`} />
-                    <ProfileDetail icon={HeartPulse} label="Health/Pension Status" value={selectedSenior.pensionStatus} />
-                    <ProfileDetail icon={CreditCard} label="OSCA ID" value={selectedSenior.id} />
+                    <div className="md:col-span-2">
+                      <label htmlFor="edit-oscaId" className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-1 block">OSCA ID (Can be updated)</label>
+                      <input id="edit-oscaId" name="oscaId" type="text" value={editFormData.oscaId || ''} onChange={e => setEditFormData(prev => ({ ...prev, oscaId: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-blue-50 border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-900 font-bold text-blue-900" />
+                    </div>
+                    <div>
+                      <label htmlFor="edit-firstName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">First Name</label>
+                      <input id="edit-firstName" name="firstName" type="text" value={editFormData.firstName || ''} onChange={e => setEditFormData(prev => ({ ...prev, firstName: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
+                    </div>
+                    <div>
+                      <label htmlFor="edit-middleName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Middle Name</label>
+                      <input id="edit-middleName" name="middleName" type="text" value={editFormData.middleName || ''} onChange={e => setEditFormData(prev => ({ ...prev, middleName: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
+                    </div>
+                    <div>
+                      <label htmlFor="edit-lastName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Last Name</label>
+                      <input id="edit-lastName" name="lastName" type="text" value={editFormData.lastName || ''} onChange={e => setEditFormData(prev => ({ ...prev, lastName: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
+                    </div>
+                    <div>
+                      <label htmlFor="edit-pensionStatus" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Pension Status</label>
+                      <select id="edit-pensionStatus" name="pensionStatus" value={editFormData.pensionStatus || ''} onChange={e => setEditFormData(prev => ({ ...prev, pensionStatus: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700">
+                        <option value="Indigent">Indigent</option>
+                        <option value="Pensioner">Pensioner</option>
+                        <option value="National Social Pensioner">National Social Pensioner</option>
+                        <option value="Local Social Pensioner">Local Social Pensioner</option>
+                        <option value="None">None</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="edit-barangay" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Barangay</label>
+                      <select id="edit-barangay" name="barangay" value={editFormData.barangay || ''} onChange={e => setEditFormData(prev => ({ ...prev, barangay: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700">
+                        {BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="edit-contactNumber" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Contact Number</label>
+                      <input id="edit-contactNumber" name="contactNumber" type="text" value={editFormData.contactNumber || ''} onChange={e => setEditFormData(prev => ({ ...prev, contactNumber: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
+                    </div>
+                    <div className="md:col-span-2">
+                      <label htmlFor="edit-streetAddress" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Street Address</label>
+                      <input id="edit-streetAddress" name="streetAddress" type="text" value={editFormData.streetAddress || ''} onChange={e => setEditFormData(prev => ({ ...prev, streetAddress: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1002,16 +1091,25 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify }) => {
 
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 z-10 flex-wrap">
               <button onClick={() => setSelectedSenior(null)} className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-colors flex-1 md:flex-none">Cancel</button>
-              <button 
-                onClick={() => {
-                  if (confirm("Save changes to this profile?")) {
-                    setSelectedSenior(null);
+              <button
+                disabled={isProcessing}
+                onClick={async () => {
+                  setIsProcessing(true);
+                  try {
+                    await seniorsAPI.update(selectedSenior.id, editFormData);
                     notify("Profile updated successfully.", "success");
+                    setSelectedSenior(null);
+                    fetchSeniors();
+                  } catch (error: any) {
+                    notify(error.message || "Failed to update profile.", "error");
+                  } finally {
+                    setIsProcessing(false);
                   }
                 }}
-                className="px-8 py-3 rounded-xl bg-blue-900 text-white font-bold hover:bg-blue-800 transition-colors shadow-lg shadow-blue-100 flex items-center justify-center gap-2 flex-1 md:flex-none"
+                className="px-8 py-3 rounded-xl bg-blue-900 text-white font-bold hover:bg-blue-800 transition-colors shadow-lg shadow-blue-100 flex items-center justify-center gap-2 flex-1 md:flex-none disabled:opacity-70"
               >
-                <Edit2 size={18} /> Save Changes
+                {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <Edit2 size={18} />}
+                {isProcessing ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </div>

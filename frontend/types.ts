@@ -10,7 +10,8 @@ export enum ViewType {
   APPROVAL = 'APPROVAL',
   USER_DASHBOARD = 'USER_DASHBOARD',
   USER_REVIEW = 'USER_REVIEW',
-  ARCHIVE = 'ARCHIVE'
+  ARCHIVE = 'ARCHIVE',
+  BATCH_PRINT = 'BATCH_PRINT'
 }
 
 export type UserRole = 'Admin' | 'Staff' | 'Senior';
@@ -67,6 +68,7 @@ export interface FamilyMember {
 
 export interface SeniorCitizen {
   id: string;
+  oscaId?: string;
   name: string;
   age: number;
   gender: 'Male' | 'Female' | 'Other';
@@ -92,6 +94,7 @@ export interface SeniorCitizen {
   nationalId?: string;
   familyMembersCount?: number;
   familyMembers?: FamilyMember[];
+  updatedAt?: string;
 }
 
 export interface HistoryLog {
