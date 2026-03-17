@@ -90,13 +90,6 @@ const App: React.FC = () => {
       } else {
         setCurrentView(ViewType.DASHBOARD);
       }
-      
-      // Notify welcome on login
-      const hasNotified = sessionStorage.getItem(`welcome_notified_${currentUser.id}`);
-      if (!hasNotified) {
-        notify(`Welcome, ${currentUser.name}!`, 'success');
-        sessionStorage.setItem(`welcome_notified_${currentUser.id}`, 'true');
-      }
     }
   }, [currentUser]);
 
@@ -108,7 +101,6 @@ const App: React.FC = () => {
     await logout();
     setIsRegistering(false);
     setIsLogoutConfirmOpen(false);
-    notify('You have been logged out.', 'error');
   };
 
   // Show loading screen while verifying session or performing auth operations

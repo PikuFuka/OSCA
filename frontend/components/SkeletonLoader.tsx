@@ -6,13 +6,13 @@ interface SkeletonProps {
 
 const Skeleton: React.FC<SkeletonProps> = ({ className = "" }) => {
   return (
-    <div className={`bg-slate-200 animate-pulse rounded-md ${className}`}></div>
+    <div className={`relative overflow-hidden rounded-md bg-slate-200/80 skeleton-wave ${className}`}></div>
   );
 };
 
 export const DashboardSkeleton = () => {
   return (
-    <div className="space-y-6 md:space-y-8 pb-16 animate-pulse">
+    <div className="space-y-6 md:space-y-8 pb-16 animate-in fade-in duration-300">
       {/* Header */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
         <div className="space-y-2">
@@ -55,7 +55,7 @@ export const DashboardSkeleton = () => {
 
 export const TableSkeleton = () => {
   return (
-    <div className="space-y-6 animate-pulse">
+    <div className="space-y-6 animate-in fade-in duration-300">
       <div className="flex justify-between items-center">
         <Skeleton className="h-10 w-48 rounded-xl" />
         <div className="flex gap-2">
@@ -85,7 +85,7 @@ export const TableSkeleton = () => {
 
 export const ProfileSkeleton = () => {
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-pulse">
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-300">
       <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 flex flex-col md:flex-row items-center gap-8">
         <Skeleton className="w-32 h-32 rounded-full" />
         <div className="flex-1 space-y-4 text-center md:text-left">
@@ -103,7 +103,7 @@ export const ProfileSkeleton = () => {
 
 export const UserDashboardSkeleton = () => {
   return (
-    <div className="space-y-8 pb-12 animate-pulse">
+    <div className="space-y-8 pb-12 animate-in fade-in duration-300">
       {/* Welcome Section */}
       <Skeleton className="h-48 md:h-64 rounded-[2.5rem]" />
       

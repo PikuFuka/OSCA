@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Printer, X, Loader2 } from 'lucide-react';
+import { Search, Printer, X, Loader2, Plus, CheckCircle2 } from 'lucide-react';
 import { SeniorCitizen, INITIAL_ID_CONFIG, CurrentUser } from '../types';
 import { seniorsAPI } from '../services/api';
 
@@ -18,6 +18,8 @@ const StaticLabel = ({ text, config, className = "" }: { text: string, config: {
 );
 
 const MAX_CARDS = 4;
+const CARD_WIDTH = 480;
+const CARD_HEIGHT = 300;
 
 const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -84,6 +86,37 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
     setTimeout(() => window.print(), 300);
   };
 
+  const renderFrontCard = (senior: SeniorCitizen) => {
+    const config = senior.idConfig || INITIAL_ID_CONFIG;
+
+    return (
+      <div className="relative w-full h-full overflow-hidden">
+        <img src="img/FRONT.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="Front ID template" />
+        <div className="absolute inset-0 z-10">
+          <div className="absolute" style={{ left: '12px', top: '139px', width: '125px', height: '127px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {senior.idPhoto && <img src={senior.idPhoto} className="w-full h-full object-cover" alt={senior.name} />}
+          </div>
+          <div className="absolute inset-0 z-20">
+            <StaticLabel text={formatName(senior)} config={config.name} className="font-black text-slate-900 uppercase" />
+            <StaticLabel text={`Brgy. ${senior.barangay}`} config={config.barangay} className="font-black text-slate-900 uppercase" />
+            <StaticLabel text="Pagsanjan, Laguna" config={config.city} className="font-black text-slate-900 uppercase" />
+            <StaticLabel text={String(senior.age)} config={config.age} className="font-black text-slate-900" />
+            <StaticLabel
+              text={senior.dateOfBirth
+                ? new Date(senior.dateOfBirth).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+                : 'N/A'}
+              config={config.dob}
+              className="font-black text-slate-900"
+            />
+            <StaticLabel text={senior.gender || ''} config={config.gender} className="font-black text-slate-900 uppercase" />
+            <StaticLabel text={new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })} config={config.dateIssued} className="font-black text-slate-900" />
+            <StaticLabel text={senior.id} config={config.id} className="font-black text-rose-600 tracking-tighter" />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -92,7 +125,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
         <p className="text-slate-500 font-medium">Select up to {MAX_CARDS} seniors and print their ID cards on a single A4 page.</p>
       </div>
 
-      {/* Search + Table + Actions */}
+      {/* Search + Actions */}
       <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 md:p-8 print:hidden">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div className="relative w-full md:w-96">
@@ -134,71 +167,94 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
           </div>
         )}
 
-        {/* Table Results */}
-        <div className="overflow-x-auto rounded-2xl border border-slate-200">
-          <table className="w-full text-left border-collapse min-w-max">
-            <thead>
-              <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold border-b border-slate-200">
-                <th className="p-4 w-12 text-center">Select</th>
-                <th className="p-4">OSCA ID</th>
-                <th className="p-4">Name</th>
-                <th className="p-4">Barangay</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-sm">
-              {searching ? (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-slate-400">
-                    <Loader2 className="animate-spin inline mr-2" size={20} /> Searching...
-                  </td>
-                </tr>
-              ) : searchResults.length > 0 ? (
-                searchResults.map(senior => {
-                  const isSelected = selectedSeniors.some(s => s.id === senior.id);
-                  const isMaxedOut = selectedSeniors.length >= MAX_CARDS && !isSelected;
-                  
-                  return (
-                    <tr 
-                      key={senior.id} 
-                      className={`hover:bg-slate-50 transition-colors ${isSelected ? 'bg-blue-50/50' : ''}`}
-                    >
-                      <td className="p-4 text-center">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          disabled={isMaxedOut}
-                          onChange={() => {
-                            if (isSelected) {
-                              removeSenior(senior.id);
-                            } else {
-                              addSenior(senior);
-                            }
-                          }}
-                          className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
-                        />
-                      </td>
-                      <td className="p-4 font-mono text-sm text-slate-600">{senior.id}</td>
-                      <td className="p-4 font-bold text-slate-900">{senior.name}</td>
-                      <td className="p-4 text-slate-600">{senior.barangay}</td>
-                    </tr>
-                  )
-                })
-              ) : searchTerm ? (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-slate-400">
-                    No results found for "{searchTerm}"
-                  </td>
-                </tr>
-              ) : (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-slate-400 italic">
-                    Type to search for seniors...
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+        {/* Search Results as Responsive Cards */}
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 md:p-5">
+          {searching ? (
+            <div className="p-8 text-center text-slate-400">
+              <Loader2 className="animate-spin inline mr-2" size={20} /> Searching...
+            </div>
+          ) : searchResults.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {searchResults.map(senior => {
+                const isSelected = selectedSeniors.some(s => s.id === senior.id);
+                const isMaxedOut = selectedSeniors.length >= MAX_CARDS && !isSelected;
+
+                return (
+                  <div key={senior.id} className={`rounded-2xl border p-4 transition-all ${isSelected ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-slate-200'}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-black uppercase tracking-wider text-slate-400">OSCA ID</p>
+                        <p className="font-mono text-sm text-slate-700">{senior.id}</p>
+                        <p className="font-black text-slate-900 truncate mt-1">{senior.name}</p>
+                        <p className="text-sm text-slate-500">{senior.barangay}</p>
+                      </div>
+                      <button
+                        disabled={isMaxedOut}
+                        onClick={() => {
+                          if (isSelected) removeSenior(senior.id);
+                          else addSenior(senior);
+                        }}
+                        className={`shrink-0 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wide flex items-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${isSelected ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-900 text-white hover:bg-blue-800'}`}
+                      >
+                        {isSelected ? <CheckCircle2 size={14} /> : <Plus size={14} />}
+                        {isSelected ? 'Added' : 'Add'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : searchTerm ? (
+            <div className="p-8 text-center text-slate-400">No results found for "{searchTerm}"</div>
+          ) : (
+            <div className="p-8 text-center text-slate-400 italic">Type to search for seniors...</div>
+          )}
         </div>
+      </div>
+
+      {/* On-screen ID Preview */}
+      <div className="print:hidden bg-white rounded-3xl border border-slate-100 shadow-sm p-6 md:p-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
+          <div>
+            <h3 className="text-xl font-black text-slate-900">Batch ID Preview</h3>
+            <p className="text-sm text-slate-500">Responsive front/back preview, aligned for A4 print output.</p>
+          </div>
+          <span className="inline-flex items-center px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-widest">
+            Match to final print layout
+          </span>
+        </div>
+
+        {selectedSeniors.length === 0 ? (
+          <div className="border border-dashed border-slate-300 rounded-2xl p-10 text-center text-slate-400">
+            Select seniors above to generate the ID preview.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {selectedSeniors.map((senior) => (
+              <div key={`preview-${senior.id}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 md:p-4">
+                <div className="mb-2 px-1 flex items-center justify-between gap-2">
+                  <p className="text-xs md:text-sm font-black text-slate-700 truncate">{formatName(senior)}</p>
+                  <p className="text-[10px] md:text-xs font-mono text-slate-500">ID: {senior.id}</p>
+                </div>
+
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                  <div className="w-full rounded-lg border border-slate-300 overflow-hidden bg-white">
+                    <div className="relative w-full" style={{ aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}` }}>
+                      <img src="img/BACK.jpg" className="absolute inset-0 w-full h-full object-cover" alt="Back ID template" />
+                    </div>
+                  </div>
+                  <div className="w-full rounded-lg border border-slate-300 bg-white overflow-x-auto">
+                    <div className="relative mx-auto" style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}>
+                      <div className="absolute inset-0">
+                        {renderFrontCard(senior)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Print-only content */}
@@ -247,7 +303,6 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
         `}</style>
         <div className="batch-print-area">
           {selectedSeniors.map(senior => {
-            const config = senior.idConfig || INITIAL_ID_CONFIG;
             return (
               <div key={senior.id} className="batch-row">
                 {/* Back card */}
@@ -259,30 +314,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
                 {/* Front card */}
                 <div className="batch-card">
                   <div className="batch-card-content">
-                    <img src="img/FRONT.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
-                    <div className="absolute inset-0 z-10">
-                      {/* Photo */}
-                      <div className="absolute" style={{ left: '12px', top: '139px', width: '125px', height: '127px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {senior.idPhoto && <img src={senior.idPhoto} className="w-full h-full object-cover" alt="" />}
-                      </div>
-                      {/* Labels */}
-                      <div className="absolute inset-0 z-20">
-                        <StaticLabel text={formatName(senior)} config={config.name} className="font-black text-slate-900 uppercase" />
-                        <StaticLabel text={`Brgy. ${senior.barangay}`} config={config.barangay} className="font-black text-slate-900 uppercase" />
-                        <StaticLabel text="Pagsanjan, Laguna" config={config.city} className="font-black text-slate-900 uppercase" />
-                        <StaticLabel text={String(senior.age)} config={config.age} className="font-black text-slate-900" />
-                        <StaticLabel
-                          text={senior.dateOfBirth
-                            ? new Date(senior.dateOfBirth).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
-                            : 'N/A'}
-                          config={config.dob}
-                          className="font-black text-slate-900"
-                        />
-                        <StaticLabel text={senior.gender || ''} config={config.gender} className="font-black text-slate-900 uppercase" />
-                        <StaticLabel text={new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })} config={config.dateIssued} className="font-black text-slate-900" />
-                        <StaticLabel text={senior.id} config={config.id} className="font-black text-rose-600 tracking-tighter" />
-                      </div>
-                    </div>
+                    {renderFrontCard(senior)}
                   </div>
                 </div>
               </div>

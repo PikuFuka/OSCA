@@ -9,6 +9,40 @@ import ConfirmModal from './ConfirmModal';
 
 // Initial draggable positions from shared config
 const initialTextPositions = INITIAL_ID_CONFIG;
+const DEFAULT_CAMERA_ZOOM = 1.25;
+const MIN_CAMERA_ZOOM = 1;
+const MAX_CAMERA_ZOOM = 2.5;
+const CAMERA_ZOOM_STEP = 0.05;
+const PHOTO_PROCESS_MAX_DIMENSION = 1080;
+const PERSON_MASK_THRESHOLD = 10; // Adjust as needed based on testing for better results on ID photos
+const MASK_BLUR_PX = 4; // Adjust for smoother edges on segmentation mask
+const PHOTO_ENHANCEMENT_FILTER = 'brightness(1) contrast(1) clarity(2)';
+
+type SegmentationFrame = {
+  compositedCanvas: HTMLCanvasElement;
+};
+
+// We will return the segmentation instance itself since we are doing live video stream.
+let selfieSegmentationLoader: Promise<any> | null = null;
+
+const getSelfieSegmentationInstance = async () => {
+  if (!selfieSegmentationLoader) {
+    selfieSegmentationLoader = import('@mediapipe/selfie_segmentation').then(async mod => {
+      const selfieSegmentation = new mod.SelfieSegmentation({
+        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+      });
+
+      selfieSegmentation.setOptions({
+        modelSelection: 1,
+        selfieMode: true
+      });
+
+      await selfieSegmentation.initialize();
+      return selfieSegmentation;
+    });
+  }
+  return selfieSegmentationLoader;
+};
 
 const DraggableLabel = ({ 
   id, 
@@ -224,10 +258,25 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   };
   const [idPhoto, setIdPhoto] = useState<string | null>(null);
   const [isWebcamActive, setIsWebcamActive] = useState(false);
+  const [isPhotoProcessing, setIsPhotoProcessing] = useState(false);
+  const [cameraZoom, setCameraZoom] = useState(DEFAULT_CAMERA_ZOOM);
   const [isIdFlipped, setIsIdFlipped] = useState(false);
   const [mobileStep, setMobileStep] = useState<'photo' | 'preview'>('photo');
+  const [useWhiteBackground, setUseWhiteBackground] = useState(true);
+  const useWhiteBackgroundRef = useRef(true);
+
+  const toggleWhiteBackground = () => {
+    setUseWhiteBackground(prev => {
+      const next = !prev;
+      useWhiteBackgroundRef.current = next;
+      return next;
+    });
+  };
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const liveCanvasRef = useRef<HTMLCanvasElement>(null);
+  const segmentationLoopRef = useRef<number | null>(null);
 
   // Draggable Text Configuration
   const [textConfig, setTextConfig] = useState(initialTextPositions);
@@ -296,14 +345,86 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     setIsIdFlipped(false);
     setMobileStep('photo'); // Reset to photo step on mobile
     setIdModalOpen(true);
+    // Preload the model to reduce delay on first capture/upload.
+    void getSelfieSegmentationInstance().catch(() => undefined);
   };
 
   const startWebcam = async () => {
     setIsWebcamActive(true);
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'user',
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
+        }
+      });
+
+      setCameraZoom(DEFAULT_CAMERA_ZOOM);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        
+        // Setup live segmented background
+        const selfieSegmentation = await getSelfieSegmentationInstance();
+        
+        selfieSegmentation.onResults((results: any) => {
+          if (!liveCanvasRef.current) return;
+          const canvas = liveCanvasRef.current;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) return;
+          
+          canvas.width = results.image.width;
+          canvas.height = results.image.height;
+          
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+          
+          if (useWhiteBackgroundRef.current) {
+            // 1. Draw the raw captured image with filters applied
+            ctx.filter = PHOTO_ENHANCEMENT_FILTER;
+            ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+            
+            // 2. Use destination-in to mask out the background.
+            // MediaPipe's mask is opaque where the person is, and transparent elsewhere.
+            ctx.filter = 'none';
+            ctx.globalCompositeOperation = 'destination-in';
+            ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
+            
+            // 3. Draw a solid white background behind the now-transparent background
+            ctx.globalCompositeOperation = 'destination-over';
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Reset
+            ctx.globalCompositeOperation = 'source-over';
+          } else {
+            // Just draw the raw webcam feed with enhancement
+            ctx.filter = PHOTO_ENHANCEMENT_FILTER;
+            ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
+            ctx.filter = 'none';
+          }
+        });
+
+        // Use requestAnimationFrame for processing video frames
+        let lastTime = -1;
+        const processStream = async () => {
+          if (!videoRef.current || videoRef.current.paused || videoRef.current.ended) return;
+          
+          // Only process if the video has a new frame
+          if (videoRef.current.currentTime !== lastTime) {
+            lastTime = videoRef.current.currentTime;
+            try {
+              await selfieSegmentation.send({ image: videoRef.current });
+            } catch (e) {
+              console.error('Frame processing error', e);
+            }
+          }
+          segmentationLoopRef.current = requestAnimationFrame(processStream);
+        };
+        
+        videoRef.current.onloadeddata = () => {
+          processStream();
+        };
       }
     } catch (err) {
       notify("Error accessing camera. Please check permissions.", "error");
@@ -311,44 +432,181 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     }
   };
 
-  const capturePhoto = () => {
-    if (videoRef.current && canvasRef.current) {
-      const video = videoRef.current;
+  const capturePhoto = async () => {
+    if (liveCanvasRef.current && canvasRef.current && videoRef.current) {
+      const liveCanvas = liveCanvasRef.current;
       const canvas = canvasRef.current;
       const context = canvas.getContext('2d');
       if (context) {
-        // Crop to square from center
-        const size = Math.min(video.videoWidth, video.videoHeight);
-        const startX = (video.videoWidth - size) / 2;
-        const startY = (video.videoHeight - size) / 2;
+        // Exact 1:1 output with center crop and zoom support.
+        const zoom = Math.max(1, Number(cameraZoom) || 1);
+        const sourceSize = Math.min(liveCanvas.width, liveCanvas.height) / zoom;
+        const startX = (liveCanvas.width - sourceSize) / 2;
+        const startY = (liveCanvas.height - sourceSize) / 2;
 
-        context.drawImage(video, startX, startY, size, size, 0, 0, canvas.width, canvas.height);
+        context.drawImage(liveCanvas, startX, startY, sourceSize, sourceSize, 0, 0, canvas.width, canvas.height);
         const dataUrl = canvas.toDataURL('image/png');
-        setIdPhoto(dataUrl);
         stopWebcam();
-        setMobileStep('preview'); // Move to preview on mobile
+        setMobileStep('preview');
+
+        setIdPhoto(dataUrl);
         notify("Photo captured successfully.", "success");
       }
     }
   };
 
+  const loadImage = (source: string): Promise<HTMLImageElement> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('Invalid image file.'));
+      img.src = source;
+    });
+  };
+
+  const flattenImageOnWhite = (source: string): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+
+        const context = canvas.getContext('2d');
+        if (!context) {
+          reject(new Error('Unable to process image.'));
+          return;
+        }
+
+        context.fillStyle = '#FFFFFF';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        context.drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => reject(new Error('Invalid image file.'));
+      img.src = source;
+    });
+  };
+
+  const resizeImageForProcessing = (source: string, maxDimension: number): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        const width = img.naturalWidth || img.width;
+        const height = img.naturalHeight || img.height;
+        const scale = Math.min(1, maxDimension / Math.max(width, height));
+
+        if (scale === 1) {
+          resolve(source);
+          return;
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(width * scale));
+        canvas.height = Math.max(1, Math.round(height * scale));
+
+        const context = canvas.getContext('2d');
+        if (!context) {
+          reject(new Error('Unable to resize image.'));
+          return;
+        }
+
+        context.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => reject(new Error('Invalid image file.'));
+      img.src = source;
+    });
+  };
+
+  const compositeWithWhiteUsingMask = async (originalSource: string): Promise<string> => {
+    const originalImg = await loadImage(originalSource);
+    const selfieSegmentation = await getSelfieSegmentationInstance();
+    
+    return new Promise<string>((resolve, reject) => {
+      selfieSegmentation.onResults((results) => {
+        try {
+          const width = results.image.width;
+          const height = results.image.height;
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('Unable to render context');
+
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = 'high';
+
+          // 1. Draw raw image with filter
+          ctx.filter = PHOTO_ENHANCEMENT_FILTER;
+          ctx.drawImage(results.image, 0, 0, width, height);
+
+          // 2. Use destination-in to mask out the background
+          ctx.filter = 'none';
+          ctx.globalCompositeOperation = 'destination-in';
+          ctx.drawImage(results.segmentationMask, 0, 0, width, height);
+
+          // 3. Draw white background behind
+          ctx.globalCompositeOperation = 'destination-over';
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+
+          // Reset
+          ctx.globalCompositeOperation = 'source-over';
+          resolve(canvas.toDataURL('image/png'));
+        } catch (error) {
+          reject(error);
+        }
+      });
+
+      selfieSegmentation.send({ image: originalImg }).catch(reject);
+    });
+  };
+
+  const processPhotoWithWhiteBackground = async (source: string): Promise<string> => {
+    try {
+      const optimizedSource = await resizeImageForProcessing(source, PHOTO_PROCESS_MAX_DIMENSION);
+      return compositeWithWhiteUsingMask(optimizedSource);
+    } catch (error) {
+      return flattenImageOnWhite(source);
+    }
+  };
+
   const stopWebcam = () => {
+    if (segmentationLoopRef.current) {
+      cancelAnimationFrame(segmentationLoopRef.current);
+      segmentationLoopRef.current = null;
+    }
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
       stream.getTracks().forEach(track => track.stop());
       videoRef.current.srcObject = null;
     }
     setIsWebcamActive(false);
+    setCameraZoom(DEFAULT_CAMERA_ZOOM);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setIdPhoto(reader.result as string);
-        setMobileStep('preview'); // Move to preview on mobile
-        notify("Image uploaded successfully. Click 'Save' to update profile.", "success");
+      reader.onloadend = async () => {
+        setIsPhotoProcessing(true);
+        try {
+          let processedImage;
+          if (useWhiteBackgroundRef.current) {
+             processedImage = await processPhotoWithWhiteBackground(reader.result as string);
+          } else {
+             processedImage = reader.result as string;
+          }
+          setIdPhoto(processedImage);
+          setMobileStep('preview'); // Move to preview on mobile
+          notify("Image uploaded successfully. Click 'Save' to update profile.", "success");
+        } catch (error) {
+          notify("Failed to process uploaded image.", "error");
+        } finally {
+          setIsPhotoProcessing(false);
+        }
       };
       reader.readAsDataURL(file);
     }
@@ -370,6 +628,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   };
 
   const closeIdModal = () => {
+    if (isPhotoProcessing) return;
     stopWebcam();
     setIdModalOpen(false);
     setIdGenerationSenior(null);
@@ -774,17 +1033,44 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Preview and Issue OSCA ID</p>
                  </div>
                </div>
-               <button onClick={closeIdModal} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-full transition-colors"><X size={24} /></button>
+               <button onClick={closeIdModal} disabled={isPhotoProcessing} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"><X size={24} /></button>
              </div>
 
              <div className="flex flex-col lg:flex-row flex-1 overflow-hidden relative">
+                {isPhotoProcessing && (
+                  <div className="fixed inset-0 z-[120] bg-slate-900/45 backdrop-blur-md flex items-center justify-center p-6">
+                    <div className="w-full max-w-sm bg-[#FFFBF1] rounded-3xl shadow-2xl border border-white/60 px-6 py-7 text-center">
+                      <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-white/70 border border-slate-200/80 flex items-center justify-center shadow-sm">
+                        <img src="img/pjn_logo.png" alt="Pagsanjan Logo" className="w-10 h-10 object-contain" />
+                      </div>
+
+                      <div className="inline-flex items-center justify-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 mb-3">
+                        <Loader2 size={14} className="animate-spin text-blue-900" />
+                        <span className="text-[10px] font-black uppercase tracking-[0.18em] text-blue-900">Processing</span>
+                      </div>
+
+                      <p className="text-lg font-black tracking-tight text-slate-900">Processing photo...</p>
+                      <p className="text-sm font-medium text-slate-600 mt-1">Applying background cleanup and finalizing ID image.</p>
+                    </div>
+                  </div>
+                )}
                 {/* Left Panel: Photo Capture */}
                 <div className={`w-full lg:w-1/3 bg-slate-50 p-6 border-r border-slate-100 overflow-y-auto transition-all ${mobileStep === 'photo' ? 'block' : 'hidden lg:block'}`}>
                    <h4 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-4">Member Photo</h4>
                    <div className="aspect-square bg-slate-200 rounded-2xl mb-4 overflow-hidden relative border-2 border-slate-300 flex items-center justify-center">
                       {isWebcamActive ? (
                         <>
-                          <video ref={videoRef} autoPlay className="w-full h-full object-cover transform scale-x-[-1]" />
+                          <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            className="hidden"
+                          />
+                          <canvas
+                            ref={liveCanvasRef}
+                            className="w-full h-full object-cover"
+                            style={{ transform: `scaleX(-1) scale(${cameraZoom})` }}
+                          />
                           {/* ID Photo Guide Overlay */}
                           <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-60">
                              <svg viewBox="0 0 200 200" className="w-full h-full text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]" preserveAspectRatio="xMidYMid meet">
@@ -808,6 +1094,9 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                                <path d="M 20 200 Q 20 145 100 145 Q 180 145 180 200" fill="none" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4,4" />
                              </svg>
                           </div>
+                            <div className="absolute bottom-2 right-2 bg-black/60 text-white text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-wider">
+                              Auto {cameraZoom.toFixed(2)}x | 1:1
+                            </div>
                           <canvas ref={canvasRef} className="hidden" width={400} height={400} />
                         </>
                       ) : idPhoto ? (
@@ -819,25 +1108,82 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                    <div className="space-y-3">
                       {!isWebcamActive ? (
                          <>
-                           <button onClick={startWebcam} className="w-full py-3 bg-blue-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-800 transition-all"><Camera size={18} /> Open Webcam</button>
+                          <button onClick={startWebcam} disabled={isPhotoProcessing} className="w-full py-3 bg-blue-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"><Camera size={18} /> Open Webcam</button>
                            <div className="relative">
-                              <input id="member-id-upload" name="memberIdPhoto" type="file" accept="image/*" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" onChange={handleFileUpload} />
-                              <button className="w-full py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-100 transition-all"><Upload size={18} /> Upload Image</button>
+                            <input id="member-id-upload" name="memberIdPhoto" type="file" accept="image/*" disabled={isPhotoProcessing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed" onChange={handleFileUpload} />
+                            <button disabled={isPhotoProcessing} className="w-full py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"><Upload size={18} /> Upload Image</button>
                            </div>
                          </>
                       ) : (
                          <div className="grid grid-cols-2 gap-3">
-                            <button onClick={stopWebcam} className="py-3 bg-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-300 transition-all">Cancel</button>
-                            <button onClick={capturePhoto} className="py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all">Capture</button>
+                           <button onClick={stopWebcam} disabled={isPhotoProcessing} className="py-3 bg-slate-200 text-slate-600 rounded-xl font-bold hover:bg-slate-300 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Cancel</button>
+                           <button onClick={capturePhoto} disabled={isPhotoProcessing} className="py-3 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed">Capture</button>
                          </div>
+                      )}
+
+                      {isWebcamActive && (
+                        <div className="bg-white border border-slate-200 rounded-xl p-3 space-y-3">
+                          <button 
+                            onClick={toggleWhiteBackground}
+                            className={`w-full py-2.5 rounded-lg text-xs font-black uppercase tracking-wider transition-colors ${
+                              useWhiteBackground 
+                                ? 'bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200' 
+                                : 'bg-slate-100 text-slate-600 border border-slate-200 hover:bg-slate-200'
+                            }`}
+                          >
+                            AI White Background: {useWhiteBackground ? 'ON' : 'OFF'}
+                          </button>
+                          
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Zoom</span>
+                              <span className="text-xs font-black text-blue-900">{cameraZoom.toFixed(2)}x</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setCameraZoom(prev => Math.max(MIN_CAMERA_ZOOM, Number((prev - CAMERA_ZOOM_STEP).toFixed(2))))}
+                              className="w-9 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 font-black hover:bg-slate-100"
+                              aria-label="Zoom out"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="range"
+                              min={MIN_CAMERA_ZOOM}
+                              max={MAX_CAMERA_ZOOM}
+                              step={CAMERA_ZOOM_STEP}
+                              value={cameraZoom}
+                              onChange={(e) => setCameraZoom(Number(e.target.value))}
+                              className="w-full accent-blue-900"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setCameraZoom(prev => Math.min(MAX_CAMERA_ZOOM, Number((prev + CAMERA_ZOOM_STEP).toFixed(2))))}
+                              className="w-9 h-9 rounded-lg border border-slate-200 bg-slate-50 text-slate-700 font-black hover:bg-slate-100"
+                              aria-label="Zoom in"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setCameraZoom(DEFAULT_CAMERA_ZOOM)}
+                            className="w-full py-2 rounded-lg bg-blue-50 text-blue-700 text-xs font-black uppercase tracking-wider hover:bg-blue-100"
+                          >
+                            Reset to Auto Zoom
+                          </button>
+                        </div>
+                        </div>
                       )}
                       
                       {/* Explicit button to proceed on mobile if photo exists but user navigated back */}
                       {idPhoto && !isWebcamActive && (
                         <div className="space-y-2">
-                           <button 
+                          <button 
                              onClick={savePhoto} 
-                              className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100"
+                            disabled={isPhotoProcessing}
+                            className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 disabled:opacity-50 disabled:cursor-not-allowed"
                            >
                               <Save size={18} /> Save to Profile
                            </button>

@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ArrowRight, User, KeyRound, UserPlus } from 'lucide-react';
+import { ArrowRight, User, KeyRound, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface LoginViewProps {
@@ -11,6 +11,7 @@ interface LoginViewProps {
 const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
@@ -21,7 +22,6 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
     try {
       await login(identifier, password);
       // login success is handled by AuthContext state change, which App.tsx listens to
-      notify('You have successfully signed in.', 'success');
     } catch (error: any) {
       notify(error.message || 'Invalid credentials. Please check your ID/Email and password.', 'error');
     } finally {
@@ -38,8 +38,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
           style={{ backgroundImage: 'url("img/arch.jpg")' }}
         ></div>
         {/* Overlays for better readability and branding */}
-        <div className="absolute inset-0 bg-blue-900/40 backdrop-blur-[2px]"></div>
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/80 via-blue-900/20 to-amber-900/30"></div>
+        <div className="absolute inset-0 bg-blue-900/28 backdrop-blur-[1px]"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/60 via-blue-900/10 to-amber-900/20"></div>
       </div>
 
       <div className="max-w-4xl w-full bg-white/95 rounded-3xl md:rounded-[2.5rem] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col md:flex-row border border-white/20 relative z-10 backdrop-blur-md">
@@ -117,7 +117,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                   placeholder="e.g., 2024-0001"
-                  className="w-full pl-14 pr-5 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 placeholder:font-medium"
+                  className="w-full pl-14 pr-5 py-4 rounded-2xl bg-slate-50 border border-slate-300/80 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 placeholder:font-medium"
                 />
               </div>
             </div>
@@ -131,12 +131,25 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
                 <input 
                   id="login-password"
                   name="password"
-                  type="password" 
+                  type={showPassword ? 'text' : 'password'} 
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-14 pr-5 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 placeholder:font-medium"
+                  className="w-full pl-14 pr-14 py-4 rounded-2xl bg-slate-50 border border-slate-300/80 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 placeholder:font-medium"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(prev => !prev)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg text-slate-400 hover:text-blue-900 hover:bg-blue-50 transition-colors"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              <div className="flex justify-end pr-1">
+                <button type="button" className="text-[11px] text-blue-800 font-bold hover:text-blue-900 transition-colors">
+                  Forgot your password?
+                </button>
               </div>
             </div>
 
@@ -153,21 +166,16 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
             </button>
           </form>
 
-          <div className="mt-8 pt-6 border-t border-slate-50 text-center space-y-4">
+          <div className="mt-10 pt-8 border-t border-slate-100 text-center space-y-6">
              <div className="flex items-center justify-center gap-2">
                 <span className="text-xs font-bold text-slate-400">Not registered yet?</span>
              </div>
              <button 
                onClick={onRegister}
-               className="w-full bg-white border-2 border-slate-100 text-slate-600 py-3 rounded-2xl font-bold hover:bg-slate-50 hover:border-blue-100 hover:text-blue-900 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+               className="w-full bg-white border-2 border-blue-900/60 text-blue-900 py-3 rounded-2xl font-bold hover:bg-blue-50 hover:border-blue-900 hover:text-blue-900 transition-all flex items-center justify-center gap-2 active:scale-[0.98] shadow-sm"
              >
                <UserPlus size={18} /> Apply for Senior Citizen ID
              </button>
-             <div className="pt-2">
-               <button className="text-[10px] text-slate-400 font-bold hover:text-blue-900 transition-colors">
-                 Forgot your password?
-               </button>
-             </div>
           </div>
         </div>
       </div>
