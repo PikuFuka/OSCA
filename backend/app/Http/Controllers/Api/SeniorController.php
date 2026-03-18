@@ -15,6 +15,11 @@ use Illuminate\Support\Facades\Hash;
 
 class SeniorController extends Controller
 {
+    private function applyValidOscaIdScope($query)
+    {
+        return $query->whereNotNull('osca_id')->whereRaw("TRIM(osca_id) <> ''");
+    }
+
     private function applySeniorSearch($query, string $search): void
     {
         $search = trim($search);
@@ -41,7 +46,9 @@ class SeniorController extends Controller
 
     private function findSeniorByIdentifier($identifier): Senior
     {
-        $senior = Senior::where('osca_id', (string) $identifier)->first();
+        $senior = $this->applyValidOscaIdScope(Senior::query())
+            ->where('osca_id', (string) $identifier)
+            ->first();
 
         if (!$senior && is_numeric($identifier)) {
             $senior = Senior::find($identifier);
@@ -106,6 +113,7 @@ class SeniorController extends Controller
     private function transformSenior($senior) {
         return [
             'id' => $senior->osca_id ?? $senior->id,
+            'oscaId' => $senior->osca_id,
             'name' => $senior->full_name,
             'age' => $senior->age,
             'gender' => $senior->sex,
@@ -211,6 +219,8 @@ class SeniorController extends Controller
         $senior = Senior::with(['familyMembers', 'documents' => function($query) {
                             $query->select(['id', 'senior_id', 'document_type', 'file_name', 'mime_type', 'file_size']);
                         }])
+                        ->whereNotNull('osca_id')
+                        ->whereRaw("TRIM(osca_id) <> ''")
                         ->where('osca_id', $id)
                         ->firstOrFail();
 
@@ -316,6 +326,8 @@ class SeniorController extends Controller
             $duplicate = Senior::where('first_name', $validated['firstName'])
                 ->where('last_name', $validated['lastName'])
                 ->where('date_of_birth', $validated['dateOfBirth'])
+                ->whereNotNull('osca_id')
+                ->whereRaw("TRIM(osca_id) <> ''")
                 ->first();
 
             if ($duplicate) {
@@ -453,7 +465,10 @@ class SeniorController extends Controller
 
         // Check if oscaId is being updated and already exists for another senior
         if (isset($validated['oscaId']) && $validated['oscaId'] !== $senior->osca_id) {
-            $exists = Senior::where('osca_id', $validated['oscaId'])->where('id', '!=', $senior->id)->exists();
+            $exists = $this->applyValidOscaIdScope(Senior::query())
+                ->where('osca_id', $validated['oscaId'])
+                ->where('id', '!=', $senior->id)
+                ->exists();
             if ($exists) {
                 return response()->json([
                     'success' => false,

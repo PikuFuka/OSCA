@@ -14,9 +14,9 @@ const MIN_CAMERA_ZOOM = 1;
 const MAX_CAMERA_ZOOM = 2.5;
 const CAMERA_ZOOM_STEP = 0.05;
 const PHOTO_PROCESS_MAX_DIMENSION = 1080;
-const PERSON_MASK_THRESHOLD = 10; // Adjust as needed based on testing for better results on ID photos
-const MASK_BLUR_PX = 4; // Adjust for smoother edges on segmentation mask
-const PHOTO_ENHANCEMENT_FILTER = 'brightness(1) contrast(1) clarity(2)';
+const PERSON_MASK_THRESHOLD = 10;
+const MASK_BLUR_PX = 10;
+const PHOTO_ENHANCEMENT_FILTER = 'brightness(1.2) contrast(1.2) clarity(2)';
 
 type SegmentationFrame = {
   compositedCanvas: HTMLCanvasElement;
@@ -354,9 +354,9 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
-          facingMode: 'user',
-          width: { ideal: 1280 },
-          height: { ideal: 720 }
+          facingMode: 'user', // Use front camera if available
+          width: { ideal: 1080 },
+          height: { ideal: 720 },
         }
       });
 

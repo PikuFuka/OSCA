@@ -206,7 +206,11 @@ class RequestController extends Controller
         ]);
 
         if (!empty($validated['osca_id'])) {
-            $exists = Senior::where('osca_id', $validated['osca_id'])->where('id', '!=', $senior->id)->exists();
+            $exists = Senior::where('osca_id', $validated['osca_id'])
+                ->whereNotNull('osca_id')
+                ->whereRaw("TRIM(osca_id) <> ''")
+                ->where('id', '!=', $senior->id)
+                ->exists();
             if ($exists) {
                 return response()->json([
                     'success' => false,

@@ -26,9 +26,12 @@ import {
 import { useAuth } from './context/AuthContext';
 import { authAPI } from './services/api';
 
+type ReportSection = 'masterlist' | 'centenarians' | 'deceased';
+
 const App: React.FC = () => {
   const { user: currentUser, loading, logout, isAuthenticated, checkAuth } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.DASHBOARD);
+  const [reportSection, setReportSection] = useState<ReportSection>('masterlist');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
@@ -148,7 +151,17 @@ const App: React.FC = () => {
     switch (currentView) {
       // Admin / Staff Views
       case ViewType.DASHBOARD:
-        return <Dashboard setView={setCurrentView} />;
+        return (
+          <Dashboard
+            setView={setCurrentView}
+            onCardNavigate={(view, targetSection) => {
+              if (view === ViewType.FINAL_REPORT && targetSection) {
+                setReportSection(targetSection);
+              }
+              setCurrentView(view);
+            }}
+          />
+        );
       case ViewType.ADD_MEMBER:
         // Used by Seniors (Update) and Staff (Register)
         // If Senior, it acts as "Update Profile"
@@ -171,7 +184,13 @@ const App: React.FC = () => {
       case ViewType.HISTORY:
         return <HistoryLogView notify={notify} />;
       case ViewType.FINAL_REPORT:
-        return <ReportView notify={notify} setGlobalLoading={setIsGeneratingReport} />;
+        return (
+          <ReportView
+            notify={notify}
+            setGlobalLoading={setIsGeneratingReport}
+            initialSection={reportSection}
+          />
+        );
       case ViewType.BACKUP:
         return <BackupView notify={notify} />;
       case ViewType.APPROVAL:
@@ -190,6 +209,13 @@ const App: React.FC = () => {
       default:
         return <Dashboard />;
     }
+  };
+
+  const navigateToView = (view: ViewType) => {
+    if (view !== ViewType.FINAL_REPORT) {
+      setReportSection('masterlist');
+    }
+    setCurrentView(view);
   };
 
   // If not logged in and registering, show Public Registration View
@@ -384,7 +410,7 @@ const App: React.FC = () => {
       <Sidebar 
         currentView={currentView} 
         setView={(view) => {
-          setCurrentView(view);
+          navigateToView(view);
           if (window.innerWidth < 768) setIsSidebarOpen(false); // Close sidebar on mobile select
         }} 
         isOpen={isSidebarOpen}

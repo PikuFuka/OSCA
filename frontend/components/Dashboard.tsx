@@ -23,9 +23,10 @@ import { DashboardSkeleton } from './SkeletonLoader';
 
 interface DashboardProps {
   setView?: (view: ViewType) => void;
+  onCardNavigate?: (view: ViewType, reportSection?: 'masterlist' | 'centenarians' | 'deceased') => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
+const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   const [selectedBarangay, setSelectedBarangay] = useState('All Barangays');
   const [selectedYear, setSelectedYear] = useState('All Years');
   const [stats, setStats] = useState<any>(null);
@@ -183,7 +184,11 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
       {/* Stats Summary Section */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
         {/* Total Members */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative">
+        <button
+          type="button"
+          onClick={() => onCardNavigate?.(ViewType.FINAL_REPORT, 'masterlist')}
+          className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative text-left w-full"
+        >
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-blue-50 text-blue-900 rounded-2xl"><Users size={24} /></div>
             <div className="flex items-center gap-1 text-emerald-600 font-bold text-[10px] uppercase tracking-wider bg-emerald-50 px-2 py-1 rounded-lg">
@@ -192,10 +197,14 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
           </div>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Members</p>
           <h3 className={`text-3xl font-black text-slate-900 transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.totalMembers.toLocaleString()}</h3>
-        </div>
+        </button>
 
         {/* Pending Applications (Action Item) */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative">
+        <button
+          type="button"
+          onClick={() => onCardNavigate?.(ViewType.APPROVAL)}
+          className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative text-left w-full"
+        >
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><ClipboardList size={24} /></div>
             <div className={`flex items-center gap-1 font-bold text-[10px] uppercase tracking-wider px-2 py-1 rounded-lg ${
@@ -208,27 +217,35 @@ const Dashboard: React.FC<DashboardProps> = ({ setView }) => {
           </div>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Pending Applications</p>
           <h3 className={`text-3xl font-black text-slate-900 transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.pendingApps.toLocaleString()}</h3>
-        </div>
+        </button>
 
         {/* Living Centenarians (VIP Group) */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative">
+        <button
+          type="button"
+          onClick={() => onCardNavigate?.(ViewType.FINAL_REPORT, 'centenarians')}
+          className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative text-left w-full"
+        >
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl"><Award size={24} /></div>
             <div className="flex items-center gap-1 text-purple-600 font-bold text-[10px] uppercase tracking-wider bg-purple-50 px-2 py-1 rounded-lg">VIP Status</div>
           </div>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Living Centenarians (100+)</p>
           <h3 className={`text-3xl font-black text-slate-900 transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.centenarians.toLocaleString()}</h3>
-        </div>
+        </button>
 
         {/* Total Deceased */}
-        <div className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative">
+        <button
+          type="button"
+          onClick={() => onCardNavigate?.(ViewType.FINAL_REPORT, 'deceased')}
+          className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative text-left w-full"
+        >
           <div className="flex justify-between items-start mb-4">
             <div className="p-3 bg-slate-50 text-slate-600 rounded-2xl"><UserX size={24} /></div>
             <div className="flex items-center gap-1 text-slate-500 font-bold text-[10px] uppercase tracking-wider bg-slate-50 px-2 py-1 rounded-lg">Archived</div>
           </div>
           <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Deceased</p>
           <h3 className={`text-3xl font-black text-slate-900 transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.totalDeceased.toLocaleString()}</h3>
-        </div>
+        </button>
       </div>
 
       <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 transition-opacity duration-300 ${refreshing ? 'opacity-60' : 'opacity-100'}`}>
