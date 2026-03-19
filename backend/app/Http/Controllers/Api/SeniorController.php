@@ -9,6 +9,7 @@ use App\Models\SeniorDocument;
 use App\Models\Request as SeniorRequest;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -447,14 +448,16 @@ class SeniorController extends Controller
      */
     public function update(Request $request, $id)
     {
-        // Try OSCA ID first, then fallback to database ID if needed
-        $senior = Senior::where('osca_id', $id)->orWhere('id', $id)->firstOrFail();
+        // Resolve by OSCA ID first to avoid accidental matches against numeric database IDs.
+        $senior = $this->findSeniorByIdentifier($id);
 
         $validated = $request->validate([
             'oscaId' => 'sometimes|nullable|string|max:255',
             'firstName' => 'sometimes|string|max:255',
             'middleName' => 'nullable|string|max:255',
             'lastName' => 'sometimes|string|max:255',
+            'extensionName' => 'sometimes|nullable|string|max:10',
+            'dateOfBirth' => 'sometimes|date',
             'status' => 'sometimes|in:Active,Pending,Deceased,Inactive',
             'pensionStatus' => 'sometimes|in:Indigent,Pensioner,National Social Pensioner,Local Social Pensioner,None',
             'barangay' => 'sometimes|string|max:255',
@@ -463,10 +466,29 @@ class SeniorController extends Controller
             'idConfig' => 'nullable|array',
         ]);
 
+        $normalizedExtensionName = $senior->extension_name;
+        if (array_key_exists('extensionName', $validated)) {
+            $rawExtension = trim((string) ($validated['extensionName'] ?? ''));
+            $normalizedExtensionName = in_array(strtolower($rawExtension), ['', 'none', 'n/a', 'na'], true)
+                ? null
+                : $rawExtension;
+        }
+
+        $updatedDateOfBirth = $senior->date_of_birth;
+        if (array_key_exists('dateOfBirth', $validated)) {
+            $updatedDateOfBirth = Carbon::parse($validated['dateOfBirth']);
+        }
+
+        $normalizedOscaId = $senior->osca_id;
+        if (array_key_exists('oscaId', $validated)) {
+            $trimmedOscaId = trim((string) ($validated['oscaId'] ?? ''));
+            $normalizedOscaId = $trimmedOscaId === '' ? null : $trimmedOscaId;
+        }
+
         // Check if oscaId is being updated and already exists for another senior
-        if (isset($validated['oscaId']) && $validated['oscaId'] !== $senior->osca_id) {
+        if ($normalizedOscaId !== $senior->osca_id) {
             $exists = $this->applyValidOscaIdScope(Senior::query())
-                ->where('osca_id', $validated['oscaId'])
+                ->where('osca_id', $normalizedOscaId)
                 ->where('id', '!=', $senior->id)
                 ->exists();
             if ($exists) {
@@ -478,10 +500,13 @@ class SeniorController extends Controller
         }
 
         $senior->update([
-            'osca_id' => array_key_exists('oscaId', $validated) ? $validated['oscaId'] : $senior->osca_id,
+            'osca_id' => $normalizedOscaId,
             'first_name' => $validated['firstName'] ?? $senior->first_name,
             'middle_name' => $validated['middleName'] ?? $senior->middle_name,
             'last_name' => $validated['lastName'] ?? $senior->last_name,
+            'extension_name' => $normalizedExtensionName,
+            'date_of_birth' => $updatedDateOfBirth,
+            'age' => $updatedDateOfBirth ? Carbon::parse($updatedDateOfBirth)->age : $senior->age,
             'status' => $validated['status'] ?? $senior->status,
             'pension_status' => $validated['pensionStatus'] ?? $senior->pension_status,
             'barangay' => $validated['barangay'] ?? $senior->barangay,

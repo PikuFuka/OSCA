@@ -868,6 +868,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                                 firstName: senior.firstName || '',
                                 middleName: senior.middleName || '',
                                 lastName: senior.lastName || '',
+                                extensionName: senior.extensionName || '',
+                                dateOfBirth: senior.dateOfBirth || '',
                                 pensionStatus: senior.pensionStatus || '',
                                 barangay: senior.barangay || '',
                                 streetAddress: senior.streetAddress || '',
@@ -1405,6 +1407,21 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                     <div>
                       <label htmlFor="edit-lastName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Last Name</label>
                       <input id="edit-lastName" name="lastName" type="text" value={editFormData.lastName || ''} onChange={e => setEditFormData(prev => ({ ...prev, lastName: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
+                    </div>
+                    <div>
+                      <label htmlFor="edit-extensionName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Extension Name</label>
+                      <select id="edit-extensionName" name="extensionName" value={editFormData.extensionName || ''} onChange={e => setEditFormData(prev => ({ ...prev, extensionName: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700">
+                        <option value="">None</option>
+                        <option value="Jr.">Jr.</option>
+                        <option value="Sr.">Sr.</option>
+                        <option value="III">III</option>
+                        <option value="IV">IV</option>
+                        <option value="V">V</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label htmlFor="edit-dateOfBirth" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Birthday</label>
+                      <input id="edit-dateOfBirth" name="dateOfBirth" type="date" value={editFormData.dateOfBirth || ''} onChange={e => setEditFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
                     </div>
                     <div>
                       <label htmlFor="edit-pensionStatus" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Pension Status</label>
