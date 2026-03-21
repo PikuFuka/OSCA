@@ -14,8 +14,11 @@ const MIN_CAMERA_ZOOM = 1;
 const MAX_CAMERA_ZOOM = 2.5;
 const CAMERA_ZOOM_STEP = 0.05;
 const PHOTO_PROCESS_MAX_DIMENSION = 1080;
-const PERSON_MASK_THRESHOLD = 10;
-const MASK_BLUR_PX = 10;
+const MASK_MIN_CONFIDENCE = 0.01;
+const MASK_MAX_CONFIDENCE = 0.99;
+const MASK_BLUR_PX = 3;
+const MASK_EROSION_RADIUS = 1;
+const TEMPORAL_MASK_BLEND = 0.7;
 const PHOTO_ENHANCEMENT_FILTER = 'brightness(1.2) contrast(1.2) clarity(2)';
 
 type SegmentationFrame = {
@@ -25,6 +28,49 @@ type SegmentationFrame = {
 // We will return the segmentation instance itself since we are doing live video stream.
 let selfieSegmentationLoader: Promise<any> | null = null;
 
+const clamp01 = (value: number) => Math.max(0, Math.min(1, value));
+
+const smoothstep = (edge0: number, edge1: number, x: number) => {
+  const t = clamp01((x - edge0) / Math.max(1e-5, edge1 - edge0));
+  return t * t * (3 - 2 * t);
+};
+
+const erodeAlphaMask = (
+  source: Uint8ClampedArray,
+  width: number,
+  height: number,
+  radius: number
+) => {
+  if (radius <= 0) {
+    return source;
+  }
+
+  const output = new Uint8ClampedArray(source.length);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      let minAlpha = 255;
+
+      const startY = Math.max(0, y - radius);
+      const endY = Math.min(height - 1, y + radius);
+      const startX = Math.max(0, x - radius);
+      const endX = Math.min(width - 1, x + radius);
+
+      for (let ky = startY; ky <= endY; ky++) {
+        for (let kx = startX; kx <= endX; kx++) {
+          const neighbor = source[ky * width + kx];
+          if (neighbor < minAlpha) {
+            minAlpha = neighbor;
+          }
+        }
+      }
+
+      output[y * width + x] = minAlpha;
+    }
+  }
+
+  return output;
+};
+
 const getSelfieSegmentationInstance = async () => {
   if (!selfieSegmentationLoader) {
     selfieSegmentationLoader = import('@mediapipe/selfie_segmentation').then(async mod => {
@@ -33,7 +79,7 @@ const getSelfieSegmentationInstance = async () => {
       });
 
       selfieSegmentation.setOptions({
-        modelSelection: 1,
+        modelSelection: 0,
         selfieMode: true
       });
 
@@ -277,6 +323,68 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const liveCanvasRef = useRef<HTMLCanvasElement>(null);
   const segmentationLoopRef = useRef<number | null>(null);
+  const liveMaskCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const photoMaskCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const temporalMaskRef = useRef<Uint8ClampedArray | null>(null);
+
+  const buildRefinedMaskCanvas = (
+    segmentationMask: CanvasImageSource,
+    width: number,
+    height: number,
+    useTemporalSmoothing: boolean,
+    canvasRef: React.MutableRefObject<HTMLCanvasElement | null>
+  ): HTMLCanvasElement | null => {
+    if (!canvasRef.current) {
+      canvasRef.current = document.createElement('canvas');
+    }
+
+    const canvas = canvasRef.current;
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) {
+      return null;
+    }
+
+    ctx.clearRect(0, 0, width, height);
+    ctx.filter = MASK_BLUR_PX > 0 ? `blur(${MASK_BLUR_PX}px)` : 'none';
+    ctx.drawImage(segmentationMask, 0, 0, width, height);
+    ctx.filter = 'none';
+
+    const maskImageData = ctx.getImageData(0, 0, width, height);
+    const alphaMask = new Uint8ClampedArray(width * height);
+
+    for (let i = 0, px = 0; i < maskImageData.data.length; i += 4, px++) {
+      const confidence = maskImageData.data[i] / 255;
+      const softened = smoothstep(MASK_MIN_CONFIDENCE, MASK_MAX_CONFIDENCE, confidence);
+      alphaMask[px] = Math.round(softened * 255);
+    }
+
+    const erodedAlpha = erodeAlphaMask(alphaMask, width, height, MASK_EROSION_RADIUS);
+
+    if (useTemporalSmoothing && temporalMaskRef.current && temporalMaskRef.current.length === erodedAlpha.length) {
+      for (let i = 0; i < erodedAlpha.length; i++) {
+        erodedAlpha[i] = Math.round(
+          erodedAlpha[i] * TEMPORAL_MASK_BLEND + temporalMaskRef.current[i] * (1 - TEMPORAL_MASK_BLEND)
+        );
+      }
+    }
+
+    temporalMaskRef.current = new Uint8ClampedArray(erodedAlpha);
+
+    for (let i = 0, px = 0; i < maskImageData.data.length; i += 4, px++) {
+      maskImageData.data[i] = 255;
+      maskImageData.data[i + 1] = 255;
+      maskImageData.data[i + 2] = 255;
+      maskImageData.data[i + 3] = erodedAlpha[px];
+    }
+
+    ctx.putImageData(maskImageData, 0, 0);
+    return canvas;
+  };
 
   // Draggable Text Configuration
   const [textConfig, setTextConfig] = useState(initialTextPositions);
@@ -384,11 +492,21 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
             ctx.filter = PHOTO_ENHANCEMENT_FILTER;
             ctx.drawImage(results.image, 0, 0, canvas.width, canvas.height);
             
-            // 2. Use destination-in to mask out the background.
-            // MediaPipe's mask is opaque where the person is, and transparent elsewhere.
+            // 2. Use a soft alpha matte so hair/clothing edges blend naturally.
             ctx.filter = 'none';
             ctx.globalCompositeOperation = 'destination-in';
-            ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
+            const refinedMask = buildRefinedMaskCanvas(
+              results.segmentationMask,
+              canvas.width,
+              canvas.height,
+              true,
+              liveMaskCanvasRef
+            );
+            if (refinedMask) {
+              ctx.drawImage(refinedMask, 0, 0, canvas.width, canvas.height);
+            } else {
+              ctx.drawImage(results.segmentationMask, 0, 0, canvas.width, canvas.height);
+            }
             
             // 3. Draw a solid white background behind the now-transparent background
             ctx.globalCompositeOperation = 'destination-over';
@@ -541,10 +659,21 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
           ctx.filter = PHOTO_ENHANCEMENT_FILTER;
           ctx.drawImage(results.image, 0, 0, width, height);
 
-          // 2. Use destination-in to mask out the background
+          // 2. Use destination-in with a refined soft mask to improve edges.
           ctx.filter = 'none';
           ctx.globalCompositeOperation = 'destination-in';
-          ctx.drawImage(results.segmentationMask, 0, 0, width, height);
+          const refinedMask = buildRefinedMaskCanvas(
+            results.segmentationMask,
+            width,
+            height,
+            false,
+            photoMaskCanvasRef
+          );
+          if (refinedMask) {
+            ctx.drawImage(refinedMask, 0, 0, width, height);
+          } else {
+            ctx.drawImage(results.segmentationMask, 0, 0, width, height);
+          }
 
           // 3. Draw white background behind
           ctx.globalCompositeOperation = 'destination-over';
@@ -584,6 +713,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     }
     setIsWebcamActive(false);
     setCameraZoom(DEFAULT_CAMERA_ZOOM);
+    temporalMaskRef.current = null;
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
