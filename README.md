@@ -1,37 +1,158 @@
 # OSCA Senior Citizen ID System
 
-OSCA is a full-stack records management system for the Office of the Senior Citizen Affairs in Pagsanjan, Laguna. It handles registration, profile management, review and approval workflows, document storage, reporting, and audit logs.
+<p align="center">
+  <strong>Operational records, approval workflows, and ID management for OSCA Pagsanjan, Laguna.</strong>
+</p>
 
-This repository contains:
+<p align="center">
+  Built with Laravel 12 + React 19 + TypeScript + Vite + Tailwind CSS
+</p>
 
-- Laravel 12 backend API in `backend/`
-- React 19 + TypeScript frontend in `frontend/`
-- Root scripts for local startup and frontend production build
-- Windows launcher in `APP/start.bat`
+---
 
-## Repository Layout
+## 1. Product Design Intent
+
+The OSCA platform is designed around three goals:
+
+- Reliability: keep citizen records accurate, durable, and auditable.
+- Workflow clarity: separate registration, review, approval, and archive lifecycles.
+- Operational speed: give staff a fast UI for searches, updates, and reporting.
+
+This repository is a split architecture:
+
+- Backend API and production web entrypoint in `backend/`
+- Frontend SPA in `frontend/`
+- Root scripts for integrated local startup and Apache deployment build
+
+---
+
+## 2. System Architecture
+
+```mermaid
+flowchart LR
+  U[OSCA Staff / Admin / Senior User] --> FE[React SPA \n frontend]
+  FE -->|REST /api| BE[Laravel API \n backend]
+  BE --> DB[(MySQL or SQLite)]
+  BE --> FS[Storage \n profile photos / documents]
+
+  subgraph Production via Apache
+    AP[Apache DocumentRoot \n backend/public]
+    AP --> SPA[/app -> backend/public/app/index.html]
+    AP --> API[/api/* -> Laravel routes]
+  end
+```
+
+### Runtime Model
+
+- Development:
+  - Vite serves frontend at `http://localhost:3000`
+  - Laravel serves API at `http://127.0.0.1:8000`
+  - Vite proxy forwards `/api` to Laravel
+- Apache/XAMPP deployment:
+  - Apache serves Laravel from `backend/public`
+  - Built frontend is served from `backend/public/app`
+  - `/` redirects to `/app`
+
+---
+
+## 3. Application Architecture
+
+### Backend (Laravel 12)
+
+- Routing:
+  - API routes in `backend/routes/api.php`
+  - Web routes in `backend/routes/web.php`
+- Layers:
+  - Controllers in `backend/app/Http/Controllers`
+  - Models in `backend/app/Models`
+  - Exports/reporting in `backend/app/Exports`
+- Cross-cutting concerns:
+  - Auth and session/security via Laravel + Sanctum
+  - Logging via Laravel logging stack
+  - File and public asset handling via `storage` + symlink
+
+### Frontend (React 19 + TS)
+
+- Entry and shell:
+  - App root in `frontend/index.tsx` and `frontend/App.tsx`
+- Major UI domains in `frontend/components/`:
+  - Registry, review, archive, reports, backup, account, dashboard
+- Shared state and service boundaries:
+  - Auth and app state in `frontend/context/`
+  - API interaction in `frontend/services/`
+  - Utility logic in `frontend/utils/`
+
+### Data & Identity Model (High-Level)
+
+- Primary actors:
+  - Admin
+  - Staff
+  - Senior user
+- Primary business objects:
+  - Senior profile
+  - Supporting documents and photo assets
+  - Approval state/history log entries
+  - Generated reports / exports
+
+---
+
+## 4. Repository Map
 
 ```text
 OSCA/
-|-- APP/                     # Windows launcher
-|   `-- start.bat
-|-- backend/                 # Laravel API and production web entrypoint
-|-- frontend/                # React app
-|-- package.json             # Root helper scripts
-|-- REQUIREMENTS.txt         # Short install checklist
+|-- APP/                      # Windows launcher
+|-- backend/                  # Laravel app + API + Apache entrypoint
+|   |-- app/
+|   |-- config/
+|   |-- database/
+|   |-- public/
+|   `-- routes/
+|-- frontend/                 # React application
+|   |-- components/
+|   |-- context/
+|   |-- services/
+|   `-- utils/
+|-- package.json              # Root task orchestrator
+|-- REQUIREMENTS.txt          # Installation checklist
 `-- README.md
 ```
 
-## Requirements
+---
 
-Install these before setup:
+## 5. Technology Stack
 
-- XAMPP with Apache, MySQL, and PHP 8.2+
+### Backend
+
+- PHP 8.2+
+- Laravel 12
+- Laravel Sanctum
+- maatwebsite/excel
+
+### Frontend
+
+- React 19
+- TypeScript
+- Vite 6
+- Tailwind CSS
+- Axios
+- Recharts
+
+### Infrastructure
+
+- XAMPP Apache
+- XAMPP MySQL (or SQLite for local lightweight setups)
+
+---
+
+## 6. Local Development Setup
+
+### Prerequisites
+
+- XAMPP (Apache, MySQL, PHP 8.2+)
 - Node.js 22 LTS+
 - Composer 2.x
-- Git (optional)
 
-Required PHP extensions (typically available in XAMPP PHP):
+Expected PHP extensions:
 
 - `pdo_mysql` or `pdo_sqlite`
 - `mbstring`
@@ -42,22 +163,20 @@ Required PHP extensions (typically available in XAMPP PHP):
 - `xml`
 - `tokenizer`
 
-## Development Setup
-
-### 1. Get the project
+### Step 1: Clone project
 
 ```bash
 git clone https://github.com/PikuFuka/OSCA.git
 cd OSCA
 ```
 
-### 2. Install root dependencies
+### Step 2: Install root tools
 
 ```bash
 npm install
 ```
 
-### 3. Install backend dependencies and create env
+### Step 3: Backend install + env
 
 ```bash
 cd backend
@@ -66,11 +185,11 @@ copy .env.example .env
 php artisan key:generate
 ```
 
-On macOS/Linux, use `cp .env.example .env`.
+On macOS/Linux: `cp .env.example .env`
 
-### 4. Configure database in backend/.env
+### Step 4: Configure database in `backend/.env`
 
-Option A: MySQL (XAMPP)
+MySQL option:
 
 ```dotenv
 DB_CONNECTION=mysql
@@ -81,17 +200,15 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-Create `osca_db` in phpMyAdmin first.
-
-Option B: SQLite
+SQLite option:
 
 ```dotenv
 DB_CONNECTION=sqlite
 ```
 
-Then create an empty file at `backend/database/database.sqlite`.
+For SQLite, create an empty file at `backend/database/database.sqlite`.
 
-### 5. Run schema and storage link
+### Step 5: Migrate and link storage
 
 ```bash
 php artisan migrate
@@ -99,57 +216,55 @@ php artisan storage:link
 php artisan db:seed
 ```
 
-Seeding is optional.
+`db:seed` is optional.
 
-### 6. Install frontend dependencies
+### Step 6: Frontend install
 
 ```bash
 cd ..\frontend
 npm install
 ```
 
-### 7. Start development servers
-
-From project root:
+### Step 7: Run in development mode
 
 ```bash
 cd ..
 npm run dev
 ```
 
-This root command starts:
+This starts:
 
-- MySQL from `C:\xampp\mysql\bin\mysqld.exe` (hardcoded in root script)
+- MySQL via hardcoded path `C:\xampp\mysql\bin\mysqld.exe`
 - Laravel at `http://127.0.0.1:8000`
 - Vite at `http://localhost:3000`
 
 Development URLs:
 
 - Frontend: `http://localhost:3000`
-- Backend API: `http://127.0.0.1:8000/api`
+- API: `http://127.0.0.1:8000/api`
 - phpMyAdmin: `http://localhost/phpmyadmin`
 
-## Apache/XAMPP Deployment (Recommended for LAN Access)
+---
 
-Use this mode when the app should be reachable from other devices in your local network.
+## 7. Deployment Architecture (Apache/XAMPP)
 
-### Deployment flow summary
+This is the recommended deployment path for LAN office usage.
 
-1. Build frontend into `backend/public/app`
-2. Serve Laravel from Apache document root `backend/public`
-3. Let Laravel serve API and SPA routes
-4. Access app via `/app` on your Apache host
+### Deployment Topology
 
-### 1. One-time server preparation
+```mermaid
+flowchart TD
+  Build[npm run build:frontend] --> Out[backend/public/app]
+  Apache[Apache DocumentRoot backend/public] --> Laravel[Laravel Runtime]
+  Laravel --> AppRoute[/app serves SPA index]
+  Laravel --> ApiRoute[/api serves JSON API]
+  Laravel --> DB[(MySQL)]
+  Laravel --> Storage[storage/app + public/storage]
+```
 
-1. Open XAMPP Control Panel.
-2. Ensure Apache and MySQL are installed and can start.
-3. In Apache config, ensure `mod_rewrite` is enabled.
-4. Ensure Apache allows `.htaccess` overrides for your site (`AllowOverride All`).
+### Step-by-Step Deployment
 
-### 2. Configure production env
-
-Edit `backend/.env` and confirm at least:
+1. Configure environment in `backend/.env`:
 
 ```dotenv
 APP_ENV=production
@@ -157,105 +272,68 @@ APP_DEBUG=false
 APP_URL=http://YOUR_HOST_OR_IP
 ```
 
-Set database values for your MySQL server.
-
-If you use Laravel config caching, run these after env edits:
-
-```bash
-cd backend
-php artisan config:clear
-php artisan cache:clear
-php artisan config:cache
-```
-
-### 3. Install dependencies on target machine
-
-From project root:
+2. Install root and backend dependencies:
 
 ```bash
 npm install
-```
-
-From `backend/`:
-
-```bash
+cd backend
 composer install --no-dev --optimize-autoloader
-php artisan key:generate
 php artisan migrate --force
 php artisan storage:link
 ```
 
-Notes:
-
-- Run `key:generate` only once per deployment environment.
-- Do not rotate the key on a live system unless intentional.
-
-### 4. Build frontend for Laravel/Apache
-
-From project root:
+3. Build frontend for production:
 
 ```bash
+cd ..
 npm run build:frontend
 ```
 
-This writes the production frontend to `backend/public/app`.
-
-### 5. Point Apache to Laravel public directory
-
-Set Apache DocumentRoot to:
+4. Set Apache `DocumentRoot` to:
 
 ```text
 .../OSCA/backend/public
 ```
 
-Sample VirtualHost template:
+5. Optionally start from sample config:
 
 - `backend/deploy/xampp-vhost.conf.example`
 
-After updating Apache config:
-
-1. Restart Apache.
-2. Verify virtual host or localhost resolves correctly.
-
-### 6. Verify route behavior
-
-Current Laravel web routes are configured so that:
+6. Restart Apache and verify:
 
 - `/` redirects to `/app`
-- `/app` serves `backend/public/app/index.html`
-- `/api/*` remains Laravel API routes
+- `/app` serves the built SPA
+- `/api/*` serves Laravel API routes
 
-If `/app` returns HTTP 503, frontend build is missing. Re-run:
+7. For LAN access:
 
-```bash
-npm run build:frontend
-```
+- Allow Apache in Windows Firewall
+- Access with machine IP, e.g. `http://192.168.x.x/app`
+- Keep `APP_URL` aligned with actual access host/IP
 
-### 7. Windows Firewall and LAN checks
+### Frontend Update Rule
 
-1. Allow Apache through Windows Firewall (Private network at minimum).
-2. Use your machine LAN IP to access the app from other devices.
-3. Keep `APP_URL` consistent with the actual host/IP users access.
-
-Example access URL from another device:
-
-```text
-http://192.168.x.x/app
-```
-
-### 8. Update deployment after frontend changes
-
-Any React or Tailwind change requires a rebuild:
+Every frontend code change requires rebuilding:
 
 ```bash
 npm run build:frontend
 ```
 
-Then reload Apache page.
+---
 
-## Root Scripts
+## 8. Security & Operations Notes
 
-From project root:
+- Change seeded/default credentials immediately in non-dev environments.
+- Keep `APP_DEBUG=false` in deployed environments.
+- Do not regenerate `APP_KEY` on a live environment unless planned.
+- Run regular database backups and validate restore procedures.
+- Restrict server access to trusted network segments where possible.
+
+---
+
+## 9. Commands Reference
+
+### Root
 
 ```bash
 npm run dev
@@ -263,7 +341,7 @@ npm run build:frontend
 npm run deploy:apache
 ```
 
-## Backend Scripts
+### Backend
 
 ```bash
 cd backend
@@ -273,7 +351,7 @@ php artisan db:seed
 php artisan test
 ```
 
-## Frontend Scripts
+### Frontend
 
 ```bash
 cd frontend
@@ -282,50 +360,55 @@ npm run build
 npm run preview
 ```
 
-## Default Seeded Accounts
+---
 
-If you run `php artisan db:seed`, these defaults are used unless changed in `backend/.env`:
+## 10. Seeded Accounts (If `db:seed` is used)
 
 - Admin email: `admin@osca.gov.ph`
 - Admin password: `admin123`
 - Staff email: `staff@osca.gov.ph`
 - Staff password: `staff123`
 
-Change default credentials immediately outside local testing.
+Change these immediately after deployment.
 
-## Troubleshooting
+---
 
-### composer is not recognized
+## 11. Troubleshooting
 
-Install Composer and ensure Composer bin is in PATH.
+### `composer` not recognized
 
-### php is not recognized
+Install Composer and ensure Composer bin directory is in `PATH`.
 
-Add XAMPP PHP to PATH, commonly `C:\xampp\php`.
+### `php` not recognized
 
-### Frontend production page returns 503
+Add XAMPP PHP path (usually `C:\xampp\php`) to system `PATH`.
 
-Build is missing from `backend/public/app`.
+### `/app` returns 503
+
+Frontend production assets are missing. Rebuild:
 
 ```bash
 npm run build:frontend
 ```
 
-### Uploaded files are missing
+### Uploaded files not visible
 
-Run storage symlink command from `backend/`:
+Ensure storage symlink exists:
 
 ```bash
+cd backend
 php artisan storage:link
 ```
 
-### CORS errors in development
+### CORS issues in dev mode
 
-Use frontend on port 3000 and backend on port 8000 to match current CORS and proxy configuration.
+Use frontend at port 3000 and backend at 8000 to match configured proxy/CORS.
 
-## Notes
+---
 
-- This root README is the authoritative project setup and deployment guide.
-- `backend/README.md` and `frontend/README.md` are framework boilerplate.
+## 12. Maintainer Notes
+
+- This root README is the canonical setup + architecture + deployment document.
+- `backend/README.md` and `frontend/README.md` are framework boilerplate defaults.
 
 Last updated: March 22, 2026
