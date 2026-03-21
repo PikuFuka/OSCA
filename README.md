@@ -30,15 +30,15 @@ This repository is a split architecture:
 
 ```mermaid
 flowchart LR
-  U[OSCA Staff / Admin / Senior User] --> FE[React SPA \n frontend]
-  FE -->|REST /api| BE[Laravel API \n backend]
+  U[OSCA Staff Admin Senior User] --> FE[React SPA frontend]
+  FE -->|REST API| BE[Laravel API backend]
   BE --> DB[(MySQL or SQLite)]
-  BE --> FS[Storage \n profile photos / documents]
+  BE --> FS[Storage profile photos and documents]
 
   subgraph Production via Apache
-    AP[Apache DocumentRoot \n backend/public]
-    AP --> SPA[/app -> backend/public/app/index.html]
-    AP --> API[/api/* -> Laravel routes]
+    AP[Apache DocumentRoot backend public]
+    AP --> SPA[App route serves backend public app index html]
+    AP --> API[API routes handled by Laravel]
   end
 ```
 
@@ -256,8 +256,8 @@ This is the recommended deployment path for LAN office usage.
 flowchart TD
   Build[npm run build:frontend] --> Out[backend/public/app]
   Apache[Apache DocumentRoot backend/public] --> Laravel[Laravel Runtime]
-  Laravel --> AppRoute[/app serves SPA index]
-  Laravel --> ApiRoute[/api serves JSON API]
+  Laravel --> AppRoute[App route serves SPA index]
+  Laravel --> ApiRoute[API route serves JSON]
   Laravel --> DB[(MySQL)]
   Laravel --> Storage[storage/app + public/storage]
 ```
