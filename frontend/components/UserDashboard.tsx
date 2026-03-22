@@ -69,7 +69,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
       if (notify) notify(`${file.name} uploaded successfully`, 'success');
       await fetchMemberData();
     } catch (error: any) {
-      if (notify) notify(error.message || 'Upload failed', 'error');
+      if (notify) console.error(error); notify('Upload failed', 'error');
     } finally {
       setActionLoading(null);
       e.target.value = '';
@@ -87,7 +87,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
       if (notify) notify('Document deleted successfully', 'success');
       await fetchMemberData();
     } catch (error: any) {
-      if (notify) notify(error.message || 'Delete failed', 'error');
+      if (notify) console.error(error); notify('Delete failed', 'error');
     } finally {
       setActionLoading(null);
     }
@@ -384,3 +384,4 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
 };
 
 export default UserDashboard;
+

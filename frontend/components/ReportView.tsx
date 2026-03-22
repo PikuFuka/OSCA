@@ -1,5 +1,5 @@
 
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileSpreadsheet, 
   ChevronRight, 
@@ -29,9 +29,6 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
   const [deceasedData, setDeceasedData] = useState<any[]>([]);
   const [activeSection, setActiveSection] = useState<'masterlist' | 'centenarians' | 'deceased'>(initialSection);
   const itemsPerPage = 8;
-  const masterlistRef = useRef<HTMLDivElement | null>(null);
-  const centenariansRef = useRef<HTMLDivElement | null>(null);
-  const deceasedRef = useRef<HTMLDivElement | null>(null);
 
   // Fetch report data from API with pagination and filtering
   useEffect(() => {
@@ -78,7 +75,8 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             : allDeceasedData.filter((item: any) => item.barangay === selectedBrgy)
         );
       } catch (error) {
-        // Silent fail
+        console.error('Failed to load report data:', error);
+        notify('Unable to load report data right now. Please try again.', 'error');
       } finally {
         setLoading(false);
       }
@@ -88,19 +86,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
 
   useEffect(() => {
     setActiveSection(initialSection);
-    const targetRef =
-      initialSection === 'centenarians'
-        ? centenariansRef
-        : initialSection === 'deceased'
-          ? deceasedRef
-          : masterlistRef;
-
-    setTimeout(() => {
-      targetRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 120);
-  }, [initialSection, loading]);
-
-  const displayedData = seniorsData;
+  }, [initialSection]);
 
   const formatDate = (value?: string) => {
     if (!value) return '-';
@@ -132,6 +118,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
         if (setGlobalLoading) setGlobalLoading(false);
       }, 5000);
     } catch (error) {
+      console.error('Failed to export report:', error);
       notify('Failed to generate report. Please try again.', 'error');
       setIsExporting(false);
       if (setGlobalLoading) setGlobalLoading(false);
@@ -168,10 +155,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
           <div className="sticky top-0 z-10 w-fit max-w-full bg-slate-50/95 backdrop-blur-sm rounded-2xl border border-slate-200 p-3 inline-flex flex-wrap items-center gap-2 shadow-sm">
             <button
               type="button"
-              onClick={() => {
-                setActiveSection('masterlist');
-                masterlistRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
+              onClick={() => setActiveSection('masterlist')}
               className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                 activeSection === 'masterlist'
                   ? 'bg-blue-900 text-white'
@@ -182,10 +166,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             </button>
             <button
               type="button"
-              onClick={() => {
-                setActiveSection('centenarians');
-                centenariansRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
+              onClick={() => setActiveSection('centenarians')}
               className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                 activeSection === 'centenarians'
                   ? 'bg-purple-600 text-white'
@@ -196,10 +177,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             </button>
             <button
               type="button"
-              onClick={() => {
-                setActiveSection('deceased');
-                deceasedRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
+              onClick={() => setActiveSection('deceased')}
               className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                 activeSection === 'deceased'
                   ? 'bg-slate-700 text-white'
@@ -210,7 +188,8 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             </button>
           </div>
 
-          <div ref={masterlistRef} className="bg-white rounded-[2rem] border-2 border-blue-100 shadow-md overflow-hidden">
+          {activeSection === 'masterlist' && (
+          <div className="bg-white rounded-[2rem] border-2 border-blue-100 shadow-md overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-blue-700 via-blue-500 to-blue-300" />
             <div className="p-8 border-b border-blue-100 flex items-center justify-between bg-blue-50/40">
               <div className="flex items-center gap-3">
@@ -237,7 +216,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               </div>
             </div>
             
-            <div className="overflow-auto max-h-[520px]">
+            <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="sticky top-0 z-[2]">
                   <tr className="bg-white text-slate-400 uppercase text-xs font-black tracking-[0.2em] border-b border-slate-50">
@@ -252,8 +231,8 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {displayedData.length > 0 ? (
-                    displayedData.map((item) => (
+                  {seniorsData.length > 0 ? (
+                    seniorsData.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
                         <td className="px-8 py-5">
                           <p className="text-lg font-bold text-slate-800">{item.name}</p>
@@ -301,14 +280,10 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               </div>
             </div>
           </div>
+          )}
 
-          <div className="flex items-center gap-3 px-2 py-1">
-            <div className="h-px flex-1 bg-slate-200" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Centenarians</span>
-            <div className="h-px flex-1 bg-slate-200" />
-          </div>
-
-          <div ref={centenariansRef} className="bg-white rounded-[2rem] border-2 border-purple-100 shadow-md overflow-hidden">
+          {activeSection === 'centenarians' && (
+          <div className="bg-white rounded-[2rem] border-2 border-purple-100 shadow-md overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-purple-700 via-purple-500 to-purple-300" />
             <div className="p-8 border-b border-purple-100 flex items-center justify-between bg-purple-50/50">
               <div className="flex items-center gap-3">
@@ -338,7 +313,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               </div>
             </div>
 
-            <div className="overflow-auto max-h-[520px]">
+            <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="sticky top-0 z-[2]">
                   <tr className="bg-white text-slate-400 uppercase text-xs font-black tracking-[0.2em] border-b border-slate-50">
@@ -380,14 +355,10 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               </table>
             </div>
           </div>
+          )}
 
-          <div className="flex items-center gap-3 px-2 py-1">
-            <div className="h-px flex-1 bg-slate-200" />
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">Deceased</span>
-            <div className="h-px flex-1 bg-slate-200" />
-          </div>
-
-          <div ref={deceasedRef} className="bg-white rounded-[2rem] border-2 border-slate-300 shadow-md overflow-hidden">
+          {activeSection === 'deceased' && (
+          <div className="bg-white rounded-[2rem] border-2 border-slate-300 shadow-md overflow-hidden">
             <div className="h-1.5 bg-gradient-to-r from-slate-800 via-slate-600 to-slate-400" />
             <div className="p-8 border-b border-slate-200 flex items-center justify-between bg-slate-100/70">
               <div className="flex items-center gap-3">
@@ -417,7 +388,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               </div>
             </div>
 
-            <div className="overflow-auto max-h-[520px]">
+            <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="sticky top-0 z-[2]">
                   <tr className="bg-white text-slate-400 uppercase text-xs font-black tracking-[0.2em] border-b border-slate-50">
@@ -459,6 +430,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               </table>
             </div>
           </div>
+          )}
         </div>
       </div>
     </div>

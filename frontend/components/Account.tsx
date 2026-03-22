@@ -251,7 +251,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
       });
       notify(`New ${createForm.role} account created successfully!`, "success");
     } catch (error: any) {
-      notify(error.message || "Failed to create account on the server.", "error");
+      console.error(error); notify("Failed to create account on the server.", "error");
     }
   };
 
@@ -592,3 +592,4 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
 };
 
 export default Account;
+

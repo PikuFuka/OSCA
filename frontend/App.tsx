@@ -28,10 +28,20 @@ import { authAPI } from './services/api';
 
 type ReportSection = 'masterlist' | 'centenarians' | 'deceased';
 
+const TECHNICAL_MESSAGE_PATTERN = /(axios|network error|request failed|sqlstate|exception|trace|stack|typeerror|syntaxerror|referenceerror|unauthorized|forbidden|http\s*\d{3}|status\s*\d{3}|csrf|token|cannot read properties)/i;
+
+const toUserFriendlyMessage = (message: string, type: ToastType) => {
+  if (type !== 'error') return message;
+  if (TECHNICAL_MESSAGE_PATTERN.test(message)) {
+    return 'Something went wrong. Please try again.';
+  }
+  return message;
+};
+
 const App: React.FC = () => {
   const { user: currentUser, loading, logout, isAuthenticated, checkAuth } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.DASHBOARD);
-  const [reportSection, setReportSection] = useState<ReportSection>('masterlist');
+  const [reportSection, setReportSection] = useState<ReportSection | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
 
@@ -58,7 +68,11 @@ const App: React.FC = () => {
   });
 
   const notify = useCallback((message: string, type: ToastType = 'success') => {
-    setToast({ show: true, message, type });
+    const safeMessage = toUserFriendlyMessage(message, type);
+    if (type === 'error' && safeMessage !== message) {
+      console.error('Technical error message hidden from user:', message);
+    }
+    setToast({ show: true, message: safeMessage, type });
   }, []);
 
   const closeToast = useCallback(() => {
@@ -188,7 +202,7 @@ const App: React.FC = () => {
           <ReportView
             notify={notify}
             setGlobalLoading={setIsGeneratingReport}
-            initialSection={reportSection}
+            initialSection={reportSection ?? undefined}
           />
         );
       case ViewType.BACKUP:
@@ -213,7 +227,7 @@ const App: React.FC = () => {
 
   const navigateToView = (view: ViewType) => {
     if (view !== ViewType.FINAL_REPORT) {
-      setReportSection('masterlist');
+      setReportSection(null);
     }
     setCurrentView(view);
   };
@@ -311,7 +325,8 @@ const App: React.FC = () => {
         setPwForm({ current: '', newPw: '', confirm: '' });
         await checkAuth();
       } catch (error: any) {
-        notify(error.message || 'Failed to change password.', 'error');
+        console.error('Failed to change password:', error);
+        notify('Unable to change password right now. Please try again.', 'error');
       } finally {
         setPwLoading(false);
       }

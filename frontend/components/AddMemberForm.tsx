@@ -471,7 +471,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
         : 'Application successfully processed!';
       notify(msg, "success");
     } catch (error: any) {
-      notify(error.message || 'Failed to submit application. Please try again.', 'error');
+      console.error(error); notify('Failed to submit application. Please try again.', 'error');
     } finally {
       setLoading(false);
     }
@@ -1196,3 +1196,4 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
 };
 
 export default AddMemberForm;
+

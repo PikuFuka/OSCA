@@ -3,6 +3,18 @@ import axios from 'axios';
 // API Service - Connects Frontend to Laravel Backend
 const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+const TECHNICAL_MESSAGE_PATTERN = /(sqlstate|stack trace|exception|typeerror|syntaxerror|referenceerror|undefined|null|token|csrf|axios|network error|http\s*\d{3}|status\s*\d{3})/i;
+
+const getFriendlyErrorByStatus = (status?: number) => {
+  if (status === 400) return 'Please check the information and try again.';
+  if (status === 401) return 'Your session has expired. Please sign in again.';
+  if (status === 403) return 'You do not have permission to do that action.';
+  if (status === 404) return 'The requested record was not found.';
+  if (status === 422) return 'Some information is invalid. Please review and try again.';
+  if (status === 500) return 'Server is temporarily unavailable. Please try again in a moment.';
+  return 'Something went wrong. Please try again.';
+};
+
 /**
  * Token management functions (Removed - Laravel Sanctum SPA auth used instead)
  */
@@ -34,10 +46,27 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-    // Transform error for better UI display
-    const errorMessage = error.response?.data?.message || error.message || 'An unexpected error occurred';
+    const status = error.response?.status;
+    const serverMessage = error.response?.data?.message;
+    const isServerMessageSafe = typeof serverMessage === 'string' && !TECHNICAL_MESSAGE_PATTERN.test(serverMessage);
+    const fallbackMessage = getFriendlyErrorByStatus(status);
+
+    // Keep user-facing message simple and non-technical.
+    const errorMessage = isServerMessageSafe ? serverMessage : fallbackMessage;
+
+    // Log technical details for developers.
+    if (!isServerMessageSafe) {
+      console.error('API request failed:', {
+        status,
+        method: error.config?.method,
+        url: error.config?.url,
+        serverMessage,
+        rawError: error,
+      });
+    }
+
     const enhancedError = new Error(errorMessage);
-    (enhancedError as any).status = error.response?.status;
+    (enhancedError as any).status = status;
     (enhancedError as any).data = error.response?.data;
     
     // If unauthorized (401), clear token and potentially redirect

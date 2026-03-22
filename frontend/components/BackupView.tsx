@@ -46,7 +46,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
       window.URL.revokeObjectURL(url);
       notify('Database export started — check your downloads.', 'success');
     } catch (error: any) {
-      notify(error.message || 'Export failed.', 'error');
+      console.error(error); notify('Export failed.', 'error');
     } finally {
       setTimeout(() => setIsExporting(false), 2000);
     }
@@ -72,7 +72,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
       setSelectedFile(null);
       setIsRefreshRequired(true);
     } catch (error: any) {
-      notify(error.message || 'Import failed. Please check the file and try again.', 'error');
+      console.error(error); notify('Import failed. Please check the file and try again.', 'error');
     } finally {
       setIsImporting(false);
     }
@@ -299,3 +299,4 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
 };
 
 export default BackupView;
+

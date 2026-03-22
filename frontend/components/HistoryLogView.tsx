@@ -105,7 +105,7 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
       setLogs([]);
       notify('All activity logs have been cleared.', 'success');
     } catch (error: any) {
-      notify(error.message || 'Failed to clear logs.', 'error');
+      console.error(error); notify('Failed to clear logs.', 'error');
     } finally {
       setClearing(false);
     }
@@ -217,3 +217,4 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
 };
 
 export default HistoryLogView;
+

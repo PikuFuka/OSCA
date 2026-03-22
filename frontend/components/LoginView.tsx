@@ -23,7 +23,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
       await login(identifier, password);
       // login success is handled by AuthContext state change, which App.tsx listens to
     } catch (error: any) {
-      notify(error.message || 'Invalid credentials. Please check your ID/Email and password.', 'error');
+      console.error(error); notify('Invalid credentials. Please check your ID/Email and password.', 'error');
     } finally {
       setLoading(false);
     }
@@ -191,3 +191,4 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
 };
 
 export default LoginView;
+

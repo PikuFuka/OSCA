@@ -438,7 +438,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
         notify(`Status for ${senior.name} marked as Deceased.`, 'warning');
       }
     } catch (error: any) {
-      notify(error.message || `Failed to perform ${type.toLowerCase()} action.`, 'error');
+      console.error(error);
+      notify(`Failed to perform ${type.toLowerCase()} action.`, 'error');
     } finally {
       setIsProcessing(false);
       setConfirmState({ isOpen: false, type: null, senior: null });
@@ -751,7 +752,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
       // Update local state for the senior list
       setSeniors(prev => prev.map(s => s.id === idGenerationSenior.id ? { ...s, idPhoto: idPhoto } : s));
     } catch (error: any) {
-      notify(error.message || "Failed to save photo.", "error");
+      console.error(error); notify("Failed to save photo.", "error");
     } finally {
       setLoading(false);
     }
@@ -1594,7 +1595,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                     setSelectedSenior(null);
                     fetchSeniors();
                   } catch (error: any) {
-                    notify(error.message || "Failed to update profile.", "error");
+                    console.error(error); notify("Failed to update profile.", "error");
                   } finally {
                     setIsProcessing(false);
                   }
@@ -1819,3 +1820,4 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 };
 
 export default MemberRegistry;
+
