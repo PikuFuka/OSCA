@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock } from 'lucide-react';
+import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock, Edit2Icon } from 'lucide-react';
 import { BARANGAYS, SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } from '../types';
 import { seniorsAPI, activityLogsAPI } from '../services/api';
 import { TableSkeleton } from './SkeletonLoader';
@@ -281,6 +281,49 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
       setViewModalOpen(false);
     } finally {
       setFetchingDetails(false);
+    }
+  };
+
+  const getMemberOscaId = (senior: any) => {
+    return senior?.oscaId || senior?.osca_id || senior?.id || '';
+  };
+
+  const openEditMember = async (senior: SeniorCitizen) => {
+    setIsProcessing(true);
+    try {
+      const fullData = await seniorsAPI.getById(senior.id as any);
+      const merged = { ...senior, ...fullData } as any;
+      setSelectedSenior(merged);
+      setEditFormData({
+        oscaId: getMemberOscaId(merged),
+        firstName: merged.firstName || merged.first_name || '',
+        middleName: merged.middleName || merged.middle_name || '',
+        lastName: merged.lastName || merged.last_name || '',
+        extensionName: merged.extensionName || merged.extension_name || '',
+        dateOfBirth: merged.dateOfBirth || merged.date_of_birth || '',
+        pensionStatus: merged.pensionStatus || merged.pension_status || '',
+        barangay: merged.barangay || '',
+        streetAddress: merged.streetAddress || merged.street_address || '',
+        contactNumber: merged.contactNumber || merged.contact_number || '',
+      });
+    } catch (error: any) {
+      // Fallback to current row data if detail fetch fails.
+      setSelectedSenior(senior);
+      setEditFormData({
+        oscaId: getMemberOscaId(senior),
+        firstName: senior.firstName || '',
+        middleName: senior.middleName || '',
+        lastName: senior.lastName || '',
+        extensionName: senior.extensionName || '',
+        dateOfBirth: senior.dateOfBirth || '',
+        pensionStatus: senior.pensionStatus || '',
+        barangay: senior.barangay || '',
+        streetAddress: senior.streetAddress || '',
+        contactNumber: senior.contactNumber || '',
+      });
+      notify('Loaded limited details. Some fields may need manual update.', 'warning');
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -852,163 +895,167 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   };
   
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div className="space-y-6 md:space-y-10">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-10">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Senior Registry</h2>
-          <p className="text-slate-500 font-medium">Official masterlist of registered Senior Citizens in the municipality.</p>
+          <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight">Member Registry</h2>
+          <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px] mt-3 bg-white/50 w-fit px-3 py-1 rounded-full border border-slate-200 shadow-sm">Official Records</p>
+        </div>
+
+        <div className="flex flex-col xl:flex-row xl:items-center gap-5 w-full xl:w-auto">
+          <div className="w-full xl:w-[450px]">
+            <div className="relative group">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-systemBlue/5 rounded-lg flex items-center justify-center text-slate-400 group-focus-within:text-systemBlue transition-colors">
+                <Search size={18} />
+              </div>
+              <input 
+                id="registry-search"
+                name="registrySearch"
+                type="text" 
+                placeholder="Search name, ID, or barangay..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-14 pr-6 py-4 bg-white/80 backdrop-blur-md border border-slate-200 rounded-ios text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-4 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm"
+              />
+            </div>
+          </div>
+
+          <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-2 rounded-ios border border-slate-200 shadow-sm">
+            <div className="w-10 h-10 bg-systemBlue/10 rounded-ios flex items-center justify-center shrink-0 border border-systemBlue/10">
+              <MapPin size={20} className="text-systemBlue" />
+            </div>
+            <select 
+              id="registry-barangay-filter"
+              name="registryBarangayFilter"
+              value={filterBarangay}
+              onChange={(e) => { setFilterBarangay(e.target.value); setPage(1); }}
+              className="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer w-full min-w-[180px] pr-8"
+            >
+              <option className="bg-white">All Barangays</option>
+              {BARANGAYS.map(b => (
+                <option key={b} value={b} className="bg-white">{b}</option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
 
       {/* Note banner directing admin/staff to For Approvals */}
       {setView && (
-        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center gap-3">
-          <div className="p-2 bg-amber-100 rounded-xl text-amber-600 shrink-0">
-            <FileCheck size={20} />
+        <div className="bg-systemBlue/5 border border-systemBlue/10 rounded-ios p-6 mb-10 flex flex-col md:flex-row md:items-center gap-5 backdrop-blur-sm shadow-sm">
+          <div className="w-12 h-12 bg-systemBlue text-white rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-systemBlue/20">
+            <FileCheck size={24} />
           </div>
-          <p className="text-sm font-medium text-amber-800">
-            <span className="font-bold">Note:</span> Only approved members are shown here. New registrations awaiting approval can be found in the{' '}
-            <button
-              onClick={() => setView(ViewType.APPROVAL)}
-              className="text-blue-700 font-bold underline hover:text-blue-900"
-            >
-              For Approvals
-            </button>{' '}
-            section.
-          </p>
+          <div className="flex-1">
+            <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-1">Queue Management</h4>
+            <p className="text-sm font-medium text-slate-600 leading-relaxed">
+              Only validated members appear in this registry. Pending applicants or updates are stored in the{' '}
+              <button
+                onClick={() => setView(ViewType.APPROVAL)}
+                className="text-systemBlue font-bold decoration-2 underline underline-offset-4 hover:text-blue-700 transition-colors"
+              >
+                Approval Queue
+              </button>
+              .
+            </p>
+          </div>
         </div>
       )}
       
-      <div className="bg-white rounded-3xl md:rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col">
-        <div className="p-4 md:p-8 border-b border-slate-50 flex flex-col lg:flex-row items-center justify-between gap-4 bg-slate-50/20">
-          <div className="relative w-full lg:w-[450px]">
-            <label htmlFor="registry-search" className="sr-only">Search seniors by ID or name</label>
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
-            <input 
-              id="registry-search"
-              name="registrySearch"
-              type="text" 
-              placeholder="Search by ID or Name..."
-              className="w-full pl-14 pr-8 py-4 rounded-2xl md:rounded-[1.25rem] bg-white border border-slate-200 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all text-base font-medium shadow-sm"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-3 w-full lg:w-auto">
-            <div className="flex-1 lg:flex-none flex items-center gap-3 px-6 py-4 border border-slate-200 rounded-2xl md:rounded-[1.25rem] bg-white shadow-sm">
-              <label htmlFor="registry-barangay-filter" className="sr-only">Filter registry by barangay</label>
-              <MapPin size={20} className="text-blue-900 shrink-0" />
-              <select 
-                id="registry-barangay-filter"
-                name="registryBarangayFilter"
-                value={filterBarangay}
-                onChange={(e) => { setFilterBarangay(e.target.value); setPage(1); }}
-                className="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer w-full min-w-[160px]"
-              >
-                <option>All Barangays</option>
-                {BARANGAYS.map(b => (
-                  <option key={b} value={b}>{b}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
+      <div className="ios-card shadow-xl shadow-slate-200/50">
         <div className="overflow-x-auto w-full">
           {loading ? (
             <TableSkeleton />
           ) : (
-            <table className="w-full text-left border-collapse table-fixed min-w-[800px]">
+            <table className="ios-table min-w-[950px]">
               <thead>
-                <tr className="bg-white text-slate-400 uppercase text-xs font-black tracking-[0.2em] border-b border-slate-50">
-                  <th className="px-6 py-6 w-[30%]">Member Profile</th>
-                  <th className="px-6 py-6 w-[10%]">Age / Barangay</th>
-                  <th className="px-6 py-6 w-[10%]">Category</th>
-                  <th className="px-6 py-6 w-[10%]">Status</th>
-                  <th className="px-9 py-6 w-[16%]">Last Updated</th>
-                  <th className="px-6 py-6 w-[20%] text-center">Actions</th>
+                <tr>
+                  <th className="px-8 py-5 w-[35%]">Member Identity</th>
+                  <th className="px-8 py-5 w-[12%] text-center">Age / Locality</th>
+                  <th className="px-8 py-5 w-[15%] text-center">Category</th>
+                  <th className="px-8 py-5 w-[12%] text-center">Status</th>
+                  <th className="px-8 py-5 w-[12%] text-center">Modified</th>
+                  <th className="px-8 py-5 w-[14%] text-center">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody>
                 {displayedSeniors.length > 0 ? displayedSeniors.map((senior) => {
                   const category = getDisplayCategory(senior.pensionStatus);
                   return (
-                  <tr key={senior.id} className="hover:bg-blue-50/20 transition-colors group">
-                    <td className="px-6 py-5 align-middle">
-                      <div className="flex items-center gap-4">
-                        {senior.idPhoto ? (
-                          <img src={senior.idPhoto} alt={senior.name} loading="lazy" className="w-10 h-10 rounded-2xl object-cover border-2 border-white shadow-sm shrink-0 bg-slate-100" />
-                        ) : (
-                          <div className="w-10 h-10 rounded-2xl bg-slate-100 flex items-center justify-center text-blue-900 font-black border-2 border-white shadow-sm shrink-0 text-sm">
-                            {senior.name.split(' ').map(n => n[0]).join('')}
-                          </div>
-                        )}
+                  <tr key={senior.id} className="group hover:bg-slate-50 transition-colors">
+                    <td className="px-8 py-5 align-middle">
+                      <div className="flex items-center gap-5">
+                        <div className="relative">
+                          {senior.idPhoto ? (
+                            <img src={senior.idPhoto} alt={senior.name} loading="lazy" className="w-12 h-12 rounded-ios object-cover border border-slate-200 shadow-sm shrink-0 bg-slate-50" />
+                          ) : (
+                            <div className="w-12 h-12 rounded-ios bg-systemBlue/20 flex items-center justify-center text-systemBlue font-bold border border-slate-200 shadow-sm shrink-0 text-sm">
+                              {senior.name.split(' ').map(n => n[0]).join('')}
+                            </div>
+                          )}
+                          <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-systemGray-50 ${
+                            senior.status === 'Active' ? 'bg-emerald-500' : 
+                            senior.status === 'Pending' ? 'bg-amber-500' : 
+                            'bg-slate-500'
+                          }`}></div>
+                        </div>
                         <div className="min-w-0">
-                          <p className="font-bold text-slate-900 text-base md:text-lg truncate lg:whitespace-normal lg:break-words">{senior.name}</p>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5 truncate">{senior.id}</p>
+                          <p className="font-bold text-slate-900 text-base truncate tracking-tight">{senior.name}</p>
+                          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mt-1 font-mono">{getMemberOscaId(senior)}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-5 align-middle">
+                    <td className="px-8 py-5 align-middle text-center">
                       <div className="flex flex-col">
-                        <span className="text-base font-bold text-slate-700">{senior.age} yrs</span>
-                        <span className="text-xs text-slate-400 font-bold uppercase tracking-widest truncate">{senior.barangay}</span>
+                        <span className="text-base font-bold text-slate-900">{senior.age}</span>
+                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 truncate">{senior.barangay}</span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 align-middle">
-                      <div className="flex items-center gap-1.5">
-                        <span className={`text-[10px] font-black uppercase px-3 py-1.5 rounded-lg whitespace-nowrap ${getCategoryStyle(category)}`}>
+                    <td className="px-8 py-5 align-middle">
+                      <div className="flex items-center justify-center">
+                        <span className={`text-[10px] font-bold uppercase px-3 py-1.5 rounded-full border ${getCategoryStyle(category)}`}>
                           {category}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 align-middle">
-                      <span className={`inline-flex items-center justify-center text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full whitespace-nowrap ${
-                        senior.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 
-                        senior.status === 'Pending' ? 'bg-amber-100 text-amber-700' : 
-                        senior.status === 'Deceased' ? 'bg-slate-900 text-white' :
-                        'bg-slate-100 text-slate-400'
-                      }`}>
-                        {senior.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-5 align-middle">
-                      <div className="flex items-center gap-1.5">
-                        <Clock size={12} className="text-slate-400 shrink-0" />
-                        <span className="text-xs font-semibold text-slate-500">
-                          {senior.updatedAt || 'N/A'}
+                    <td className="px-8 py-5 align-middle">
+                      <div className="flex items-center justify-center">
+                        <span className={`inline-flex items-center justify-center text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border ${
+                          senior.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
+                          senior.status === 'Pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
+                          senior.status === 'Deceased' ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                          'bg-slate-100 text-slate-500 border-slate-200'
+                        }`}>
+                          {senior.status}
                         </span>
                       </div>
                     </td>
-                    <td className="px-6 py-5 align-middle">
-                      <div className="flex items-center justify-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <td className="px-8 py-5 align-middle text-center">
+                       <p className="text-[11px] font-bold text-slate-500 tabular-nums">
+                         {senior.updatedAt ? new Date(senior.updatedAt).toLocaleString('en-US', { 
+                           month: 'short', 
+                           day: '2-digit', 
+                           year: 'numeric',
+                           hour: '2-digit',
+                           minute: '2-digit'
+                         }) : 'N/A'}
+                       </p>
+                    </td>
+                    <td className="px-8 py-5 align-middle text-center">
+                      <div className="flex items-center justify-center gap-3">
                         <button
                            onClick={() => handleViewDetails(senior)}
-                           className="p-2 bg-white border border-slate-200 text-slate-500 hover:text-blue-900 hover:bg-blue-50 hover:border-blue-200 rounded-xl transition-all shadow-sm"
-                           title="View Details"
+                           className="w-10 h-10 bg-systemBlue/5 hover:bg-systemBlue text-systemBlue hover:text-white rounded-ios border border-systemBlue/10 flex items-center justify-center transition-all duration-300 shadow-sm"
+                           title="Inspect"
                         >
                            <Eye size={18} />
                         </button>
 
                         {canGenerateID && (
                           <button
-                            onClick={() => {
-                              setSelectedSenior(senior);
-                              setEditFormData({
-                                oscaId: senior.id || '',
-                                firstName: senior.firstName || '',
-                                middleName: senior.middleName || '',
-                                lastName: senior.lastName || '',
-                                extensionName: senior.extensionName || '',
-                                dateOfBirth: senior.dateOfBirth || '',
-                                pensionStatus: senior.pensionStatus || '',
-                                barangay: senior.barangay || '',
-                                streetAddress: senior.streetAddress || '',
-                                contactNumber: senior.contactNumber || '',
-                              });
-                            }}
-                            className="p-2 bg-white border border-slate-200 text-slate-500 hover:text-amber-600 hover:bg-amber-50 hover:border-amber-200 rounded-xl transition-all shadow-sm"
-                            title="Edit Profile"
+                            onClick={() => openEditMember(senior)}
+                            className="w-10 h-10 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-ios border border-emerald-100 flex items-center justify-center transition-all duration-300 shadow-sm"
+                            title="Edit"
                           >
                             <Edit2 size={18} />
                           </button>
@@ -1018,12 +1065,12 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                           <button 
                             disabled={senior.status !== 'Active'}
                             onClick={() => handleGenerateID(senior)} 
-                            className={`p-2 bg-white border border-slate-200 rounded-xl transition-all shadow-sm ${
+                            className={`w-10 h-10 border rounded-ios flex items-center justify-center transition-all duration-300 shadow-sm ${
                               senior.status !== 'Active' 
-                                ? 'opacity-30 cursor-not-allowed text-slate-400' 
-                                : 'text-blue-600 hover:bg-blue-50 hover:border-blue-200'
+                                ? 'bg-slate-50 opacity-30 cursor-not-allowed text-slate-400 border-slate-200' 
+                                : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-600 hover:text-white hover:border-amber-600'
                             }`} 
-                            title={senior.status === 'Active' ? "Generate ID" : "Approval Required to Generate ID"}
+                            title={senior.status === 'Active' ? "Issue ID" : "Approval Restricted"}
                           >
                             <IdCard size={18} />
                           </button>
@@ -1031,13 +1078,23 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                         
                         {isAdmin && (
                           <>
-                            <button onClick={() => setConfirmState({ isOpen: true, type: 'Delete', senior })} className="p-2 bg-white border border-slate-200 text-slate-500 hover:text-rose-600 hover:border-rose-200 rounded-xl transition-all shadow-sm" title="Delete Record"><Trash2 size={18} /></button>
-                            <button onClick={() => setConfirmState({ isOpen: true, type: 'Decease', senior })} className="p-2 bg-white border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-all shadow-sm" title="Mark Deceased"><UserX size={18} /></button>
+                             {senior.status !== 'Deceased' && (
+                               <button
+                                 onClick={() => setConfirmState({ isOpen: true, type: 'Decease', senior })}
+                                 className="w-10 h-10 bg-slate-100 hover:bg-slate-900 text-slate-500 hover:text-white rounded-ios border border-slate-200 flex items-center justify-center transition-all duration-300 shadow-sm"
+                                 title="Mark as Deceased"
+                               >
+                                 <UserX size={18} />
+                               </button>
+                             )}
+                             <button 
+                               onClick={() => setConfirmState({ isOpen: true, type: 'Delete', senior })} 
+                               className="w-10 h-10 bg-rose-50 hover:bg-rose-600 text-rose-500 hover:text-white rounded-ios border border-rose-100 flex items-center justify-center transition-all duration-300 shadow-sm" 
+                               title="Delete"
+                             >
+                               <Trash2 size={18} />
+                             </button>
                           </>
-                        )}
-
-                        {!canGenerateID && (
-                          <span className="text-xs text-slate-400 font-bold italic">Read Only</span>
                         )}
                       </div>
                     </td>
@@ -1045,10 +1102,10 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   );
                 }) : (
                    <tr>
-                    <td colSpan={7} className="px-10 py-32 text-center">
-                      <div className="flex flex-col items-center gap-4">
-                        <div className="p-6 bg-slate-50 rounded-full text-slate-200"><Search size={48} /></div>
-                        <p className="text-slate-400 font-black uppercase tracking-[0.2em] text-xs">No records found for this criteria</p>
+                    <td colSpan={6} className="px-10 py-40 text-center">
+                      <div className="flex flex-col items-center gap-6">
+                        <div className="w-20 h-20 bg-slate-100 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 animate-pulse"><Search size={40} /></div>
+                        <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-xs">No records identified in current dataset</p>
                       </div>
                     </td>
                   </tr>
@@ -1058,12 +1115,12 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
           )}
         </div>
 
-        <div className="p-4 md:p-10 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between text-xs font-black text-slate-400 uppercase tracking-widest border-t border-slate-50 gap-4">
-          <p>Showing {displayedSeniors.length} of {totalCount} total records</p>
-          <div className="flex items-center gap-4">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-6 py-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 disabled:opacity-30 transition-all">Previous</button>
-            <span className="text-blue-900">Page {page} of {totalPages}</span>
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-6 py-2 bg-white border border-slate-200 rounded-xl hover:bg-slate-100 disabled:opacity-30 transition-all">Next</button>
+        <div className="p-6 md:px-10 md:py-8 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest border-t border-slate-200 gap-6">
+          <p className="px-4 py-2 bg-white rounded-full border border-slate-200">Dataset Range: {displayedSeniors.length} / {totalCount} records</p>
+          <div className="flex items-center gap-6">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-6 py-2.5 bg-white border border-slate-200 rounded-ios text-slate-700 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-20 transition-all font-bold">Previous</button>
+            <span className="text-systemBlue px-4">Page {page} <span className="opacity-30 mx-2">/</span> {totalPages}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-6 py-2.5 bg-white border border-slate-200 rounded-ios text-slate-700 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-20 transition-all font-bold">Next</button>
           </div>
         </div>
       </div>
@@ -1093,8 +1150,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   gap: 0mm !important;
                 }
                 .print-card {
-                  width: 85.6mm !important;
-                  height: 53.98mm !important;
+                  width: 3.5in !important;
+                  height: 2.3in !important;
                   -webkit-print-color-adjust: exact !important;
                   print-color-adjust: exact !important;
                   position: relative;
@@ -1104,7 +1161,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                 .print-content {
                   width: 480px;
                   height: 300px;
-                  transform: scale(calc(85.6mm / 480px));
+                  transform: scale(calc(3.5in / 480px), calc(2.3in / 300px));
                   transform-origin: top left;
                 }
               }
@@ -1158,7 +1215,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
           <div className="bg-white rounded-[2.5rem] w-full max-w-5xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] print:hidden">
              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white z-10">
                <div className="flex items-center gap-3">
-                 <div className="p-2 bg-blue-900 text-white rounded-xl">
+                 <div className="p-2 bg-systemBlue text-white rounded-xl">
                    <IdCard size={24} />
                  </div>
                  <div>
@@ -1241,7 +1298,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                    <div className="space-y-3">
                       {!isWebcamActive ? (
                          <>
-                          <button onClick={startWebcam} disabled={isPhotoProcessing} className="w-full py-3 bg-blue-900 text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"><Camera size={18} /> Open Webcam</button>
+                          <button onClick={startWebcam} disabled={isPhotoProcessing} className="w-full py-3 bg-systemBlue text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-blue-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"><Camera size={18} /> Open Webcam</button>
                            <div className="relative">
                             <input id="member-id-upload" name="memberIdPhoto" type="file" accept="image/*" disabled={isPhotoProcessing} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer disabled:cursor-not-allowed" onChange={handleFileUpload} />
                             <button disabled={isPhotoProcessing} className="w-full py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-100 transition-all disabled:opacity-50 disabled:cursor-not-allowed"><Upload size={18} /> Upload Image</button>
@@ -1490,7 +1547,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-slate-900">Edit Member Profile</h3>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{selectedSenior.id}</p>
+                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{getMemberOscaId(selectedSenior)}</p>
                 </div>
               </div>
               <button onClick={() => setSelectedSenior(null)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-full transition-colors"><X size={24} /></button>
@@ -1500,7 +1557,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                 {selectedSenior.idPhoto ? (
                   <img src={selectedSenior.idPhoto} alt={selectedSenior.name} loading="lazy" className="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] object-cover shadow-xl shadow-blue-100 mx-auto md:mx-0 bg-slate-100" />
                 ) : (
-                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] bg-blue-900 text-white flex items-center justify-center text-3xl md:text-4xl font-black shrink-0 shadow-xl shadow-blue-100 mx-auto md:mx-0">
+                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] bg-systemBlue text-white flex items-center justify-center text-3xl md:text-4xl font-black shrink-0 shadow-xl shadow-blue-100 mx-auto md:mx-0">
                     {selectedSenior.name.split(' ').map(n => n[0]).join('')}
                   </div>
                 )}
@@ -1600,7 +1657,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                     setIsProcessing(false);
                   }
                 }}
-                className="px-8 py-3 rounded-xl bg-blue-900 text-white font-bold hover:bg-blue-800 transition-colors shadow-lg shadow-blue-100 flex items-center justify-center gap-2 flex-1 md:flex-none disabled:opacity-70"
+                className="px-8 py-3 rounded-xl bg-systemBlue text-white font-bold hover:bg-blue-800 transition-colors shadow-lg shadow-blue-100 flex items-center justify-center gap-2 flex-1 md:flex-none disabled:opacity-70"
               >
                 {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <Edit2 size={18} />}
                 {isProcessing ? 'Saving...' : 'Save Changes'}
@@ -1617,7 +1674,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
           <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
             <div className="p-6 md:p-8 flex items-center justify-between border-b border-slate-100 bg-slate-50">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-blue-900 flex items-center justify-center text-white">
+                <div className="w-12 h-12 rounded-2xl bg-systemBlue flex items-center justify-center text-white">
                   <Eye size={24} />
                 </div>
                 <div>
@@ -1647,7 +1704,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                         {selectedSeniorForView.idPhoto ? (
                           <img src={selectedSeniorForView.idPhoto} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-blue-900 text-white text-5xl font-black">
+                          <div className="w-full h-full flex items-center justify-center bg-systemBlue text-white text-5xl font-black">
                             {selectedSeniorForView.firstName?.[0]}{selectedSeniorForView.lastName?.[0]}
                           </div>
                         )}

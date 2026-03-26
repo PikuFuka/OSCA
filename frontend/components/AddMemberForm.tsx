@@ -142,6 +142,14 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   const passwordHasMin = formData.password.length >= 8;
   const passwordHasNumber = /[0-9]/.test(formData.password);
   const passwordHasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.password);
+  const isPasswordRuleComplete = passwordHasMin && passwordHasNumber && passwordHasSpecial;
+  const nextPasswordRequirement = !passwordHasMin
+    ? 'At least 8 characters'
+    : !passwordHasNumber
+    ? 'Contains a number'
+    : !passwordHasSpecial
+    ? 'Contains a special character'
+    : 'All password requirements met';
 
   const normalizeUppercaseValue = (value: string) => value.toUpperCase();
 
@@ -502,7 +510,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   const ProgressStep = ({ num, title, isActive, isCompleted }: any) => (
     <div className={`flex items-center shrink-0`}>
       <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-[10px] transition-all shrink-0
-        ${isActive ? 'bg-blue-900 text-white shadow-lg shadow-blue-100 ring-4 ring-blue-50' : 
+        ${isActive ? 'bg-systemBlue text-white shadow-lg shadow-blue-100 ring-4 ring-blue-50' : 
           isCompleted ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
         {isCompleted ? <CheckCircle size={14} /> : num}
       </div>
@@ -594,16 +602,16 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
             </div>
             
             <div className="overflow-x-auto">
-              <table className="w-full text-left font-medium">
+              <table className="ios-table font-medium">
                 <thead>
-                  <tr className="bg-white text-slate-400 uppercase text-[10px] font-black tracking-[0.2em] border-b border-slate-50">
+                  <tr>
                     <th className="px-10 py-5">Full Name</th>
                     <th className="px-10 py-5">Barangay</th>
                     <th className="px-10 py-5">Status</th>
                     <th className="px-10 py-5 text-right">Date Joined</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody>
                   {loadingRecent ? (
                     [1, 2, 3].map(i => (
                       <tr key={i} className="animate-pulse">
@@ -615,7 +623,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                     ))
                   ) : recentSeniors.length > 0 ? (
                     recentSeniors.map((senior) => (
-                      <tr key={senior.id} className="hover:bg-slate-50/50 transition-colors">
+                      <tr key={senior.id}>
                         <td className="px-10 py-5">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center text-[10px] font-black border border-blue-100 overflow-hidden">
@@ -692,17 +700,6 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
 
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
         <form onSubmit={handleSubmit} className="p-6 md:p-10">
-          {errors.length > 0 && (
-            <div className="mb-6 p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-700">
-              <p className="text-xs font-black uppercase tracking-widest mb-2">Please fix the following:</p>
-              <ul className="text-sm font-semibold space-y-1 list-disc list-inside">
-                {errors.slice(0, 5).map((err, idx) => (
-                  <li key={idx}>{err}</li>
-                ))}
-                {errors.length > 5 && <li>...and more</li>}
-              </ul>
-            </div>
-          )}
           
           {/* STEP 1: IDENTITY */}
           {step === 1 && (
@@ -938,7 +935,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                               placeholder="Amount" value={tempMember.income} onChange={e => setTempMember({...tempMember, income: e.target.value})} />
                         </div>
                         <div className="md:col-span-4 flex items-end">
-                           <button type="button" onClick={addFamilyMember} className="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100 mb-[1px]">
+                           <button type="button" onClick={addFamilyMember} className="w-full bg-systemBlue hover:bg-blue-800 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100 mb-[1px]">
                               <Plus size={18} /> Add to Roster
                            </button>
                         </div>
@@ -1044,17 +1041,10 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                           {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
                       </div>
-                      <div className="mt-2 space-y-1 text-xs font-bold pl-2">
-                        <div className={`flex items-center gap-1 ${passwordHasMin ? 'text-emerald-600' : 'text-rose-500'}`}>
-                          {passwordHasMin ? <CheckCircle size={12} /> : <AlertCircle size={12} />} At least 8 characters
-                        </div>
-                        <div className={`flex items-center gap-1 ${passwordHasNumber ? 'text-emerald-600' : 'text-rose-500'}`}>
-                          {passwordHasNumber ? <CheckCircle size={12} /> : <AlertCircle size={12} />} Contains a number
-                        </div>
-                        <div className={`flex items-center gap-1 ${passwordHasSpecial ? 'text-emerald-600' : 'text-rose-500'}`}>
-                          {passwordHasSpecial ? <CheckCircle size={12} /> : <AlertCircle size={12} />} Contains a special character
-                        </div>
-                      </div>
+                      <p className={`mt-2 text-xs font-bold pl-2 flex items-center gap-1 ${isPasswordRuleComplete ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        {isPasswordRuleComplete ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+                        {nextPasswordRequirement}
+                      </p>
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Confirm Password *</label>
@@ -1132,7 +1122,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                   <span className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase ${
                     formData.pensionStatus === 'Indigent' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
                   }`}>{formData.pensionStatus}</span>
-                  <span className="px-3 py-1 bg-blue-900 text-white rounded-lg text-[10px] font-black tracking-widest uppercase">{applicantType}</span>
+                  <span className="px-3 py-1 bg-systemBlue text-white rounded-lg text-[10px] font-black tracking-widest uppercase">{applicantType}</span>
                 </div>
               </div>
                {/* Review Details... omitting code for brevity, structure identical to prev */}

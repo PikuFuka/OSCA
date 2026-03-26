@@ -4,31 +4,103 @@
 
 @layer base {
   body {
-    font-family: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    font-family: 'SF Pro Text', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.01em;
+    text-rendering: optimizeLegibility;
+    background-color: #F2F2F7; /* iOS background light */
+    color: #000;
+    letter-spacing: -0.012em;
+  }
+
+  img,
+  canvas,
+  video {
+    image-rendering: auto;
+    backface-visibility: hidden;
   }
 
   input:focus,
   select:focus,
   textarea:focus {
     outline: none;
-    border-color: #0038a8 !important;
-    box-shadow: 0 0 0 4px rgba(0, 56, 168, 0.1) !important;
+    background-color: #fff !important;
+    box-shadow: none !important;
+    border-color: #007aff !important;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   button {
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
   }
 
   button:active {
-    transform: scale(0.97);
+    transform: scale(0.96) brightness(0.9);
   }
 
   aside {
     transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  }
+
+  /* SF Pro font load fallback to Inter */
+  @font-face {
+    font-family: 'Inter';
+    src: url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+  }
+
+  /* iOS styled container cards */
+  .ios-card {
+    @apply bg-white/90 backdrop-blur-ios rounded-ios border border-slate-200/70 shadow-ios overflow-hidden text-slate-900;
+  }
+
+  .ios-input {
+    @apply bg-systemGray-6 border border-slate-200/70 rounded-ios px-4 py-3 text-slate-800 placeholder-slate-400 font-medium transition-all;
+  }
+
+  .ios-btn-primary {
+    @apply bg-systemBlue text-white rounded-ios px-5 py-3 font-semibold shadow-sm active:scale-95;
+  }
+
+  .ios-btn-secondary {
+    @apply bg-systemGray-6 text-systemBlue rounded-ios px-5 py-3 font-semibold active:scale-95;
+  }
+
+  .ios-page-title {
+    @apply text-3xl md:text-4xl font-black text-slate-900 tracking-tight;
+  }
+
+  .ios-page-subtitle {
+    @apply text-slate-500 font-medium;
+  }
+
+  .ios-section {
+    @apply bg-white/90 backdrop-blur-ios rounded-[2rem] border border-slate-200/80 shadow-ios;
+  }
+
+  .ios-btn-success {
+    @apply bg-emerald-600 text-white rounded-ios px-5 py-3 font-semibold shadow-sm hover:bg-emerald-700;
+  }
+
+  .ios-btn-danger {
+    @apply bg-rose-600 text-white rounded-ios px-5 py-3 font-semibold shadow-sm hover:bg-rose-700;
+  }
+}
+
+@layer components {
+  .ios-table {
+    @apply w-full text-left;
+  }
+
+  .ios-table thead tr {
+    @apply bg-slate-50 text-slate-500 uppercase text-[10px] font-bold tracking-[0.2em] border-b border-slate-200;
+  }
+
+  .ios-table tbody {
+    @apply divide-y divide-slate-200/80;
+  }
+
+  .ios-table tbody tr {
+    @apply hover:bg-slate-50 transition-colors;
   }
 }
 
@@ -115,11 +187,50 @@
   .toast-exit {
     animation: toastSlideOut 0.16s ease-in both;
   }
+
+  .brand-entry {
+    animation: brandFadeRise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .brand-entry-logos {
+    animation: brandLogoPop 560ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+  }
+
+  .brand-entry-title {
+    animation: brandFadeRise 620ms cubic-bezier(0.16, 1, 0.3, 1) 220ms both;
+  }
+
+  .signup-entry-shell {
+    animation: brandFadeRise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .signup-entry-header {
+    animation: brandLogoPop 560ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+  }
+
+  .signup-entry-card {
+    animation: brandFadeRise 620ms cubic-bezier(0.16, 1, 0.3, 1) 220ms both;
+  }
+
+  .login-entry-shell {
+    animation: brandFadeRise 620ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .login-entry-card {
+    animation: brandLogoPop 560ms cubic-bezier(0.16, 1, 0.3, 1) 120ms both;
+  }
 }
 
 main {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+}
+
+@media print {
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
 }
 
 .shadow-sm,
@@ -193,5 +304,31 @@ main {
   to {
     opacity: 0;
     transform: translateY(-8px) scale(0.98);
+  }
+}
+
+@keyframes brandFadeRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+    filter: blur(2px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes brandLogoPop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.92);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

@@ -121,12 +121,12 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Batch Print IDs</h2>
-        <p className="text-slate-500 font-medium">Select up to {MAX_CARDS} seniors and print their ID cards on a single A4 page.</p>
+        <h2 className="ios-page-title">Batch Print IDs</h2>
+        <p className="ios-page-subtitle">Select up to {MAX_CARDS} seniors and print their ID cards on a single A4 page.</p>
       </div>
 
       {/* Search + Actions */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-6 md:p-8 print:hidden">
+      <div className="ios-section rounded-3xl p-6 md:p-8 print:hidden">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
           <div className="relative w-full md:w-96">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
@@ -146,7 +146,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
             <button
               onClick={handleBatchPrint}
               disabled={selectedSeniors.length === 0}
-              className="w-full md:w-auto px-6 py-3 rounded-2xl bg-blue-900 text-white font-bold hover:bg-blue-800 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-100"
+              className="ios-btn-primary w-full md:w-auto px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Printer size={18} />
               Print Batch
@@ -194,7 +194,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
                           if (isSelected) removeSenior(senior.id);
                           else addSenior(senior);
                         }}
-                        className={`shrink-0 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wide flex items-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${isSelected ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-900 text-white hover:bg-blue-800'}`}
+                        className={`shrink-0 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wide flex items-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${isSelected ? 'bg-emerald-100 text-emerald-700' : 'bg-systemBlue text-white hover:bg-blue-800'}`}
                       >
                         {isSelected ? <CheckCircle2 size={14} /> : <Plus size={14} />}
                         {isSelected ? 'Added' : 'Add'}
@@ -213,7 +213,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
       </div>
 
       {/* On-screen ID Preview */}
-      <div className="print:hidden bg-white rounded-3xl border border-slate-100 shadow-sm p-6 md:p-8">
+      <div className="print:hidden ios-section rounded-3xl p-6 md:p-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
           <div>
             <h3 className="text-xl font-black text-slate-900">Batch ID Preview</h3>
@@ -284,8 +284,8 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
               gap: 0;
             }
             .batch-card {
-              width: 85.6mm;
-              height: 53.98mm;
+              width: 3.5in;
+              height: 2.3in;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               position: relative;
@@ -295,7 +295,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
             .batch-card-content {
               width: 480px;
               height: 300px;
-              transform: scale(calc(85.6mm / 480px));
+              transform: scale(calc(3.5in / 480px), calc(2.3in / 300px));
               transform-origin: top left;
               position: relative;
             }

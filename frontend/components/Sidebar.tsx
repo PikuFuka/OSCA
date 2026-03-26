@@ -57,11 +57,11 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleS
     { id: ViewType.APPROVAL, label: 'For Approvals', icon: FileCheck, roles: ['Admin', 'Staff'] },
     { id: ViewType.ADD_MEMBER, label: 'Registration', icon: UserPlus, roles: ['Admin', 'Staff'] },
     { id: ViewType.MEMBER_REGISTRY, label: 'Members', icon: Users, roles: ['Admin', 'Staff'] },
+    { id: ViewType.BATCH_PRINT, label: 'Batch Print', icon: Printer, roles: ['Admin', 'Staff'] },
     { id: ViewType.FINAL_REPORT, label: 'Reports', icon: FileSpreadsheet, roles: ['Admin', 'Staff'] },
     { id: ViewType.ACCOUNT, label: 'Accounts', icon: UserCircle, roles: ['Admin', 'Staff'] }, 
     { id: ViewType.HISTORY, label: 'System Logs', icon: History, roles: ['Admin'] },
     { id: ViewType.BACKUP, label: 'Backup', icon: DatabaseBackup, roles: ['Admin'] },
-    { id: ViewType.BATCH_PRINT, label: 'Batch Print', icon: Printer, roles: ['Admin', 'Staff'] },
 
     // Senior User Items
     { id: ViewType.USER_DASHBOARD, label: 'Home', icon: Home, roles: ['Senior'] },
@@ -82,42 +82,43 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleS
   return (
     <aside 
       className={`
-        fixed inset-y-0 left-0 z-50 bg-white border-r border-slate-200 flex flex-col transition-all duration-300 shadow-xl md:shadow-none
+        fixed inset-y-0 left-0 z-50 bg-white/80 backdrop-blur-ios border-r border-slate-200/50 flex flex-col transition-all duration-300 shadow-xl md:shadow-none
         ${isOpen ? 'translate-x-0 w-72' : '-translate-x-full w-72 md:translate-x-0 md:w-24'}
         md:static md:h-full
       `}
     >
-      <div className={`p-6 flex items-center ${isOpen ? 'justify-center' : 'justify-center'} min-h-[140px]`}>
+      <div className={`p-8 flex items-center ${isOpen ? 'justify-start px-8' : 'justify-center px-0'} min-h-[140px]`}>
         {isOpen ? (
-          <div className="flex flex-col items-center gap-3">
-            <div className="relative">
-              <div className="w-14 h-14 bg-white rounded-full border border-slate-200 flex items-center justify-center p-1 overflow-hidden shadow-sm shrink-0">
+          <div className="flex items-center gap-4">
+            <div className="relative group">
+              <div className="absolute -inset-2 bg-gradient-to-tr from-systemBlue/20 to-transparent rounded-2xl blur-lg opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="relative w-14 h-14 bg-white rounded-2xl border border-slate-100 flex items-center justify-center p-2.5 shadow-ios transition-transform group-hover:scale-105 active:scale-95">
                  <img 
                    src="img/osca_logo.png" 
                    alt="OSCA Logo" 
-                   className="w-full h-full object-contain rounded-full"
+                   className="w-full h-full object-contain"
                  />
               </div>
             </div>
-            <div className="flex flex-col items-center text-center">
-              <span className="font-black text-xl tracking-tighter text-slate-900 whitespace-nowrap leading-none">OSCA SYSTEM</span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
-                {currentUser.role === 'Senior' ? 'MEMBER PORTAL' : 'MANAGEMENT PANEL'}
+            <div className="flex flex-col">
+              <span className="font-extrabold text-2xl tracking-tight text-slate-900 leading-none">OSCA</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-1.5">
+                {currentUser.role === 'Senior' ? 'PORTAL' : 'MANAGEMENT'}
               </span>
             </div>
           </div>
         ) : (
-          <div className="w-10 h-10 bg-white rounded-full border border-slate-200 flex items-center justify-center p-0.5 overflow-hidden shadow-sm">
+          <div className="w-12 h-12 bg-white rounded-2xl border border-slate-100 flex items-center justify-center p-2 shadow-ios">
              <img 
                src="img/osca_logo.png" 
                alt="OSCA Logo" 
-               className="w-full h-full object-contain rounded-full"
+               className="w-full h-full object-contain"
              />
           </div>
         )}
       </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto no-scrollbar">
+      <nav className="flex-1 px-4 py-4 space-y-1.5 overflow-y-auto no-scrollbar">
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = currentView === item.id;
@@ -126,41 +127,44 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleS
               key={item.id}
               onClick={() => setView(item.id)}
               className={`w-full flex items-center transition-all duration-200 group relative
-                ${isOpen ? 'gap-3 px-4 py-3' : 'justify-center py-3 px-0'} 
+                ${isOpen ? 'gap-4 px-4 py-3' : 'justify-center py-3.5 px-0'} 
                 ${isActive 
-                  ? 'bg-blue-50 text-blue-700 font-semibold shadow-sm border border-blue-100 rounded-xl' 
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 rounded-xl'
+                  ? 'bg-systemBlue text-white font-bold shadow-lg shadow-systemBlue/20 rounded-2xl' 
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-2xl'
                 }`}
               title={!isOpen ? item.label : ''}
             >
               <div className={!isOpen ? 'w-full flex justify-center' : 'shrink-0'}>
                 <Icon 
-                  size={22} 
-                  className={`transition-all ${isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'}`} 
+                   size={isActive ? 22 : 20} 
+                  className={`transition-all ${isActive ? 'text-white' : 'text-slate-400 group-hover:text-slate-600'}`} 
                 />
               </div>
-              <span className={`text-sm font-medium whitespace-nowrap transition-all duration-300 origin-left
-                ${isOpen ? 'opacity-100 scale-100' : 'opacity-0 scale-0 w-0 overflow-hidden absolute'}`}>
+              <span className={`text-[13px] font-bold whitespace-nowrap transition-all duration-300 origin-left
+                ${isOpen ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-4 absolute pointer-events-none'}`}>
                 {item.label}
               </span>
+              
+              {isActive && !isOpen && (
+                <div className="absolute right-0 w-1 h-6 bg-systemBlue rounded-l-full" />
+              )}
             </button>
           );
         })}
       </nav>
 
-      <div className="p-4 border-t border-slate-100 space-y-4">
+      <div className="p-4 border-t border-white/10 space-y-4">
         {isOpen && (
-          <div className="bg-slate-50 p-3 rounded-xl border border-slate-100 hidden md:block">
+          <div className="bg-white/5 p-3 rounded-ios border border-white/5 hidden md:block">
             <div className="flex items-center gap-2 mb-1">
-              <ShieldCheck size={14} className="text-emerald-600" />
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">SECURE SYSTEM</span>
+              <ShieldCheck size={14} className="text-slate-600" />
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">SECURE SYSTEM</span>
             </div>
-            <p className="text-[10px] text-slate-500 leading-tight">Protected Personal Data</p>
           </div>
         )}
         <button 
           onClick={toggleSidebar}
-          className="w-full flex items-center justify-center p-3 rounded-xl hover:bg-slate-50 text-slate-400 transition-colors hidden md:flex"
+          className="w-full flex items-center justify-center p-2 rounded-ios hover:bg-white/70 text-slate-500 transition-colors hidden md:flex"
         >
           {isOpen ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
         </button>

@@ -111,19 +111,18 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
 
   if (error && !stats) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center bg-white rounded-[2.5rem] border border-slate-100 shadow-sm mt-8">
-        <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center mb-6 shadow-sm">
-          <Skull size={40} />
+      <div className="flex flex-col items-center justify-center min-h-[400px] p-8 text-center ios-card mt-8 shadow-ios-lg">
+        <div className="w-20 h-20 bg-rose-500/20 text-rose-400 rounded-ios flex items-center justify-center mb-6">
+          <UserX size={40} />
         </div>
-        <h3 className="text-2xl font-black text-slate-900 mb-3 tracking-tight">Connectivity issue detected</h3>
+        <h3 className="text-2xl font-bold text-slate-900 mb-3 tracking-tight">Connectivity issue detected</h3>
         <p className="text-slate-500 max-w-sm mb-8 font-medium leading-relaxed">We're having trouble reaching the OSCA server. Please verify your connection and try again.</p>
         <button 
           onClick={() => fetchStats(() => false)}
-          className="group relative px-8 py-4 bg-blue-900 text-white rounded-2xl font-black hover:bg-blue-800 transition-all shadow-xl shadow-blue-100 flex items-center gap-3 overflow-hidden"
+          className="ios-btn-primary px-10 py-4 flex items-center gap-3"
         >
-          <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300"></div>
-          <TrendingUp size={20} className="relative z-10" />
-          <span className="relative z-10">Retry Connection</span>
+          <TrendingUp size={20} />
+          <span>Retry Connection</span>
         </button>
       </div>
     );
@@ -134,169 +133,184 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   }
 
   return (
-    <div className="space-y-6 md:space-y-8 pb-16">
-      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-6">
+    <div className="space-y-6 md:space-y-10 pb-16">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-8">
         <div>
-          <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            OSCA <span className="text-blue-900">Dashboard</span>
+          <h2 className="text-3xl md:text-5xl font-bold text-slate-900 tracking-tight flex items-center gap-4">
+            OSCA <span className="text-systemBlue">Analytics</span>
           </h2>
-          <p className="text-slate-500 font-medium mt-1">Monitoring {selectedBarangay} Senior Citizen Analytics.</p>
+          <p className="text-slate-500 font-semibold uppercase tracking-widest text-[10px] mt-2">Monitoring {selectedBarangay} activity</p>
         </div>
         
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
-          <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm focus-within:ring-2 focus-within:ring-blue-100 transition-all">
-            <CalendarIcon size={20} className="text-blue-900" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="flex items-center gap-3 bg-white/85 px-4 py-2.5 rounded-ios border border-slate-200 backdrop-blur-md focus-within:border-systemBlue/50 transition-all">
+            <CalendarIcon size={18} className="text-systemBlue" />
             <select 
               value={selectedYear}
               onChange={(e) => setSelectedYear(e.target.value)}
               className="text-sm font-bold text-slate-700 outline-none bg-transparent cursor-pointer min-w-[80px]"
             >
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
+              {years.map(y => <option key={y} value={y} className="bg-systemGray-100">{y}</option>)}
             </select>
           </div>
 
-          <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-2xl border border-slate-200 shadow-sm focus-within:ring-2 focus-within:ring-blue-100 transition-all">
+          <div className="flex items-center gap-3 bg-white/85 px-4 py-2.5 rounded-ios border border-slate-200 backdrop-blur-md focus-within:border-systemBlue/50 transition-all">
             {refreshing ? (
-              <div className="w-5 h-5 border-2 border-blue-200 rounded-full border-t-blue-600 animate-spin shrink-0"></div>
+              <div className="w-4 h-4 border-2 border-slate-300 rounded-full border-t-systemBlue animate-spin shrink-0"></div>
             ) : (
-              <MapPin size={20} className="text-blue-900" />
+              <MapPin size={18} className="text-systemBlue" />
             )}
             <select 
               value={selectedBarangay}
               onChange={(e) => setSelectedBarangay(e.target.value)}
-              className="text-sm font-bold text-slate-700 outline-none bg-transparent cursor-pointer w-full min-w-[150px]"
+              className="text-sm font-bold text-slate-700 outline-none bg-transparent cursor-pointer w-full min-w-[140px]"
             >
-              <option value="All Barangays">All Barangays</option>
-              {BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
+              <option value="All Barangays" className="bg-systemGray-100">All Barangays</option>
+              {BARANGAYS.map(b => <option key={b} value={b} className="bg-systemGray-100">{b}</option>)}
             </select>
           </div>
 
           <button 
             onClick={() => setView && setView(ViewType.ADD_MEMBER)}
-            className="flex-1 sm:flex-none px-6 py-3 bg-blue-900 rounded-2xl text-sm font-black text-white hover:bg-blue-800 transition-all shadow-xl shadow-blue-100 flex items-center justify-center gap-3"
+            className="ios-btn-primary px-5 py-2.5 text-sm flex items-center justify-center gap-2"
           >
-            <IdCard size={20} />
-            <span className="whitespace-nowrap">New Registration</span>
+            <IdCard size={18} />
+            <span className="whitespace-nowrap">New Entry</span>
           </button>
         </div>
       </div>
 
       {/* Stats Summary Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-5">
         {/* Total Members */}
         <button
           type="button"
           onClick={() => onCardNavigate?.(ViewType.FINAL_REPORT, 'masterlist')}
-          className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative text-left w-full"
+          className="ios-card p-6 flex flex-col gap-4 text-left group hover:scale-[1.02] active:scale-[0.98]"
         >
-          <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-blue-50 text-blue-900 rounded-2xl"><Users size={24} /></div>
-            <div className="flex items-center gap-1 text-emerald-600 font-bold text-[10px] uppercase tracking-wider bg-emerald-50 px-2 py-1 rounded-lg">
+          <div className="flex justify-between items-start">
+            <div className="w-12 h-12 bg-systemBlue/20 text-systemBlue rounded-ios flex items-center justify-center"><Users size={24} /></div>
+            <div className="flex items-center gap-1 text-emerald-400 font-bold text-[10px] uppercase tracking-wider bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
               <TrendingUp size={12} /> 8%
             </div>
           </div>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Members</p>
-          <h3 className={`text-3xl font-black text-slate-900 transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.totalMembers.toLocaleString()}</h3>
+          <div>
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Total Members</p>
+            <h3 className={`text-4xl font-bold text-slate-900 tabular-nums transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.totalMembers.toLocaleString()}</h3>
+          </div>
         </button>
 
-        {/* Pending Applications (Action Item) */}
+        {/* Pending Applications */}
         <button
           type="button"
           onClick={() => onCardNavigate?.(ViewType.APPROVAL)}
-          className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative text-left w-full"
+          className="ios-card p-6 flex flex-col gap-4 text-left group hover:scale-[1.02] active:scale-[0.98]"
         >
-          <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl"><ClipboardList size={24} /></div>
-            <div className={`flex items-center gap-1 font-bold text-[10px] uppercase tracking-wider px-2 py-1 rounded-lg ${
+          <div className="flex justify-between items-start">
+            <div className="w-12 h-12 bg-amber-500/20 text-amber-400 rounded-ios flex items-center justify-center"><ClipboardList size={24} /></div>
+            <div className={`flex items-center gap-1 font-bold text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full border ${
               dashboardData.pendingApps > 0 
-                ? 'bg-amber-50 text-amber-600 animate-pulse' 
-                : 'bg-slate-50 text-slate-400'
+                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 animate-pulse' 
+                : 'bg-slate-100 text-slate-500 border-slate-200'
             }`}>
-              {dashboardData.pendingApps > 0 ? 'Action Required' : 'All Clear'}
+              {dashboardData.pendingApps > 0 ? 'Review Needed' : 'Completed'}
             </div>
           </div>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Pending Applications</p>
-          <h3 className={`text-3xl font-black text-slate-900 transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.pendingApps.toLocaleString()}</h3>
+          <div>
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Queue Size</p>
+            <h3 className={`text-4xl font-bold text-slate-900 tabular-nums transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.pendingApps.toLocaleString()}</h3>
+          </div>
         </button>
 
-        {/* Living Centenarians (VIP Group) */}
+        {/* Living Centenarians */}
         <button
           type="button"
           onClick={() => onCardNavigate?.(ViewType.FINAL_REPORT, 'centenarians')}
-          className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative text-left w-full"
+          className="ios-card p-6 flex flex-col gap-4 text-left group hover:scale-[1.02] active:scale-[0.98]"
         >
-          <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl"><Award size={24} /></div>
-            <div className="flex items-center gap-1 text-purple-600 font-bold text-[10px] uppercase tracking-wider bg-purple-50 px-2 py-1 rounded-lg">VIP Status</div>
+          <div className="flex justify-between items-start">
+            <div className="w-12 h-12 bg-purple-500/20 text-purple-400 rounded-ios flex items-center justify-center"><Award size={24} /></div>
+            <div className="flex items-center gap-1 text-purple-400 font-bold text-[10px] uppercase tracking-wider bg-purple-500/10 px-2.5 py-1 rounded-full border border-purple-500/20">Legacy</div>
           </div>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Living Centenarians (100+)</p>
-          <h3 className={`text-3xl font-black text-slate-900 transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.centenarians.toLocaleString()}</h3>
+          <div>
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Centenarians</p>
+            <h3 className={`text-4xl font-bold text-slate-900 tabular-nums transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.centenarians.toLocaleString()}</h3>
+          </div>
         </button>
 
         {/* Total Deceased */}
         <button
           type="button"
           onClick={() => onCardNavigate?.(ViewType.FINAL_REPORT, 'deceased')}
-          className="bg-white p-6 rounded-3xl border border-slate-100 shadow-sm transition-all duration-500 hover:shadow-md relative text-left w-full"
+          className="ios-card p-6 flex flex-col gap-4 text-left group hover:scale-[1.02] active:scale-[0.98]"
         >
-          <div className="flex justify-between items-start mb-4">
-            <div className="p-3 bg-slate-50 text-slate-600 rounded-2xl"><UserX size={24} /></div>
-            <div className="flex items-center gap-1 text-slate-500 font-bold text-[10px] uppercase tracking-wider bg-slate-50 px-2 py-1 rounded-lg">Archived</div>
+          <div className="flex justify-between items-start">
+            <div className="w-12 h-12 bg-slate-100 text-slate-500 rounded-ios flex items-center justify-center"><UserX size={24} /></div>
+            <div className="flex items-center gap-1 text-slate-500 font-bold text-[10px] uppercase tracking-wider bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">Archives</div>
           </div>
-          <p className="text-slate-400 text-[10px] font-black uppercase tracking-widest">Total Deceased</p>
-          <h3 className={`text-3xl font-black text-slate-900 transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.totalDeceased.toLocaleString()}</h3>
+          <div>
+            <p className="text-slate-500 text-[10px] font-bold uppercase tracking-widest mb-1">Total Deceased</p>
+            <h3 className={`text-4xl font-bold text-slate-900 tabular-nums transition-opacity duration-300 ${refreshing ? 'opacity-50' : 'opacity-100'}`}>{dashboardData.totalDeceased.toLocaleString()}</h3>
+          </div>
         </button>
       </div>
 
       <div className={`grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8 transition-opacity duration-300 ${refreshing ? 'opacity-60' : 'opacity-100'}`}>
         {/* Registration Chart */}
-        <div className="lg:col-span-2 bg-white p-6 md:p-8 pb-4 md:pb-6 rounded-3xl md:rounded-[2.5rem] border border-slate-100 shadow-sm">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-4">
+        <div className="lg:col-span-2 ios-card p-6 md:p-10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-10 gap-6">
             <div>
-              <h3 className="text-xl font-black text-slate-900">Monthly Registration</h3>
-              <p className="text-sm text-slate-500">Intake analysis for the year {selectedYear}.</p>
+              <h3 className="text-2xl font-bold text-slate-900 tracking-tight">Registration Trends</h3>
+              <p className="text-sm text-slate-500 mt-1">Activity breakdown for {selectedYear}</p>
             </div>
-            <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-blue-900"></div> <span className="text-[10px] font-black uppercase text-slate-400">Male</span></div>
-              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div> <span className="text-[10px] font-black uppercase text-slate-400">Female</span></div>
+            <div className="flex items-center gap-6 bg-slate-100 px-4 py-2 rounded-full border border-slate-200">
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-systemBlue"></div> <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Male</span></div>
+              <div className="flex items-center gap-2"><div className="w-2.5 h-2.5 rounded-full bg-amber-500"></div> <span className="text-[10px] font-bold uppercase tracking-wide text-slate-500">Female</span></div>
             </div>
           </div>
-          <div className="h-[300px] w-full min-h-[300px] relative">
-            <ResponsiveContainer width="99%" height={300}>
+          <div className="h-[320px] w-full relative">
+            <ResponsiveContainer width="99%" height={320}>
               <AreaChart data={safeMonthlyStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="colorM" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#1e3a8a" stopOpacity={0.1}/><stop offset="95%" stopColor="#1e3a8a" stopOpacity={0}/></linearGradient>
-                  <linearGradient id="colorF" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#eab308" stopOpacity={0.1}/><stop offset="95%" stopColor="#eab308" stopOpacity={0}/></linearGradient>
+                  <linearGradient id="colorM" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#007aff" stopOpacity={0.2}/><stop offset="95%" stopColor="#007aff" stopOpacity={0}/></linearGradient>
+                  <linearGradient id="colorF" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#eab308" stopOpacity={0.2}/><stop offset="95%" stopColor="#eab308" stopOpacity={0}/></linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11}} dy={5} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11}} />
-                <Tooltip contentStyle={{ borderRadius: '20px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }} />
-                <Area type="monotone" dataKey="male" name="Male" stroke="#1e3a8a" strokeWidth={4} fillOpacity={0.6} fill="url(#colorM)" animationDuration={800} animationEasing="ease-out" />
-                <Area type="monotone" dataKey="female" name="Female" stroke="#eab308" strokeWidth={4} fillOpacity={0.4} fill="url(#colorF)" animationDuration={800} animationEasing="ease-out" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(148,163,184,0.24)" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: 'rgba(100,116,139,0.85)', fontSize: 11}} dy={15} />
+                <YAxis axisLine={false} tickLine={false} tick={{fill: 'rgba(100,116,139,0.85)', fontSize: 11}} />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'rgba(28,28,30,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', backdropFilter: 'blur(20px)', color: '#fff' }}
+                  itemStyle={{ fontSize: '12px', fontWeight: 'bold' }}
+                />
+                <Area type="monotone" dataKey="male" name="Male" stroke="#007aff" strokeWidth={4} fillOpacity={1} fill="url(#colorM)" animationDuration={1000} />
+                <Area type="monotone" dataKey="female" name="Female" stroke="#eab308" strokeWidth={4} fillOpacity={1} fill="url(#colorF)" animationDuration={1000} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         {/* Gender Breakdown */}
-        <div className="bg-white p-6 md:p-8 pb-4 md:pb-6 rounded-3xl md:rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col">
-          <h3 className="text-xl font-black text-slate-900 mb-6">Gender Split</h3>
-          <div className="flex-grow min-h-[250px] w-full relative h-[250px]">
-            <ResponsiveContainer width="99%" height={250}>
+        <div className="ios-card p-6 md:p-10 flex flex-col">
+          <h3 className="text-2xl font-bold text-slate-900 tracking-tight mb-2">Gender Split</h3>
+          <p className="text-sm text-slate-500 mb-8 lowercase italic">Demographic distribution</p>
+          <div className="flex-grow min-h-[250px] w-full relative h-[280px]">
+            <ResponsiveContainer width="99%" height={280}>
               <PieChart>
                 <Pie
                   data={dashboardData.genders || []}
                   cx="50%" cy="50%"
-                  innerRadius={55}
-                  outerRadius={75}
-                  paddingAngle={8}
+                  innerRadius={65}
+                  outerRadius={90}
+                  paddingAngle={10}
                   dataKey="value"
+                  animationDuration={1200}
                 >
-                  <Cell fill="#1e3a8a" />
-                  <Cell fill="#eab308" />
+                  <Cell fill="#007aff" stroke="none" />
+                  <Cell fill="#eab308" stroke="none" />
                 </Pie>
-                <Tooltip />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', backdropFilter: 'blur(20px)' }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -305,7 +319,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
             {(dashboardData.genders || []).map((g, i) => (
               <div key={g.name || i} className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 border border-slate-100">
                 <div className="flex items-center gap-3">
-                  <div className={`w-3 h-3 rounded-full ${i === 0 ? 'bg-blue-900' : 'bg-amber-500'}`}></div>
+                  <div className={`w-3 h-3 rounded-full ${i === 0 ? 'bg-systemBlue' : 'bg-amber-500'}`}></div>
                   <span className="text-sm font-bold text-slate-600">{g.name}</span>
                 </div>
                 <span className="text-base font-black text-slate-900">{(g.value || 0).toLocaleString()}</span>
@@ -387,7 +401,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                 >
                   {/* Background intensity layer */}
                   <div 
-                    className="absolute inset-0 bg-blue-900 transition-all duration-500"
+                    className="absolute inset-0 bg-systemBlue transition-all duration-500"
                     style={{ opacity: 0.05 + ((brgy.intensity || 0) * 0.95) }}
                   ></div>
                   

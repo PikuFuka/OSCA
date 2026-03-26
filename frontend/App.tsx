@@ -21,7 +21,12 @@ import {
   ArrowLeft, 
   Loader2,
   Clock,
-  KeyRound 
+  KeyRound,
+  LogOut,
+  Eye,
+  EyeOff,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
 import { useAuth } from './context/AuthContext';
 import { authAPI } from './services/api';
@@ -48,6 +53,23 @@ const App: React.FC = () => {
   // Force password change state
   const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
   const [pwLoading, setPwLoading] = useState(false);
+  const [showPw, setShowPw] = useState({ current: false, next: false, confirm: false });
+
+  const pwHasMin = pwForm.newPw.length >= 8;
+  const pwHasNumber = /[0-9]/.test(pwForm.newPw);
+  const pwHasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwForm.newPw);
+  const isPasswordRuleComplete = pwHasMin && pwHasNumber && pwHasSpecial;
+  const nextPasswordRequirement = !pwHasMin
+    ? 'At least 8 characters'
+    : !pwHasNumber
+    ? 'Contains at least one number'
+    : !pwHasSpecial
+    ? 'Contains at least one special character'
+    : 'All password requirements met';
+  const pwMatches = pwForm.confirm.length > 0 && pwForm.newPw === pwForm.confirm;
+  const canSubmitPasswordChange = Boolean(
+    pwForm.current && pwHasMin && pwHasNumber && pwHasSpecial && pwMatches && !pwLoading
+  );
   
   // Track auth globally for background API prevention
   useEffect(() => {
@@ -235,27 +257,27 @@ const App: React.FC = () => {
   // If not logged in and registering, show Public Registration View
   if (!currentUser && isRegistering) {
     return (
-      <div className="min-h-screen bg-slate-50 p-4 md:p-8 relative">
+      <div className="min-h-screen bg-systemGray-50 p-4 md:p-8 relative">
         <Toast 
           message={toast.message} 
           type={toast.type} 
           isVisible={toast.show} 
           onClose={closeToast} 
         />
-        <div className="max-w-5xl mx-auto">
+        <div className="max-w-5xl mx-auto signup-entry-shell">
           {/* Public Header */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 animate-in slide-in-from-top-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8 signup-entry-header">
              <div className="flex items-center gap-4">
                 {/* OSCA Logo */}
-                <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-full p-0.5 border border-slate-200 shadow-sm flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-ios p-1 border border-slate-200 shadow-sm flex items-center justify-center shrink-0">
                   <img 
                    src="img/osca_logo.png" 
                    alt="OSCA Logo" 
-                   className="w-full h-full object-contain rounded-full"
+                   className="w-full h-full object-contain rounded-ios"
                  />
                 </div>
                 {/* Seal Logo */}
-                <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-full p-0.5 border border-slate-200 shadow-sm flex items-center justify-center shrink-0">
+                <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-ios p-1 border border-slate-200 shadow-sm flex items-center justify-center shrink-0">
                    <img 
                    src="img/pjn_logo.png" 
                    alt="Pagsanjan Seal" 
@@ -264,26 +286,28 @@ const App: React.FC = () => {
                 </div>
 
                 <div className="flex flex-col">
-                  <span className="font-black text-xl md:text-2xl tracking-tighter text-blue-900 leading-none">OSCA Pagsanjan</span>
-                  <span className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">Online Registration</span>
+                  <span className="font-bold text-xl md:text-2xl tracking-tight text-slate-900 leading-none">OSCA Pagsanjan</span>
+                  <span className="text-[10px] md:text-xs font-semibold text-slate-500 uppercase tracking-widest mt-0.5">Online Registration</span>
                 </div>
               </div>
               <button 
                 onClick={() => setIsRegistering(false)}
-                className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-slate-600 rounded-xl font-bold border border-slate-200 hover:border-blue-200 hover:text-blue-900 transition-all shadow-sm"
+                className="w-full md:w-auto flex items-center justify-center gap-2 px-5 py-2.5 bg-white text-slate-700 rounded-ios font-semibold border border-slate-200 hover:bg-slate-50 transition-all shadow-sm"
               >
                 <ArrowLeft size={18} /> Back to Login
               </button>
           </div>
 
-          <AddMemberForm 
-            notify={notify}
-            onSuccess={() => {
-              // Not changing view state here immediately to allow user to see success message or decide next step
-              setIsRegistering(false);
-            }} 
-            onCancel={() => setIsRegistering(false)}
-          />
+          <div className="ios-card p-6 md:p-10 shadow-ios-lg signup-entry-card">
+            <AddMemberForm 
+              notify={notify}
+              onSuccess={() => {
+                // Not changing view state here immediately to allow user to see success message or decide next step
+                setIsRegistering(false);
+              }} 
+              onCancel={() => setIsRegistering(false)}
+            />
+          </div>
         </div>
       </div>
     );
@@ -318,6 +342,10 @@ const App: React.FC = () => {
         notify('New password must be at least 8 characters.', 'error');
         return;
       }
+      if (!pwHasNumber || !pwHasSpecial) {
+        notify('New password must include at least one number and one special character.', 'error');
+        return;
+      }
       setPwLoading(true);
       try {
         await authAPI.changePassword(pwForm.current, pwForm.newPw, pwForm.confirm);
@@ -333,80 +361,178 @@ const App: React.FC = () => {
     };
 
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-slate-50 relative overflow-hidden">
+      <div className="min-h-screen bg-systemGray-50 p-4 md:p-8 relative overflow-hidden">
         <Toast message={toast.message} type={toast.type} isVisible={toast.show} onClose={closeToast} />
-        <div className="absolute inset-0 z-0 opacity-30">
-          <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-blue-200 rounded-full blur-[120px]"></div>
-          <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-amber-100 rounded-full blur-[120px]"></div>
-        </div>
-        <div className="relative z-10 w-full max-w-md bg-white rounded-3xl shadow-2xl p-8 md:p-10 border border-slate-100">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center">
-              <KeyRound className="w-6 h-6 text-amber-600" />
+
+        <div className="max-w-5xl mx-auto space-y-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 animate-in slide-in-from-top-4">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-ios p-1 border border-slate-200 shadow-sm flex items-center justify-center shrink-0">
+                <img
+                  src="img/osca_logo.png"
+                  alt="OSCA Logo"
+                  className="w-full h-full object-contain rounded-ios"
+                />
+              </div>
+              <div className="w-12 h-12 md:w-14 md:h-14 bg-white rounded-ios p-1 border border-slate-200 shadow-sm flex items-center justify-center shrink-0">
+                <img
+                  src="img/pjn_logo.png"
+                  alt="Pagsanjan Seal"
+                  className="w-full h-full object-contain"
+                />
+              </div>
+
+              <div className="flex flex-col">
+                <span className="font-bold text-xl md:text-2xl tracking-tight text-slate-900 leading-none">OSCA Pagsanjan</span>
+                <span className="text-[10px] md:text-xs font-semibold text-slate-500 uppercase tracking-widest mt-0.5">Account Security</span>
+              </div>
             </div>
-            <div>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">Change Your Password</h2>
-              <p className="text-sm text-slate-500">You must change your default password before continuing.</p>
+
+            <div className="flex flex-col sm:flex-row w-full md:w-auto gap-2">
+              <div className="px-5 py-2.5 bg-white text-slate-600 rounded-ios font-semibold border border-slate-200 shadow-sm text-center md:text-left">
+                Password Update Required
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (pwLoading) return;
+                  await logout();
+                  setIsRegistering(false);
+                }}
+                className="px-5 py-2.5 bg-white text-slate-700 rounded-ios font-semibold border border-slate-200 hover:bg-slate-50 transition-all shadow-sm flex items-center justify-center gap-2"
+              >
+                <LogOut size={16} />
+                Log Out
+              </button>
             </div>
           </div>
 
-          <form onSubmit={handlePasswordChange} className="space-y-4">
-            <div>
-              <label htmlFor="force-password-current" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-1 block">Current Password</label>
-              <input
-                id="force-password-current"
-                name="currentPassword"
-                type="password"
-                value={pwForm.current}
-                onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))}
-                placeholder="Enter your current password"
-                required
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700"
-              />
+          <div className="relative z-10 w-full max-w-md mx-auto ios-card p-8 md:p-10 shadow-ios-lg">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-systemBlue/20 rounded-ios flex items-center justify-center">
+                <KeyRound className="w-6 h-6 text-systemBlue" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900 tracking-tight">Security Update</h2>
+                <p className="text-sm text-slate-500">Please update your password to continue.</p>
+              </div>
             </div>
-            <div>
-              <label htmlFor="force-password-new" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-1 block">New Password</label>
-              <input
-                id="force-password-new"
-                name="newPassword"
-                type="password"
-                value={pwForm.newPw}
-                onChange={e => setPwForm(p => ({ ...p, newPw: e.target.value }))}
-                placeholder="At least 8 characters"
-                required
-                minLength={8}
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700"
-              />
-            </div>
-            <div>
-              <label htmlFor="force-password-confirm" className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-1 mb-1 block">Confirm New Password</label>
-              <input
-                id="force-password-confirm"
-                name="confirmPassword"
-                type="password"
-                value={pwForm.confirm}
-                onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))}
-                placeholder="Repeat new password"
-                required
-                minLength={8}
-                className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700"
-              />
-            </div>
-            <button
-              type="submit"
-              disabled={pwLoading}
-              className="w-full bg-blue-900 text-white py-3 rounded-xl font-bold text-lg hover:bg-blue-800 transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-2"
-            >
-              {pwLoading ? 'Changing...' : 'Change Password'}
-            </button>
-          </form>
+
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              <div>
+                <label htmlFor="force-password-current" className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 pl-1 mb-1 block">Current Password</label>
+                <div className="relative">
+                  <input
+                    id="force-password-current"
+                    name="currentPassword"
+                    type={showPw.current ? 'text' : 'password'}
+                    value={pwForm.current}
+                    onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))}
+                    placeholder="Enter current"
+                    required
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-slate-800 placeholder-slate-400 font-semibold focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(prev => ({ ...prev, current: !prev.current }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700"
+                    aria-label={showPw.current ? 'Hide current password' : 'Show current password'}
+                  >
+                    {showPw.current ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label htmlFor="force-password-new" className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 pl-1 mb-1 block">New Password</label>
+                <div className="relative">
+                  <input
+                    id="force-password-new"
+                    name="newPassword"
+                    type={showPw.next ? 'text' : 'password'}
+                    value={pwForm.newPw}
+                    onChange={e => setPwForm(p => ({ ...p, newPw: e.target.value }))}
+                    placeholder="At least 8 characters"
+                    required
+                    minLength={8}
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3 pr-12 text-slate-800 placeholder-slate-400 font-semibold focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(prev => ({ ...prev, next: !prev.next }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700"
+                    aria-label={showPw.next ? 'Hide new password' : 'Show new password'}
+                  >
+                    {showPw.next ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                <p className={`mt-2 text-xs font-semibold pl-1 flex items-center gap-1 ${isPasswordRuleComplete ? 'text-emerald-600' : 'text-rose-500'}`}>
+                  {isPasswordRuleComplete ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+                  {nextPasswordRequirement}
+                </p>
+              </div>
+              <div>
+                <label htmlFor="force-password-confirm" className="text-[10px] font-semibold uppercase tracking-widest text-slate-500 pl-1 mb-1 block">Confirm New</label>
+                <div className="relative">
+                  <input
+                    id="force-password-confirm"
+                    name="confirmPassword"
+                    type={showPw.confirm ? 'text' : 'password'}
+                    value={pwForm.confirm}
+                    onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))}
+                    placeholder="Repeat new password"
+                    required
+                    minLength={8}
+                    className={`w-full rounded-2xl bg-white px-4 py-3 pr-12 text-slate-800 placeholder-slate-400 font-semibold focus:ring-4 transition-all ${
+                      pwForm.confirm.length === 0
+                        ? 'border border-slate-300 focus:border-blue-600 focus:ring-blue-100'
+                        : pwMatches
+                        ? 'border border-emerald-400 focus:border-emerald-500 focus:ring-emerald-100'
+                        : 'border border-rose-400 focus:border-rose-500 focus:ring-rose-100'
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(prev => ({ ...prev, confirm: !prev.confirm }))}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700"
+                    aria-label={showPw.confirm ? 'Hide confirm password' : 'Show confirm password'}
+                  >
+                    {showPw.confirm ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+                {pwForm.confirm.length > 0 && (
+                  <p className={`mt-2 text-xs font-semibold pl-1 flex items-center gap-1 ${pwMatches ? 'text-emerald-600' : 'text-rose-500'}`}>
+                    {pwMatches ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+                    {pwMatches ? 'Passwords match' : 'Passwords do not match'}
+                  </p>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={!canSubmitPasswordChange}
+                className={`w-full py-3.5 mt-2 rounded-ios font-semibold flex items-center justify-center gap-2 transition-all ${
+                  canSubmitPasswordChange
+                    ? 'ios-btn-primary'
+                    : 'bg-slate-200 text-slate-500 cursor-not-allowed'
+                }`}
+              >
+                {pwLoading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Change Password'
+                )}
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex h-screen bg-slate-50 overflow-hidden text-slate-900 relative">
+    <div className="flex h-screen bg-systemGray-50 overflow-hidden text-slate-900 relative">
       <Toast 
         message={toast.message} 
         type={toast.type} 
@@ -417,7 +543,7 @@ const App: React.FC = () => {
       {/* Mobile Backdrop */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden animate-in fade-in"
+          className="fixed inset-0 bg-black/60 backdrop-blur-md z-40 md:hidden animate-in fade-in"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}

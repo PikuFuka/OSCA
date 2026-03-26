@@ -231,7 +231,7 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
       <div className="flex justify-center mb-8">
         <button 
            onClick={() => setShowDetails(!showDetails)}
-           className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-bold flex items-center gap-3 hover:bg-slate-800 transition-all shadow-xl hover:scale-105 active:scale-95 border-2 border-slate-900"
+            className="ios-btn-primary px-8 py-4 rounded-2xl font-bold flex items-center gap-3 shadow-xl hover:scale-105 active:scale-95 border-2 border-systemBlue"
         >
            {showDetails ? <EyeOff size={20} /> : <Eye size={20} />}
            {showDetails ? 'Hide Personal Record' : 'View Personal Record'}

@@ -117,7 +117,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
           <p className="text-slate-500 font-medium text-sm mb-4">{fetchError}</p>
           <button
             onClick={fetchMemberData}
-            className="px-6 py-3 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-800 transition-all"
+            className="ios-btn-primary px-6 py-3"
           >
             Try Again
           </button>
@@ -145,7 +145,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
   return (
     <div className="space-y-8 pb-12">
       {/* Welcome Section */}
-      <div className="bg-gradient-to-r from-blue-900 to-blue-800 rounded-[2.5rem] p-8 md:p-12 text-white shadow-xl shadow-blue-900/10 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-systemBlue to-blue-600 rounded-[2.5rem] p-8 md:p-12 text-white shadow-xl shadow-blue-900/10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-500/10 rounded-full blur-2xl -ml-10 -mb-10"></div>
         
@@ -320,7 +320,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
                            href={seniorsAPI.getDocumentUrl(currentUser.id, req.doc.id)} 
                            target="_blank" 
                            rel="noreferrer"
-                           className="flex items-center justify-center gap-2 py-2.5 bg-blue-900 text-white rounded-xl font-black text-xs hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/10 sm:flex-1"
+                           className="flex items-center justify-center gap-2 py-2.5 bg-systemBlue text-white rounded-xl font-black text-xs hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/10 sm:flex-1"
                          >
                            <Eye size={16} /> VIEW
                          </a>

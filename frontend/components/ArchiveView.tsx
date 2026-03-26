@@ -80,41 +80,46 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
   );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-10">
       {!embedded && (
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-10">
           <div>
-            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Archive</h2>
-            <p className="text-slate-500 font-medium">Manage deleted and deceased member records.</p>
+            <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight">Archive</h2>
+            <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px] mt-3 bg-white/50 w-fit px-3 py-1 rounded-full border border-slate-200 shadow-sm">Inactive Records</p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center gap-5 w-full sm:w-auto">
+            <div className="relative group w-full sm:w-[350px]">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-systemBlue/5 rounded-lg flex items-center justify-center text-slate-400 group-focus-within:text-systemBlue transition-colors">
+                <Search size={18} />
+              </div>
+              <input 
+                type="text" 
+                placeholder="Search archive..."
+                className="w-full pl-14 pr-6 py-4 bg-white/80 backdrop-blur-md border border-slate-200 rounded-ios text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-4 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
           </div>
         </div>
       )}
 
-      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
-        <div className="p-6 border-b border-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50/30">
-          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl">
+      <div className="ios-card shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col min-h-[500px]">
+        <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row items-center justify-between gap-4">
+          <div className="flex items-center gap-2 bg-slate-200/50 p-1.5 rounded-ios backdrop-blur-sm border border-slate-200">
             <button 
               onClick={() => setActiveTab('deleted')}
-              className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'deleted' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-8 py-3 rounded-ios text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'deleted' ? 'bg-white text-systemBlue shadow-lg shadow-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              Deleted Members
+              Deleted
             </button>
             <button 
               onClick={() => setActiveTab('deceased')}
-              className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'deceased' ? 'bg-white text-blue-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-8 py-3 rounded-ios text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'deceased' ? 'bg-white text-systemBlue shadow-lg shadow-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
             >
-              Deceased Members
+              Deceased
             </button>
-          </div>
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search by ID or Name..."
-              className="w-full pl-12 pr-4 py-3 rounded-xl bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-50 transition-all text-sm font-medium"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
           </div>
         </div>
 
@@ -124,9 +129,9 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
                <TableSkeleton />
              </div>
           ) : (
-            <table className="w-full text-left">
+            <table className="ios-table">
               <thead>
-                <tr className="bg-white text-slate-400 uppercase text-[10px] font-black tracking-[0.2em] border-b border-slate-50">
+                <tr>
                   <th className="px-8 py-5">Member Profile</th>
                   <th className="px-8 py-5">Age / Gender</th>
                   <th className="px-8 py-5">Barangay</th>
@@ -134,9 +139,9 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
                   <th className="px-8 py-5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody>
                 {filteredData.length > 0 ? filteredData.map((senior) => (
-                  <tr key={senior.id} className="hover:bg-slate-50/50 transition-colors">
+                  <tr key={senior.id}>
                     <td className="px-8 py-4">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
@@ -164,16 +169,18 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
                       {activeTab === 'deleted' ? (
                         <button 
                           onClick={() => triggerRestore(senior)}
-                          className="p-2 text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors inline-flex items-center gap-2 text-xs font-bold"
+                          className="w-10 h-10 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-ios border border-emerald-100 flex items-center justify-center transition-all duration-300 shadow-sm ml-auto"
+                          title="Restore Record"
                         >
-                          <RefreshCw size={16} /> Restore
+                          <RefreshCw size={18} />
                         </button>
                       ) : (
                         <button 
                           onClick={() => triggerUnDeceased(senior)}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-xl transition-colors inline-flex items-center gap-2 text-xs font-bold"
+                          className="w-10 h-10 bg-systemBlue/5 hover:bg-systemBlue text-systemBlue hover:text-white rounded-ios border border-systemBlue/10 flex items-center justify-center transition-all duration-300 shadow-sm ml-auto"
+                          title="Revert to Active"
                         >
-                          <RefreshCw size={16} /> Bring to Active
+                          <RefreshCw size={18} />
                         </button>
                       )}
                     </td>

@@ -70,7 +70,7 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
       default:
         return {
           icon: <HelpCircle className="text-blue-600" size={48} />,
-          btn: 'bg-blue-900 hover:bg-blue-800 shadow-blue-200 text-white',
+          btn: 'bg-systemBlue hover:bg-blue-800 shadow-blue-200 text-white',
           bg: 'bg-blue-50 border-blue-100',
           titleColor: 'text-slate-900'
         };

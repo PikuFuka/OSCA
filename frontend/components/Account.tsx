@@ -169,7 +169,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
         <div className="flex gap-3 mt-4">
           <button 
             onClick={() => window.location.reload()}
-            className="px-6 py-3 bg-blue-900 text-white rounded-xl font-bold hover:bg-blue-800 transition-all shadow-lg shadow-blue-100"
+            className="ios-btn-primary px-6 py-3"
           >
             Retry Connection
           </button>
@@ -302,13 +302,13 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Accounts Management</h2>
-          <p className="text-slate-500 font-medium">Unified access control for Admins, Staff, and Senior Citizens.</p>
+            <h2 className="ios-page-title">Accounts Management</h2>
+            <p className="ios-page-subtitle mt-1">Manage system users and senior citizen portal accounts.</p>
         </div>
         {isAdmin && (
           <button 
             onClick={() => setIsCreateOpen(true)}
-            className="px-6 py-3 bg-blue-900 rounded-2xl text-sm font-black text-white hover:bg-blue-800 transition-all shadow-xl shadow-blue-100 flex items-center gap-3"
+            className="ios-btn-primary px-6 py-3 rounded-2xl text-sm font-black flex items-center gap-3"
           >
             <Plus size={20} />
             Create New Staff
@@ -362,9 +362,9 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
         </div>
 
         <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left">
+          <table className="ios-table">
             <thead>
-              <tr className="bg-white text-slate-400 uppercase text-[10px] font-black tracking-[0.2em] border-b border-slate-50">
+              <tr>
                 <th className="px-10 py-6">Account Identity</th>
                 <th className="px-10 py-6">Access Role</th>
                 <th className="px-10 py-6">Assigned Unit/Area</th>
@@ -372,9 +372,9 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
                 <th className="px-10 py-6 text-right">Settings</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody>
               {displayedAccounts.length > 0 ? displayedAccounts.map(acc => (
-                <tr key={acc.id} className="hover:bg-blue-50/30 transition-colors">
+                <tr key={acc.id}>
                   <td className="px-10 py-6">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-lg border-2 border-white shadow-sm shrink-0 overflow-hidden">
@@ -413,10 +413,10 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
                     {isAdmin ? (
                       <button 
                         onClick={() => handleEditClick(acc)}
-                        className="p-2 text-slate-400 hover:bg-slate-100 hover:text-blue-900 rounded-xl transition-colors"
+                        className="w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded-ios border border-slate-200 flex items-center justify-center transition-all shadow-sm"
                         title="Manage Access"
                       >
-                        <Lock size={20} />
+                        <Lock size={18} />
                       </button>
                     ) : (
                       <span className="text-xs text-slate-400 font-bold italic">View Only</span>
@@ -527,7 +527,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
                 <button type="button" onClick={() => setSelectedAccount(null)} className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-colors">Cancel</button>
                 <button 
                   type="submit" 
-                  className="w-full sm:w-auto px-6 sm:px-8 py-3.5 rounded-xl bg-blue-900 text-white font-bold hover:bg-blue-800 transition-colors shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 sm:px-8 py-3.5 rounded-xl bg-systemBlue text-white font-bold hover:bg-blue-800 transition-colors shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
                 >
                   <Save size={18} /> 
                   <span className="hidden sm:inline">Update Account</span>
@@ -565,7 +565,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
                 <button type="button" onClick={() => setIsCreateOpen(false)} className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-colors">Cancel</button>
                 <button 
                   type="submit" 
-                  className="w-full sm:w-auto px-6 sm:px-8 py-3.5 rounded-xl bg-blue-900 text-white font-bold hover:bg-blue-800 transition-colors shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
+                  className="w-full sm:w-auto px-6 sm:px-8 py-3.5 rounded-xl bg-systemBlue text-white font-bold hover:bg-blue-800 transition-colors shadow-lg shadow-blue-100 flex items-center justify-center gap-2"
                 >
                   <Plus size={18} /> 
                   <span className="hidden sm:inline">Create Account</span>

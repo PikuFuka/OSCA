@@ -47,6 +47,15 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({
   showPassword, setShowPassword, showConfirmPassword, setShowConfirmPassword,
   passwordHasMin, passwordHasNumber, passwordHasSpecial
 }) => {
+  const isPasswordRuleComplete = passwordHasMin && passwordHasNumber && passwordHasSpecial;
+  const nextPasswordRequirement = !passwordHasMin
+    ? 'At least 8 characters'
+    : !passwordHasNumber
+    ? 'Contains a number'
+    : !passwordHasSpecial
+    ? 'Contains a special character'
+    : 'All password requirements met';
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
        <div className="flex items-center gap-3 text-blue-900 mb-2">
@@ -105,17 +114,10 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-              <div className="mt-2 space-y-1 text-xs font-bold pl-2">
-                <div className={`flex items-center gap-1 ${passwordHasMin ? 'text-emerald-600' : 'text-rose-500'}`}>
-                  {passwordHasMin ? <CheckCircle size={12} /> : <AlertCircle size={12} />} At least 8 characters
-                </div>
-                <div className={`flex items-center gap-1 ${passwordHasNumber ? 'text-emerald-600' : 'text-rose-500'}`}>
-                  {passwordHasNumber ? <CheckCircle size={12} /> : <AlertCircle size={12} />} Contains a number
-                </div>
-                <div className={`flex items-center gap-1 ${passwordHasSpecial ? 'text-emerald-600' : 'text-rose-500'}`}>
-                  {passwordHasSpecial ? <CheckCircle size={12} /> : <AlertCircle size={12} />} Contains a special character
-                </div>
-              </div>
+              <p className={`mt-2 text-xs font-bold pl-2 flex items-center gap-1 ${isPasswordRuleComplete ? 'text-emerald-600' : 'text-rose-500'}`}>
+                {isPasswordRuleComplete ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+                {nextPasswordRequirement}
+              </p>
             </div>
             <div className="space-y-2">
               <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Confirm Password *</label>

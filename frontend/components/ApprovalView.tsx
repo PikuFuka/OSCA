@@ -176,39 +176,40 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="text-center md:text-left">
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">For Approvals</h2>
-          <p className="text-slate-500 font-medium">Review and process new ID applications and updates.</p>
+    <div className="space-y-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-10">
+        <div>
+          <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight">For Approvals</h2>
+          <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px] mt-3 bg-white/50 w-fit px-3 py-1 rounded-full border border-slate-200 shadow-sm">Review & Verification</p>
         </div>
-        {setView && (
-          <button
-            onClick={() => setView(ViewType.ADD_MEMBER)}
-            className="flex items-center justify-center gap-2 px-6 py-3 rounded-2xl bg-blue-900 text-white font-black text-sm uppercase tracking-widest hover:bg-blue-800 transition-all shadow-lg shadow-blue-100 w-full sm:w-auto"
-          >
-            <UserPlus size={18} /> 
-            <span className="text-xs sm:text-sm">New Registration</span>
-          </button>
-        )}
-      </div>
 
-      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden min-h-[500px]">
-        <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50/30">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+        <div className="flex flex-col sm:flex-row items-center gap-5 w-full sm:w-auto">
+          <div className="relative group w-full sm:w-[350px]">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-systemBlue/5 rounded-lg flex items-center justify-center text-slate-400 group-focus-within:text-systemBlue transition-colors">
+              <Search size={18} />
+            </div>
             <input 
               type="text" 
               placeholder="Search request..."
-              className="w-full pl-14 pr-6 py-3 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-4 focus:ring-blue-50 transition-all text-sm font-medium shadow-sm"
+              className="w-full pl-14 pr-6 py-4 bg-white/80 backdrop-blur-md border border-slate-200 rounded-ios text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-4 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <div className="text-xs font-black uppercase tracking-widest text-slate-400 text-center md:text-right">
-            {pagination.total > 0 ? `Showing ${pagination.from}-${pagination.to} of ${pagination.total}` : 'No records'}
-          </div>
+
+          {setView && (
+            <button
+              onClick={() => setView(ViewType.ADD_MEMBER)}
+              className="w-full sm:w-auto px-8 py-4 bg-systemBlue text-white font-bold rounded-ios hover:bg-blue-600 transition-all shadow-lg shadow-systemBlue/20 flex items-center justify-center gap-3 text-sm active:scale-95"
+            >
+              <UserPlus size={18} /> 
+              <span>New Registration</span>
+            </button>
+          )}
         </div>
+      </div>
+
+      <div className="ios-card shadow-xl shadow-slate-200/50 overflow-hidden min-h-[500px]">
 
         <div className="overflow-x-auto">
           {loading ? (
@@ -216,9 +217,9 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                  <TableSkeleton />
                </div>
             ) : (
-              <table className="w-full text-left">
+              <table className="ios-table">
             <thead>
-              <tr className="bg-white text-slate-400 uppercase text-[10px] font-black tracking-[0.2em] border-b border-slate-50">
+              <tr>
                 <th className="px-10 py-6">Applicant</th>
                 <th className="px-10 py-6">OSCA ID</th>
                 <th className="px-10 py-6">Request Type</th>
@@ -228,9 +229,9 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                 <th className="px-10 py-6 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody>
               {filteredRequests.length > 0 ? filteredRequests.map((req) => (
-                <tr key={req.id} className="hover:bg-slate-50/50 transition-colors">
+                <tr key={req.id}>
                   <td className="px-10 py-6">
                     <div className="flex items-center gap-4">
                       <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
@@ -284,33 +285,34 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                     </span>
                   </td>
                   <td className="px-10 py-6 text-right">
-                    <div className="flex items-center justify-end gap-2">
+                    <div className="flex items-center justify-end gap-3">
                       <button 
                         onClick={() => setSelectedRequest(req)}
-                        className="p-2 text-slate-400 hover:text-blue-900 hover:bg-slate-100 rounded-xl transition-colors"
+                        className="w-10 h-10 bg-systemBlue/5 hover:bg-systemBlue text-systemBlue hover:text-white rounded-ios border border-systemBlue/10 flex items-center justify-center transition-all duration-300 shadow-sm"
                         title="View Details"
                       >
-                        <Eye size={20} />
+                        <Eye size={18} />
                       </button>
-                      <div className="w-[1px] h-6 bg-slate-200 mx-1"></div>
                       <button 
                         onClick={() => triggerConfirm(req.id, 'Reject')}
-                        className="p-2 text-rose-500 hover:bg-rose-50 rounded-xl transition-colors" title="Reject"
+                        className="w-10 h-10 bg-rose-50 hover:bg-rose-600 text-rose-500 hover:text-white rounded-ios border border-rose-100 flex items-center justify-center transition-all duration-300 shadow-sm" 
+                        title="Reject"
                       >
-                        <XCircle size={20} />
+                        <XCircle size={18} />
                       </button>
                       <button 
                         onClick={() => triggerConfirm(req.id, 'Approve')}
-                        className="p-2 text-emerald-500 hover:bg-emerald-50 rounded-xl transition-colors" title="Approve"
+                        className="w-10 h-10 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-ios border border-emerald-100 flex items-center justify-center transition-all duration-300 shadow-sm" 
+                        title="Approve"
                       >
-                        <CheckCircle size={20} />
+                        <CheckCircle size={18} />
                       </button>
                     </div>
                   </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={6} className="px-10 py-20 text-center">
+                  <td colSpan={7} className="px-10 py-20 text-center">
                     <div className="flex flex-col items-center gap-4">
                       <div className="p-4 bg-slate-50 rounded-full text-slate-300"><CheckCircle size={32} /></div>
                       <p className="text-slate-400 font-bold text-sm">No pending requests at the moment</p>

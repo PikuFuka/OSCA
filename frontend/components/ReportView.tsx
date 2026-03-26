@@ -133,14 +133,14 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
     <div className="space-y-8 pb-12 relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-black text-slate-800 tracking-tight uppercase">Excel Final Report</h2>
-          <p className="text-slate-500 font-medium">Audited batch reporting for OSCA.</p>
+          <h2 className="ios-page-title uppercase">Excel Final Report</h2>
+          <p className="ios-page-subtitle">Audited batch reporting for OSCA.</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={handleExcelExport}
             disabled={isExporting}
-            className={`px-4 sm:px-8 py-3 bg-emerald-600 text-white rounded-2xl text-sm font-black flex items-center justify-center gap-3 hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 w-full sm:w-auto ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`ios-btn-success px-4 sm:px-8 py-3 text-sm font-black flex items-center justify-center gap-3 w-full sm:w-auto ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
             {isExporting ? <Clock className="animate-spin" size={20} /> : <FileSpreadsheet size={20} />}
             <span className="hidden sm:inline">
@@ -152,13 +152,13 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
 
       <div className="grid grid-cols-1 gap-8">
         <div className="w-full space-y-6">
-          <div className="sticky top-0 z-10 w-fit max-w-full bg-slate-50/95 backdrop-blur-sm rounded-2xl border border-slate-200 p-3 inline-flex flex-wrap items-center gap-2 shadow-sm">
+          <div className="top-0 z-10 w-fit max-w-full bg-white/90 backdrop-blur-ios rounded-2xl border border-slate-200 p-3 inline-flex flex-wrap items-center gap-2 shadow-ios">
             <button
               type="button"
               onClick={() => setActiveSection('masterlist')}
               className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
                 activeSection === 'masterlist'
-                  ? 'bg-blue-900 text-white'
+                  ? 'bg-systemBlue text-white'
                   : 'bg-white text-slate-500 border border-slate-200 hover:text-blue-900 hover:border-blue-200'
               }`}
             >
@@ -189,19 +189,20 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
           </div>
 
           {activeSection === 'masterlist' && (
-          <div className="bg-white rounded-[2rem] border-2 border-blue-100 shadow-md overflow-hidden">
-            <div className="h-1.5 bg-gradient-to-r from-blue-700 via-blue-500 to-blue-300" />
-            <div className="p-8 border-b border-blue-100 flex items-center justify-between bg-blue-50/40">
+          <div className="ios-section border border-slate-200 overflow-hidden">
+            <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
               <div className="flex items-center gap-3">
-                <FileText size={18} className="text-blue-900" />
+                <div className="p-2 bg-systemBlue/10 text-systemBlue rounded-xl">
+                  <FileText size={18} />
+                </div>
                 <div>
                   <h3 className="font-bold text-slate-800">Masterlist Preview</h3>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-blue-700">Section 1 of 3</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Section 1 of 3</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-200">
-                  <MapPin size={14} className="text-blue-900" />
+                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                  <MapPin size={14} className="text-slate-400" />
                   <select 
                     value={selectedBrgy}
                     onChange={(e) => { setSelectedBrgy(e.target.value); setPage(1); }}
@@ -217,41 +218,45 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             </div>
             
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="ios-table">
                 <thead className="sticky top-0 z-[2]">
-                  <tr className="bg-white text-slate-400 uppercase text-xs font-black tracking-[0.2em] border-b border-slate-50">
+                  <tr>
                     <th className="px-8 py-4">Full Name</th>
                     <th className="px-8 py-4">Address</th>
-                    <th className="px-8 py-4">Sex</th>
-                    <th className="px-8 py-4">Birthday</th>
-                    <th className="px-8 py-4">Age</th>
-                    <th className="px-8 py-4">OSCA ID</th>
-                    <th className="px-8 py-4">RRN No</th>
-                    <th className="px-8 py-4">Pension</th>
+                    <th className="px-8 py-4 text-center">Sex</th>
+                    <th className="px-8 py-4 text-center">Birthday</th>
+                    <th className="px-8 py-4 text-center">Age</th>
+                    <th className="px-8 py-4 text-center">OSCA ID</th>
+                    <th className="px-8 py-4 text-center">RRN No</th>
+                    <th className="px-8 py-4 text-center">Pension</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody>
                   {seniorsData.length > 0 ? (
                     seniorsData.map((item) => (
-                      <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
+                      <tr key={item.id}>
                         <td className="px-8 py-5">
-                          <p className="text-lg font-bold text-slate-800">{item.name}</p>
-                          <p className="text-xs text-slate-400 font-medium">{item.barangay || '-'}</p>
+                          <p className="text-base font-bold text-slate-900">{item.name}</p>
+                          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">{item.barangay || '-'}</p>
                         </td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.streetAddress || '-'}</td>
-                        <td className="px-8 py-5">
+                        <td className="px-8 py-5 text-sm font-medium text-slate-600 truncate max-w-[200px]">{item.streetAddress || '-'}</td>
+                        <td className="px-8 py-5 text-center">
                           <span className="text-sm font-semibold text-slate-600">{(item as any).sex || item.gender || '-'}</span>
                         </td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{formatDate(item.dateOfBirth)}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.age ?? '-'}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.oscaId || '-'}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.rrn || '-'}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.pensionStatus || '-'}</td>
+                        <td className="px-8 py-5 text-center text-sm font-medium text-slate-600">{formatDate(item.dateOfBirth)}</td>
+                        <td className="px-8 py-5 text-center text-sm font-bold text-slate-900">{item.age ?? '-'}</td>
+                        <td className="px-8 py-5 text-center text-[11px] font-bold text-slate-500 font-mono tracking-wider">{item.osca_id || item.oscaId || '-'}</td>
+                        <td className="px-8 py-5 text-center text-[11px] font-bold text-slate-500">{item.rrn || '-'}</td>
+                        <td className="px-8 py-5 text-center">
+                           <span className="text-[10px] font-bold uppercase px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600">
+                             {item.pensionStatus || 'None'}
+                           </span>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-8 py-8 text-center text-sm font-semibold text-slate-400">
+                      <td colSpan={8} className="px-8 py-20 text-center text-sm font-semibold text-slate-400 uppercase tracking-widest">
                         No masterlist records found.
                       </td>
                     </tr>
@@ -260,22 +265,22 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               </table>
             </div>
 
-            <div className="p-6 bg-blue-50/40 border-t border-blue-100 flex items-center justify-between">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Page {page} of {totalPages}</span>
-              <div className="flex items-center gap-2">
+            <div className="p-6 bg-slate-50/40 border-t border-slate-100 flex items-center justify-between">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Page {page} of {totalPages}</span>
+              <div className="flex items-center gap-3">
                 <button 
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page === 1}
-                  className="p-2 bg-white rounded-lg border border-slate-200 text-slate-400 disabled:opacity-50"
+                  className="w-10 h-10 flex items-center justify-center bg-white rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 transition-all shadow-sm"
                 >
-                  <ChevronLeft size={16} />
+                  <ChevronLeft size={18} />
                 </button>
                 <button 
                   onClick={() => setPage(p => Math.min(totalPages, p + 1))}
                   disabled={page === totalPages}
-                  className="p-2 bg-white rounded-lg border border-slate-200 text-slate-400 disabled:opacity-50"
+                  className="w-10 h-10 flex items-center justify-center bg-white rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 disabled:opacity-30 transition-all shadow-sm"
                 >
-                  <ChevronRight size={16} />
+                  <ChevronRight size={18} />
                 </button>
               </div>
             </div>
@@ -283,19 +288,20 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
           )}
 
           {activeSection === 'centenarians' && (
-          <div className="bg-white rounded-[2rem] border-2 border-purple-100 shadow-md overflow-hidden">
-            <div className="h-1.5 bg-gradient-to-r from-purple-700 via-purple-500 to-purple-300" />
-            <div className="p-8 border-b border-purple-100 flex items-center justify-between bg-purple-50/50">
+          <div className="ios-section border border-slate-200 overflow-hidden">
+            <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
               <div className="flex items-center gap-3">
-                <FileText size={18} className="text-purple-700" />
+                <div className="p-2 bg-purple-600/10 text-purple-600 rounded-xl">
+                  <FileText size={18} />
+                </div>
                 <div>
                   <h3 className="font-bold text-slate-800">Living Centenarians (100+)</h3>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-purple-700">Section 2 of 3</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Section 2 of 3</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-purple-200">
-                  <MapPin size={14} className="text-purple-700" />
+                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                  <MapPin size={14} className="text-slate-400" />
                   <select
                     value={selectedBrgy}
                     onChange={(e) => { setSelectedBrgy(e.target.value); setPage(1); }}
@@ -307,46 +313,50 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     ))}
                   </select>
                 </div>
-                <span className="text-xs font-black uppercase tracking-widest text-purple-700 bg-white px-3 py-1 rounded-lg border border-purple-100">
+                <span className="text-[10px] font-black uppercase tracking-widest text-purple-700 bg-purple-50 px-3 py-1.5 rounded-lg border border-purple-100">
                   Total: {centenariansData.length}
                 </span>
               </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="ios-table">
                 <thead className="sticky top-0 z-[2]">
-                  <tr className="bg-white text-slate-400 uppercase text-xs font-black tracking-[0.2em] border-b border-slate-50">
+                  <tr>
                     <th className="px-8 py-4">Full Name</th>
                     <th className="px-8 py-4">Address</th>
-                    <th className="px-8 py-4">Sex</th>
-                    <th className="px-8 py-4">Birthday</th>
-                    <th className="px-8 py-4">Age</th>
-                    <th className="px-8 py-4">OSCA ID</th>
-                    <th className="px-8 py-4">RRN No</th>
-                    <th className="px-8 py-4">Pension</th>
+                    <th className="px-8 py-4 text-center">Sex</th>
+                    <th className="px-8 py-4 text-center">Birthday</th>
+                    <th className="px-8 py-4 text-center">Age</th>
+                    <th className="px-8 py-4 text-center">OSCA ID</th>
+                    <th className="px-8 py-4 text-center">RRN No</th>
+                    <th className="px-8 py-4 text-center">Pension</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody>
                   {centenariansData.length > 0 ? (
                     centenariansData.map((item) => (
-                      <tr key={`cent-${item.id}`} className="hover:bg-purple-50/30 transition-colors">
+                      <tr key={`cent-${item.id}`}>
                         <td className="px-8 py-5">
-                          <p className="text-lg font-bold text-slate-800">{item.name}</p>
-                          <p className="text-xs text-slate-400 font-medium">{item.barangay || '-'}</p>
+                          <p className="text-base font-bold text-slate-900">{item.name}</p>
+                          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">{item.barangay || '-'}</p>
                         </td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.streetAddress || '-'}</td>
-                        <td className="px-8 py-5 text-sm font-semibold text-slate-600">{(item as any).sex || item.gender || '-'}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{formatDate(item.dateOfBirth)}</td>
-                        <td className="px-8 py-5 text-sm font-black text-purple-700">{item.age ?? '-'}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.oscaId || '-'}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.rrn || '-'}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.pensionStatus || '-'}</td>
+                        <td className="px-8 py-5 text-sm font-medium text-slate-600 truncate max-w-[200px]">{item.streetAddress || '-'}</td>
+                        <td className="px-8 py-5 text-center text-sm font-semibold text-slate-600">{(item as any).sex || item.gender || '-'}</td>
+                        <td className="px-8 py-5 text-center text-sm font-medium text-slate-600">{formatDate(item.dateOfBirth)}</td>
+                        <td className="px-8 py-5 text-center text-sm font-black text-purple-700">{item.age ?? '-'}</td>
+                        <td className="px-8 py-5 text-center text-[11px] font-bold text-slate-500 font-mono tracking-wider">{item.osca_id || item.oscaId || '-'}</td>
+                        <td className="px-8 py-5 text-center text-[11px] font-bold text-slate-500">{item.rrn || '-'}</td>
+                        <td className="px-8 py-5 text-center">
+                           <span className="text-[10px] font-bold uppercase px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600">
+                             {item.pensionStatus || 'None'}
+                           </span>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-8 py-8 text-center text-sm font-semibold text-slate-400">
+                      <td colSpan={8} className="px-8 py-20 text-center text-sm font-semibold text-slate-400 uppercase tracking-widest">
                         No living centenarians found for this filter.
                       </td>
                     </tr>
@@ -358,19 +368,20 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
           )}
 
           {activeSection === 'deceased' && (
-          <div className="bg-white rounded-[2rem] border-2 border-slate-300 shadow-md overflow-hidden">
-            <div className="h-1.5 bg-gradient-to-r from-slate-800 via-slate-600 to-slate-400" />
-            <div className="p-8 border-b border-slate-200 flex items-center justify-between bg-slate-100/70">
+          <div className="ios-section border border-slate-200 overflow-hidden">
+            <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
               <div className="flex items-center gap-3">
-                <FileText size={18} className="text-slate-700" />
+                <div className="p-2 bg-slate-700/10 text-slate-700 rounded-xl">
+                  <FileText size={18} />
+                </div>
                 <div>
                   <h3 className="font-bold text-slate-800">Deceased Seniors</h3>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-600">Section 3 of 3</p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Section 3 of 3</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-xl border border-slate-300">
-                  <MapPin size={14} className="text-slate-700" />
+                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                  <MapPin size={14} className="text-slate-400" />
                   <select
                     value={selectedBrgy}
                     onChange={(e) => { setSelectedBrgy(e.target.value); setPage(1); }}
@@ -382,46 +393,50 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     ))}
                   </select>
                 </div>
-                <span className="text-xs font-black uppercase tracking-widest text-slate-700 bg-white px-3 py-1 rounded-lg border border-slate-200">
+                <span className="text-[10px] font-black uppercase tracking-widest text-slate-700 bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200">
                   Total: {deceasedData.length}
                 </span>
               </div>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left">
+              <table className="ios-table">
                 <thead className="sticky top-0 z-[2]">
-                  <tr className="bg-white text-slate-400 uppercase text-xs font-black tracking-[0.2em] border-b border-slate-50">
+                  <tr>
                     <th className="px-8 py-4">Full Name</th>
                     <th className="px-8 py-4">Address</th>
-                    <th className="px-8 py-4">Sex</th>
-                    <th className="px-8 py-4">Birthday</th>
-                    <th className="px-8 py-4">Age</th>
-                    <th className="px-8 py-4">OSCA ID</th>
-                    <th className="px-8 py-4">RRN No</th>
-                    <th className="px-8 py-4">Pension</th>
+                    <th className="px-8 py-4 text-center">Sex</th>
+                    <th className="px-8 py-4 text-center">Birthday</th>
+                    <th className="px-8 py-4 text-center">Age</th>
+                    <th className="px-8 py-4 text-center">OSCA ID</th>
+                    <th className="px-8 py-4 text-center">RRN No</th>
+                    <th className="px-8 py-4 text-center">Pension</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
+                <tbody>
                   {deceasedData.length > 0 ? (
                     deceasedData.map((item) => (
-                      <tr key={`dec-${item.id}`} className="hover:bg-slate-50/50 transition-colors">
+                      <tr key={`dec-${item.id}`}>
                         <td className="px-8 py-5">
-                          <p className="text-lg font-bold text-slate-800">{item.name}</p>
-                          <p className="text-xs text-slate-400 font-medium">{item.barangay || '-'}</p>
+                          <p className="text-base font-bold text-slate-900">{item.name}</p>
+                          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">{item.barangay || '-'}</p>
                         </td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.streetAddress || '-'}</td>
-                        <td className="px-8 py-5 text-sm font-semibold text-slate-600">{(item as any).sex || item.gender || '-'}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{formatDate(item.dateOfBirth)}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.age ?? '-'}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.oscaId || '-'}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.rrn || '-'}</td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">{item.pensionStatus || '-'}</td>
+                        <td className="px-8 py-5 text-sm font-medium text-slate-600 truncate max-w-[200px]">{item.streetAddress || '-'}</td>
+                        <td className="px-8 py-5 text-center text-sm font-semibold text-slate-600">{(item as any).sex || item.gender || '-'}</td>
+                        <td className="px-8 py-5 text-center text-sm font-medium text-slate-600">{formatDate(item.dateOfBirth)}</td>
+                        <td className="px-8 py-5 text-center text-sm font-bold text-slate-900">{item.age ?? '-'}</td>
+                        <td className="px-8 py-5 text-center text-[11px] font-bold text-slate-500 font-mono tracking-wider">{item.osca_id || item.oscaId || '-'}</td>
+                        <td className="px-8 py-5 text-center text-[11px] font-bold text-slate-500">{item.rrn || '-'}</td>
+                        <td className="px-8 py-5 text-center">
+                           <span className="text-[10px] font-bold uppercase px-3 py-1.5 rounded-full border border-slate-200 bg-slate-50 text-slate-600">
+                             {item.pensionStatus || 'None'}
+                           </span>
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={8} className="px-8 py-8 text-center text-sm font-semibold text-slate-400">
+                      <td colSpan={8} className="px-8 py-20 text-center text-sm font-semibold text-slate-400 uppercase tracking-widest">
                         No deceased records found for this filter.
                       </td>
                     </tr>

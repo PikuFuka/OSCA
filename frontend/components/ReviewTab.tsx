@@ -29,7 +29,7 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ formData, applicantType }) => {
           <span className={`px-3 py-1 rounded-lg text-[10px] font-black tracking-widest uppercase ${
             formData.pensionStatus === 'Indigent' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600'
           }`}>{formData.pensionStatus}</span>
-          <span className="px-3 py-1 bg-blue-900 text-white rounded-lg text-[10px] font-black tracking-widest uppercase">{applicantType}</span>
+          <span className="px-3 py-1 bg-systemBlue text-white rounded-lg text-[10px] font-black tracking-widest uppercase">{applicantType}</span>
         </div>
       </div>
        <div className="bg-slate-50/50 rounded-3xl p-8 border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-10">

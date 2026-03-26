@@ -78,7 +78,7 @@ const FamilyTab: React.FC<FamilyTabProps> = ({ formData, setFormData, tempMember
                       placeholder="Amount" value={tempMember.income} onChange={e => setTempMember({...tempMember, income: e.target.value})} />
                 </div>
                 <div className="md:col-span-4 flex items-end">
-                   <button type="button" onClick={addFamilyMember} className="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100 mb-[1px]">
+                   <button type="button" onClick={addFamilyMember} className="w-full bg-systemBlue hover:bg-blue-800 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100 mb-[1px]">
                       <Plus size={18} /> Add to Roster
                    </button>
                 </div>

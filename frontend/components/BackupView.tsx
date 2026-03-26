@@ -81,11 +81,11 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h2 className="text-3xl font-black text-slate-900 tracking-tight">Backup & Recovery</h2>
-        <p className="text-slate-500 font-medium mt-1">Export or restore the OSCA database. Always download a backup before importing.</p>
+        <h2 className="ios-page-title">Backup & Recovery</h2>
+        <p className="ios-page-subtitle mt-1">Export or restore the OSCA database. Always download a backup before importing.</p>
       </div>
 
-      <div className="flex flex-col gap-4 rounded-[2rem] border border-slate-100 bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
+      <div className="ios-section flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Protected Tools</p>
           <p className="mt-1 text-sm font-medium text-slate-500">Archive access is nested here to reduce accidental record actions.</p>
@@ -119,7 +119,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Export Card */}
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 flex flex-col">
+        <div className="ios-section p-8 flex flex-col">
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 bg-blue-50 text-blue-900 rounded-2xl">
               <FileDown size={28} />
@@ -166,7 +166,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
             onClick={handleExport}
             disabled={isExporting}
             className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-3 transition-all shadow-lg ${
-              isExporting ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-blue-900 text-white hover:bg-blue-800 shadow-blue-100'
+              isExporting ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-systemBlue text-white hover:bg-blue-700 shadow-blue-100'
             }`}
           >
             {isExporting ? <RefreshCw size={18} className="animate-spin" /> : <Download size={18} />}
@@ -175,7 +175,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
         </div>
 
         {/* Import Card */}
-        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-8 flex flex-col">
+        <div className="ios-section p-8 flex flex-col">
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 bg-amber-50 text-amber-700 rounded-2xl">
               <FileUp size={28} />
@@ -268,7 +268,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
                <div className="flex flex-col gap-3">
                  <button 
                   onClick={() => window.location.reload()}
-                  className="w-full py-5 bg-blue-900 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-100 hover:bg-blue-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
+                  className="w-full py-5 bg-systemBlue text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-100 hover:bg-blue-800 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-3"
                  >
                     <RefreshCw size={22} className="animate-spin" />
                     Refresh & Sync System
