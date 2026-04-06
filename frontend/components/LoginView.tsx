@@ -69,7 +69,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
 
         {/* Right Side - Login Form */}
         <div className="w-full md:w-1/2 relative bg-white p-6 md:p-10 lg:p-12 flex flex-col justify-center md:max-lg:items-center min-h-screen login-entry-shell">
-          <div className="relative z-10 w-full max-w-lg md:mx-auto p-6 md:p-8 lg:p-9 login-entry-card">
+          <div className="relative z-10 w-full max-w-md md:mx-auto p-6 md:p-8 lg:p-9 login-entry-card">
             <div className="mb-7 text-center">
               <h2 className="text-3xl md:text-[2.25rem] font-black text-slate-900 tracking-tight mb-2">Welcome Back</h2>
               <p className="text-slate-500 font-medium text-[1.05rem]">Enter your credentials to access the portal.</p>

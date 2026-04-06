@@ -963,19 +963,19 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
       )}
       
       <div className="ios-card shadow-xl shadow-slate-200/50">
-        <div className="overflow-x-auto w-full">
+        <div className="w-full overflow-x-hidden">
           {loading ? (
             <TableSkeleton />
           ) : (
-            <table className="ios-table min-w-[950px]">
+            <table className="ios-table w-full table-fixed">
               <thead>
                 <tr>
-                  <th className="px-8 py-5 w-[35%]">Member Identity</th>
-                  <th className="px-8 py-5 w-[12%] text-center">Age / Locality</th>
-                  <th className="px-8 py-5 w-[15%] text-center">Category</th>
-                  <th className="px-8 py-5 w-[12%] text-center">Status</th>
-                  <th className="px-8 py-5 w-[12%] text-center">Modified</th>
-                  <th className="px-8 py-5 w-[14%] text-center">Actions</th>
+                  <th className="px-4 lg:px-6 py-4 lg:py-5 w-[30%]">Member Identity</th>
+                  <th className="px-4 lg:px-6 py-4 lg:py-5 w-[12%] text-center">Age / Locality</th>
+                  <th className="px-4 lg:px-6 py-4 lg:py-5 w-[14%] text-center">Category</th>
+                  <th className="px-4 lg:px-6 py-4 lg:py-5 w-[12%] text-center">Status</th>
+                  <th className="px-4 lg:px-6 py-4 lg:py-5 w-[14%] text-center">Modified</th>
+                  <th className="px-2 lg:px-3 py-4 lg:py-5 w-[18%] text-center">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -983,13 +983,13 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   const category = getDisplayCategory(senior.pensionStatus);
                   return (
                   <tr key={senior.id} className="group hover:bg-slate-50 transition-colors">
-                    <td className="px-8 py-5 align-middle">
-                      <div className="flex items-center gap-5">
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 align-middle">
+                      <div className="flex items-center gap-3 lg:gap-4">
                         <div className="relative">
                           {senior.idPhoto ? (
-                            <img src={senior.idPhoto} alt={senior.name} loading="lazy" className="w-12 h-12 rounded-ios object-cover border border-slate-200 shadow-sm shrink-0 bg-slate-50" />
+                            <img src={senior.idPhoto} alt={senior.name} loading="lazy" className="w-11 h-11 lg:w-12 lg:h-12 rounded-ios object-cover border border-slate-200 shadow-sm shrink-0 bg-slate-50" />
                           ) : (
-                            <div className="w-12 h-12 rounded-ios bg-systemBlue/20 flex items-center justify-center text-systemBlue font-bold border border-slate-200 shadow-sm shrink-0 text-sm">
+                            <div className="w-11 h-11 lg:w-12 lg:h-12 rounded-ios bg-systemBlue/20 flex items-center justify-center text-systemBlue font-bold border border-slate-200 shadow-sm shrink-0 text-sm">
                               {senior.name.split(' ').map(n => n[0]).join('')}
                             </div>
                           )}
@@ -1001,26 +1001,26 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                         </div>
                         <div className="min-w-0">
                           <p className="font-bold text-slate-900 text-base truncate tracking-tight">{senior.name}</p>
-                          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mt-1 font-mono">{getMemberOscaId(senior)}</p>
+                          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mt-1 font-mono truncate">{getMemberOscaId(senior)}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-8 py-5 align-middle text-center">
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 align-middle text-center">
                       <div className="flex flex-col">
                         <span className="text-base font-bold text-slate-900">{senior.age}</span>
                         <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 truncate">{senior.barangay}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-5 align-middle">
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 align-middle">
                       <div className="flex items-center justify-center">
-                        <span className={`text-[10px] font-bold uppercase px-3 py-1.5 rounded-full border ${getCategoryStyle(category)}`}>
+                        <span className={`text-[10px] font-bold uppercase whitespace-nowrap px-3 py-1.5 rounded-full border ${getCategoryStyle(category)}`}>
                           {category}
                         </span>
                       </div>
                     </td>
-                    <td className="px-8 py-5 align-middle">
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 align-middle">
                       <div className="flex items-center justify-center">
-                        <span className={`inline-flex items-center justify-center text-[10px] font-bold uppercase tracking-widest px-3 py-1 rounded-full border ${
+                        <span className={`inline-flex items-center justify-center text-[10px] font-bold uppercase tracking-widest whitespace-nowrap px-3 py-1 rounded-full border ${
                           senior.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
                           senior.status === 'Pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
                           senior.status === 'Deceased' ? 'bg-slate-100 text-slate-600 border-slate-200' :
@@ -1030,7 +1030,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                         </span>
                       </div>
                     </td>
-                    <td className="px-8 py-5 align-middle text-center">
+                    <td className="px-4 lg:px-6 py-4 lg:py-5 align-middle text-center">
                        <p className="text-[11px] font-bold text-slate-500 tabular-nums">
                          {senior.updatedAt ? new Date(senior.updatedAt).toLocaleString('en-US', { 
                            month: 'short', 
@@ -1041,23 +1041,23 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                          }) : 'N/A'}
                        </p>
                     </td>
-                    <td className="px-8 py-5 align-middle text-center">
-                      <div className="flex items-center justify-center gap-3">
+                    <td className="px-2 lg:px-3 py-4 lg:py-5 align-middle text-center">
+                      <div className="flex flex-nowrap items-center justify-center gap-0.5 lg:gap-1">
                         <button
                            onClick={() => handleViewDetails(senior)}
-                           className="w-10 h-10 bg-systemBlue/5 hover:bg-systemBlue text-systemBlue hover:text-white rounded-ios border border-systemBlue/10 flex items-center justify-center transition-all duration-300 shadow-sm"
+                           className="w-6 h-6 lg:w-8 lg:h-8 bg-systemBlue/5 hover:bg-systemBlue text-systemBlue hover:text-white rounded-ios border border-systemBlue/10 flex items-center justify-center transition-all duration-300 shadow-sm"
                            title="Inspect"
                         >
-                           <Eye size={18} />
+                           <Eye size={12} />
                         </button>
 
                         {canGenerateID && (
                           <button
                             onClick={() => openEditMember(senior)}
-                            className="w-10 h-10 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-ios border border-emerald-100 flex items-center justify-center transition-all duration-300 shadow-sm"
+                            className="w-6 h-6 lg:w-8 lg:h-8 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-ios border border-emerald-100 flex items-center justify-center transition-all duration-300 shadow-sm"
                             title="Edit"
                           >
-                            <Edit2 size={18} />
+                            <Edit2 size={12} />
                           </button>
                         )}
 
@@ -1065,14 +1065,14 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                           <button 
                             disabled={senior.status !== 'Active'}
                             onClick={() => handleGenerateID(senior)} 
-                            className={`w-10 h-10 border rounded-ios flex items-center justify-center transition-all duration-300 shadow-sm ${
+                            className={`w-6 h-6 lg:w-8 lg:h-8 border rounded-ios flex items-center justify-center transition-all duration-300 shadow-sm ${
                               senior.status !== 'Active' 
                                 ? 'bg-slate-50 opacity-30 cursor-not-allowed text-slate-400 border-slate-200' 
                                 : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-600 hover:text-white hover:border-amber-600'
                             }`} 
                             title={senior.status === 'Active' ? "Issue ID" : "Approval Restricted"}
                           >
-                            <IdCard size={18} />
+                            <IdCard size={12} />
                           </button>
                         )}
                         
@@ -1081,18 +1081,18 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                              {senior.status !== 'Deceased' && (
                                <button
                                  onClick={() => setConfirmState({ isOpen: true, type: 'Decease', senior })}
-                                 className="w-10 h-10 bg-slate-100 hover:bg-slate-900 text-slate-500 hover:text-white rounded-ios border border-slate-200 flex items-center justify-center transition-all duration-300 shadow-sm"
+                                 className="w-6 h-6 lg:w-8 lg:h-8 bg-slate-100 hover:bg-slate-900 text-slate-500 hover:text-white rounded-ios border border-slate-200 flex items-center justify-center transition-all duration-300 shadow-sm"
                                  title="Mark as Deceased"
                                >
-                                 <UserX size={18} />
+                                 <UserX size={12} />
                                </button>
                              )}
                              <button 
                                onClick={() => setConfirmState({ isOpen: true, type: 'Delete', senior })} 
-                               className="w-10 h-10 bg-rose-50 hover:bg-rose-600 text-rose-500 hover:text-white rounded-ios border border-rose-100 flex items-center justify-center transition-all duration-300 shadow-sm" 
+                               className="w-6 h-6 lg:w-8 lg:h-8 bg-rose-50 hover:bg-rose-600 text-rose-500 hover:text-white rounded-ios border border-rose-100 flex items-center justify-center transition-all duration-300 shadow-sm" 
                                title="Delete"
                              >
-                               <Trash2 size={18} />
+                               <Trash2 size={12} />
                              </button>
                           </>
                         )}
