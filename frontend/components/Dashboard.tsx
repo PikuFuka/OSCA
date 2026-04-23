@@ -23,7 +23,7 @@ import { DashboardSkeleton } from './SkeletonLoader';
 
 interface DashboardProps {
   setView?: (view: ViewType) => void;
-  onCardNavigate?: (view: ViewType, reportSection?: 'masterlist' | 'centenarians' | 'deceased') => void;
+  onCardNavigate?: (view: ViewType, reportSection?: 'masterlist' | 'centenarians' | 'deceased' | 'newly-registered') => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {

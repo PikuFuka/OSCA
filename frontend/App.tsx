@@ -31,7 +31,7 @@ import {
 import { useAuth } from './context/AuthContext';
 import { authAPI } from './services/api';
 
-type ReportSection = 'masterlist' | 'centenarians' | 'deceased';
+type ReportSection = 'masterlist' | 'centenarians' | 'deceased' | 'newly-registered';
 
 const TECHNICAL_MESSAGE_PATTERN = /(axios|network error|request failed|sqlstate|exception|trace|stack|typeerror|syntaxerror|referenceerror|unauthorized|forbidden|http\s*\d{3}|status\s*\d{3}|csrf|token|cannot read properties)/i;
 
@@ -567,7 +567,7 @@ const App: React.FC = () => {
           onLogout={requestLogout}
         />
         
-        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto print:overflow-visible p-4 md:p-6 lg:p-8">
           <div className="max-w-7xl mx-auto view-enter" key={currentView}>
             {renderView()}
           </div>

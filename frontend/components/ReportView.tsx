@@ -15,7 +15,7 @@ import { TableSkeleton } from './SkeletonLoader';
 interface ReportViewProps {
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
     setGlobalLoading?: (loading: boolean) => void;
-    initialSection?: 'masterlist' | 'centenarians' | 'deceased';
+    initialSection?: 'masterlist' | 'centenarians' | 'deceased' | 'newly-registered';
 }
 
 const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initialSection = 'masterlist' }) => {
@@ -27,7 +27,8 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
   const [seniorsData, setSeniorsData] = useState<any[]>([]);
   const [centenariansData, setCentenariansData] = useState<any[]>([]);
   const [deceasedData, setDeceasedData] = useState<any[]>([]);
-  const [activeSection, setActiveSection] = useState<'masterlist' | 'centenarians' | 'deceased'>(initialSection);
+  const [newlyRegisteredData, setNewlyRegisteredData] = useState<any[]>([]);
+  const [activeSection, setActiveSection] = useState<'masterlist' | 'centenarians' | 'deceased' | 'newly-registered'>(initialSection);
   const itemsPerPage = 8;
 
   // Fetch report data from API with pagination and filtering
@@ -73,6 +74,20 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
           selectedBrgy === 'All Barangays'
             ? allDeceasedData
             : allDeceasedData.filter((item: any) => item.barangay === selectedBrgy)
+        );
+
+        const recentSeniors = [...allActiveData]
+          .sort((a: any, b: any) => {
+            const dateA = new Date(a.joinedDate || a.created_at || a.updatedAt || 0).getTime();
+            const dateB = new Date(b.joinedDate || b.created_at || b.updatedAt || 0).getTime();
+            return dateB - dateA || (Number(b.id || 0) - Number(a.id || 0));
+          })
+          .slice(0, 30);
+
+        setNewlyRegisteredData(
+          selectedBrgy === 'All Barangays'
+            ? recentSeniors
+            : recentSeniors.filter((item: any) => item.barangay === selectedBrgy)
         );
       } catch (error) {
         console.error('Failed to load report data:', error);
@@ -131,7 +146,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
 
   return (
     <div className="space-y-8 pb-12 relative">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
         <div>
           <h2 className="ios-page-title uppercase">Excel Final Report</h2>
           <p className="ios-page-subtitle">Audited batch reporting for OSCA.</p>
@@ -152,7 +167,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
 
       <div className="grid grid-cols-1 gap-8">
         <div className="w-full space-y-6">
-          <div className="top-0 z-10 w-fit max-w-full bg-white/90 backdrop-blur-ios rounded-2xl border border-slate-200 p-3 inline-flex flex-wrap items-center gap-2 shadow-ios">
+          <div className="top-0 z-10 w-fit max-w-full bg-white/90 backdrop-blur-ios rounded-2xl border border-slate-200 p-3 inline-flex flex-wrap items-center gap-2 shadow-ios no-print">
             <button
               type="button"
               onClick={() => setActiveSection('masterlist')}
@@ -174,6 +189,17 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               }`}
             >
               Living Centenarians
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveSection('newly-registered')}
+              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                activeSection === 'newly-registered'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-white text-slate-500 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200'
+              }`}
+            >
+              New Registered
             </button>
             <button
               type="button"
@@ -438,6 +464,94 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <tr>
                       <td colSpan={8} className="px-8 py-20 text-center text-sm font-semibold text-slate-400 uppercase tracking-widest">
                         No deceased records found for this filter.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          )}
+
+          {activeSection === 'newly-registered' && (
+          <div className="ios-section border border-slate-200 overflow-hidden print:overflow-visible print:border-none print:shadow-none print:m-0 print:p-0">
+            <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-emerald-50/40 no-print">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-600/10 text-emerald-600 rounded-xl">
+                  <FileText size={18} />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800">New Registered Seniors</h3>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Section 4 of 4</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm">
+                  <MapPin size={14} className="text-slate-400" />
+                  <select
+                    value={selectedBrgy}
+                    onChange={(e) => { setSelectedBrgy(e.target.value); setPage(1); }}
+                    className="text-xs font-bold text-slate-700 outline-none bg-transparent"
+                  >
+                    <option>All Barangays</option>
+                    {BARANGAYS.map(b => (
+                      <option key={`new-${b}`} value={b}>{b}</option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  className="ios-btn-success px-4 py-2 text-xs font-black uppercase tracking-wider flex items-center gap-2"
+                >
+                  <FileText size={14} />
+                  Print List
+                </button>
+                <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-lg border border-emerald-100">
+                  Total: {newlyRegisteredData.length}
+                </span>
+              </div>
+            </div>
+
+            {/* Print Header for offline printing */}
+            <div className="hidden print:block mb-8 mt-4 text-center">
+              <h2 className="text-2xl font-black uppercase text-slate-900">New Registered Seniors</h2>
+              <p className="text-sm font-bold text-slate-600 mt-1">{selectedBrgy}</p>
+            </div>
+
+            <div className="overflow-x-auto print:overflow-visible">
+              <table className="ios-table w-full">
+                <thead className="sticky top-0 z-[2] print:static">
+                  <tr>
+                    <th className="px-8 py-4 text-left print:px-2 print:py-2">Full Name</th>
+                    <th className="px-8 py-4 text-left print:px-2 print:py-2">Address</th>
+                    <th className="px-8 py-4 text-center print:px-2 print:py-2">Sex</th>
+                    <th className="px-8 py-4 text-center print:px-2 print:py-2">Birthday</th>
+                    <th className="px-8 py-4 text-center print:px-2 print:py-2">Age</th>
+                    <th className="px-8 py-4 text-center print:px-2 print:py-2">OSCA ID</th>
+                    <th className="px-8 py-4 text-center print:px-2 print:py-2">RRN No</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {newlyRegisteredData.length > 0 ? (
+                    newlyRegisteredData.map((item) => (
+                      <tr key={`new-${item.id}`} className="print:border-b print:border-slate-200">
+                        <td className="px-8 py-5 print:px-2 print:py-2">
+                          <p className="text-base font-bold text-slate-900">{item.name}</p>
+                          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">{item.barangay || '-'}</p>
+                        </td>
+                        <td className="px-8 py-5 text-sm font-medium text-slate-600 truncate max-w-[200px] print:whitespace-normal print:break-words print:px-2 print:py-2">{item.streetAddress || '-'}</td>
+                        <td className="px-8 py-5 text-center text-sm font-semibold text-slate-600 print:px-2 print:py-2">{(item as any).sex || item.gender || '-'}</td>
+                        <td className="px-8 py-5 text-center text-sm font-medium text-slate-600 print:px-2 print:py-2">{formatDate(item.dateOfBirth)}</td>
+                        <td className="px-8 py-5 text-center text-sm font-black text-emerald-700 print:px-2 print:py-2">{item.age ?? '-'}</td>
+                        <td className="px-8 py-5 text-center text-[11px] font-bold text-slate-500 font-mono tracking-wider print:px-2 print:py-2">{item.osca_id || item.oscaId || '-'}</td>
+                        <td className="px-8 py-5 text-center text-[11px] font-bold text-slate-500 print:px-2 print:py-2">{item.rrn || '-'}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={7} className="px-8 py-20 text-center text-sm font-semibold text-slate-400 uppercase tracking-widest">
+                        No newly registered records found for this filter.
                       </td>
                     </tr>
                   )}

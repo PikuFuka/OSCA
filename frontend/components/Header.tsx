@@ -56,7 +56,7 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
   };
 
   return (
-    <header className="bg-systemGray-50/80 backdrop-blur-ios border-b border-slate-200/80 h-16 md:h-20 flex items-center justify-between px-4 md:px-10 sticky top-0 z-40 transition-all">
+    <header className="bg-systemGray-50/80 backdrop-blur-ios border-b border-slate-200/80 h-16 md:h-20 flex items-center justify-between px-4 md:px-10 sticky top-0 z-40 transition-all no-print">
       <div className="flex items-center gap-4 md:gap-6">
         <button onClick={toggleSidebar} className="p-2 md:p-3 hover:bg-white/70 rounded-ios transition-all text-slate-500 hover:text-slate-900 active:bg-white/90">
           <Menu size={22} />

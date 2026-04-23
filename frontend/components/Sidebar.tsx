@@ -82,7 +82,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleS
   return (
     <aside 
       className={`
-        fixed inset-y-0 left-0 z-50 bg-white/80 backdrop-blur-ios border-r border-slate-200/50 flex flex-col transition-all duration-300 shadow-xl md:shadow-none
+        no-print fixed inset-y-0 left-0 z-50 bg-white/80 backdrop-blur-ios border-r border-slate-200/50 flex flex-col transition-all duration-300 shadow-xl md:shadow-none
         ${isOpen ? 'translate-x-0 w-72' : '-translate-x-full w-72 md:translate-x-0 md:w-24'}
         md:static md:h-full
       `}

@@ -231,6 +231,9 @@ main {
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
+  .no-print {
+    display: none !important;
+  }
 }
 
 .shadow-sm,
