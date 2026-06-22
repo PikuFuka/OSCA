@@ -28,6 +28,6 @@ class SeniorDocument extends Model
 
     public function senior()
     {
-        return $this->belongsTo(Senior::class);
+        return $this->belongsTo(\App\Models\Senior::class);
     }
 }

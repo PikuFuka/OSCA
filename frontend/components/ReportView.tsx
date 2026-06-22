@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { BARANGAYS } from '../types';
 import { seniorsAPI, reportsAPI } from '../services/api';
-import { TableSkeleton } from './SkeletonLoader';
+import { ReportSkeleton } from './SkeletonLoader';
 
 interface ReportViewProps {
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
@@ -141,7 +141,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
   };
 
   if (loading) {
-    return <TableSkeleton />;
+    return <ReportSkeleton />;
   }
 
   return (

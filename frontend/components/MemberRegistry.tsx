@@ -4,7 +4,7 @@ import { createPortal } from 'react-dom';
 import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock, Edit2Icon } from 'lucide-react';
 import { BARANGAYS, SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } from '../types';
 import { seniorsAPI, activityLogsAPI } from '../services/api';
-import { TableSkeleton } from './SkeletonLoader';
+import { MemberRegistrySkeleton } from './SkeletonLoader';
 import ConfirmModal from './ConfirmModal';
 
 // Initial draggable positions from shared config
@@ -965,7 +965,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
       <div className="ios-card shadow-xl shadow-slate-200/50">
         <div className="w-full overflow-x-hidden">
           {loading ? (
-            <TableSkeleton />
+            <MemberRegistrySkeleton />
           ) : (
             <table className="ios-table w-full table-fixed">
               <thead>

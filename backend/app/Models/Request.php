@@ -24,11 +24,11 @@ class Request extends Model
 
     public function senior()
     {
-        return $this->belongsTo(Senior::class);
+        return $this->belongsTo(\App\Models\Senior::class);
     }
 
     public function actionBy()
     {
-        return $this->belongsTo(User::class, 'action_by');
+        return $this->belongsTo(\App\Models\User::class, 'action_by');
     }
 }

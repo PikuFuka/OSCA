@@ -51,17 +51,17 @@ class Senior extends Authenticatable
 
     public function familyMembers()
     {
-        return $this->hasMany(FamilyMember::class);
+        return $this->hasMany(\App\Models\FamilyMember::class);
     }
 
     public function documents()
     {
-        return $this->hasMany(SeniorDocument::class);
+        return $this->hasMany(\App\Models\SeniorDocument::class);
     }
 
     public function requests()
     {
-        return $this->hasMany(Request::class);
+        return $this->hasMany(\App\Models\Request::class);
     }
 
     // Helper to get full name

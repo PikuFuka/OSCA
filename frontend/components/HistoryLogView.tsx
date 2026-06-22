@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, CheckCircle2, AlertCircle, RefreshCcw, User, Loader2, Search, Trash2, Info } from 'lucide-react';
 import { activityLogsAPI } from '../services/api';
-import { TableSkeleton } from './SkeletonLoader';
+import { HistoryLogSkeleton } from './SkeletonLoader';
 import ConfirmModal from './ConfirmModal';
 
 interface HistoryLogViewProps {
@@ -121,7 +121,7 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
   };
 
   if (loading) {
-    return <TableSkeleton />;
+    return <HistoryLogSkeleton />;
   }
 
   return (

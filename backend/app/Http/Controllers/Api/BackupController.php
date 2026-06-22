@@ -36,7 +36,9 @@ class BackupController extends Controller
         $tempPath = storage_path('app/' . $filename);
 
         // Build mysqldump command
-        $passwordArg = $password ? "-p\"{$password}\"" : '';
+        $passwordArg = $password !== null && $password !== ''
+            ? "--password=\"{$password}\""
+            : '';
         $command = "mysqldump --user=\"{$username}\" {$passwordArg} --host=\"{$host}\" --port={$port} --single-transaction --routines --triggers \"{$database}\" > \"{$tempPath}\" 2>&1";
 
         exec($command, $output, $returnCode);
@@ -45,6 +47,11 @@ class BackupController extends Controller
             // Fallback: build SQL from PHP if mysqldump is unavailable
             $sql = $this->buildSqlDump($database);
             file_put_contents($tempPath, $sql);
+        }
+
+        // Validate the file before serving
+        if (!file_exists($tempPath) || filesize($tempPath) === 0) {
+            return response()->json(['message' => 'Database backup failed. Both CLI and PHP fallback produced empty output.'], 500);
         }
 
         ActivityLog::create([
@@ -107,7 +114,9 @@ class BackupController extends Controller
             $port     = config('database.connections.mysql.port', 3306);
 
             // Try mysql CLI first — it handles charsets natively with --default-character-set
-            $passwordArg = $password ? "-p\"{$password}\"" : '';
+            $passwordArg = $password !== null && $password !== ''
+                ? "--password=\"{$password}\""
+                : '';
             $command = "mysql --user=\"{$username}\" {$passwordArg} --host=\"{$host}\" --port={$port} --default-character-set=utf8mb4 \"{$database}\" < \"{$tempPath}\" 2>&1";
             exec($command, $output, $returnCode);
 
@@ -255,7 +264,7 @@ class BackupController extends Controller
             }
         }
         if (trim($current) !== '') $statements[] = $current;
-        return $statements;
+        return array_values(array_filter($statements));
     }
 
     private function prepareStatementForImport(string $statement): string

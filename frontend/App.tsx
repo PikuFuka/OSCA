@@ -328,6 +328,10 @@ const App: React.FC = () => {
     );
   }
 
+  if (!currentUser) {
+    return null;
+  }
+
   // Authenticated View
 
   // Force password change modal for seniors with default password

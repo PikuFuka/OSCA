@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Search, Edit2, Plus, Users, Shield, FileText, Lock, X, Save, User, UserCheck, UserX, AlertOctagon, UserCog, UserPlus, Loader2 } from 'lucide-react';
 import { BARANGAYS } from '../types';
 import { usersAPI, seniorsAPI } from '../services/api';
-import { TableSkeleton, ProfileSkeleton } from './SkeletonLoader';
+import { AccountSkeleton } from './SkeletonLoader';
 import { CurrentUser } from '../types';
 import ConfirmModal from './ConfirmModal';
 
@@ -153,7 +153,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   ] as const;
 
   if (loading) {
-    return <TableSkeleton />;
+    return <AccountSkeleton />;
   }
 
   if (error && accounts.length === 0) {

@@ -5,7 +5,7 @@ import { CheckCircle, XCircle, Search, Clock, FileText, User, Eye, MapPin, Calen
 import ConfirmModal, { ConfirmVariant } from './ConfirmModal';
 import { PendingRequest, ViewType } from '../types';
 import { requestsAPI, seniorsAPI } from '../services/api';
-import { TableSkeleton } from './SkeletonLoader';
+import { ApprovalSkeleton } from './SkeletonLoader';
 
 interface ApprovalViewProps {
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
@@ -214,7 +214,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
         <div className="overflow-x-auto">
           {loading ? (
                <div className="p-20">
-                 <TableSkeleton />
+                 <ApprovalSkeleton />
                </div>
             ) : (
               <table className="ios-table">

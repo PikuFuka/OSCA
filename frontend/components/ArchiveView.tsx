@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, RefreshCw, UserX, UserMinus, Loader2 } from 'lucide-react';
 import { seniorsAPI } from '../services/api';
 import { SeniorCitizen } from '../types';
-import { TableSkeleton } from './SkeletonLoader';
+import { ArchiveSkeleton } from './SkeletonLoader';
 import ConfirmModal from './ConfirmModal';
 
 interface ArchiveViewProps {
@@ -124,11 +124,11 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
         </div>
 
         <div className="overflow-x-auto border-t border-slate-50">
-          {loading ? (
+{loading ? (
              <div className="p-10">
-               <TableSkeleton />
+               <ArchiveSkeleton />
              </div>
-          ) : (
+           ) : (
             <table className="ios-table">
               <thead>
                 <tr>
