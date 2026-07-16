@@ -122,7 +122,7 @@ export interface PendingRequest {
   date: string;
   status: 'Pending' | 'Approved' | 'Rejected';
   details: {
-    dob: string;
+    dateOfBirth: string;
     gender?: string;
     age: number;
     address: string;

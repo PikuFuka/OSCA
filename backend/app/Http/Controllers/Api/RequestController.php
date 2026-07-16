@@ -53,6 +53,7 @@ class RequestController extends Controller
                     'profilePicture' => $photoPath ? asset('storage/' . $photoPath) : null,
                     'age' => $pendingData['age'] ?? ($req->senior ? $req->senior->age : null),
                     'dateOfBirth' => $pendingData['dateOfBirth'] ?? ($req->senior ? $req->senior->date_of_birth?->format('Y-m-d') : null),
+                    'gender' => $pendingData['sex'] ?? ($req->senior ? $req->senior->sex : null),
                     'barangay' => $pendingData['barangay'] ?? ($req->senior ? $req->senior->barangay : null),
                     'streetAddress' => $pendingData['streetAddress'] ?? ($req->senior ? $req->senior->street_address : null),
                     'contact' => $pendingData['contactNumber'] ?? ($req->senior ? $req->senior->contact_number : null),

@@ -71,14 +71,9 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
     if (isPublicUser) return;
     setLoadingRecent(true);
     try {
-      // Get most recent pending or newly created seniors
-      const response = await seniorsAPI.getAll({ per_page: 5, fresh: true });
+      const response = await seniorsAPI.getAll({ per_page: 5, fresh: true, sort: 'created_at', order: 'desc' });
       const seniors = response.data || response || [];
-      // Sort by joinedDate desc since the API might not support it yet
-      const sorted = [...seniors].sort((a, b) => 
-        new Date(b.joinedDate || 0).getTime() - new Date(a.joinedDate || 0).getTime()
-      );
-      setRecentSeniors(sorted.slice(0, 5));
+      setRecentSeniors(seniors.slice(0, 5));
     } catch (error) {
       // Silent fail on fetch
     } finally {

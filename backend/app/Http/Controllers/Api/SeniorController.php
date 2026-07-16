@@ -89,9 +89,16 @@ class SeniorController extends Controller
         }
 
         $perPage = $request->get('per_page', 15);
+        $sortBy = $request->get('sort', 'last_name');
+        $sortOrder = $request->get('order', 'asc');
+        $allowedSortColumns = ['last_name', 'first_name', 'created_at', 'updated_at', 'barangay', 'status', 'age'];
+        if (!in_array($sortBy, $allowedSortColumns)) {
+            $sortBy = 'last_name';
+        }
+        $sortOrder = strtolower($sortOrder) === 'desc' ? 'desc' : 'asc';
         
         if ($perPage == -1) {
-            $seniors = $query->orderBy('last_name')->get();
+            $seniors = $query->orderBy($sortBy, $sortOrder)->get();
             $transformed = $seniors->map(function($senior) {
                 return $this->transformSenior($senior);
             });
@@ -99,7 +106,7 @@ class SeniorController extends Controller
         }
 
         $perPage = min((int) $perPage, 100);
-        $seniors = $query->orderBy('last_name')->paginate($perPage);
+        $seniors = $query->orderBy($sortBy, $sortOrder)->paginate($perPage);
 
         $seniors->getCollection()->transform(function($senior) {
             return $this->transformSenior($senior);

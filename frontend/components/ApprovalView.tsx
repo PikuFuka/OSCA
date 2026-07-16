@@ -402,7 +402,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                <DetailRow icon={Calendar} label="Date of Birth" value={selectedRequest.details.dob} />
+                <DetailRow icon={Calendar} label="Date of Birth" value={selectedRequest.details.dateOfBirth} />
                 <DetailRow icon={User} label="Gender" value={selectedRequest.details.gender || 'N/A'} />
                 <DetailRow icon={Clock} label="Age" value={`${selectedRequest.details.age} years old`} />
                 <DetailRow icon={MapPin} label="Address" value={selectedRequest.details.address} />
