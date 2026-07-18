@@ -121,34 +121,34 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="ios-page-title">Batch Print IDs</h2>
-        <p className="ios-page-subtitle">Select up to {MAX_CARDS} seniors and print their ID cards on a single A4 page.</p>
+        <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-none mb-2">Batch Print IDs</h2>
+        <p className="text-sm font-bold text-slate-500 max-w-2xl">Select up to {MAX_CARDS} seniors and print their ID cards on a single A4 page.</p>
       </div>
 
       {/* Search + Actions */}
-      <div className="ios-section rounded-3xl p-6 md:p-8 print:hidden">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 print:hidden">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+          <div className="relative w-full md:w-[28rem]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input
               type="text"
               placeholder="Search senior by name or OSCA ID..."
-              className="w-full pl-12 pr-4 py-3 rounded-2xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all text-sm font-medium"
+              className="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all text-sm font-semibold text-slate-900 placeholder:text-slate-400"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
             />
           </div>
           
-          <div className="flex flex-col md:flex-row items-center gap-4 w-full md:w-auto">
-            <div className="text-sm font-medium text-slate-500">
-              <span className="text-blue-600 font-black">{selectedSeniors.length}</span> / {MAX_CARDS} Selected
+          <div className="flex flex-col md:flex-row items-center gap-6 w-full md:w-auto">
+            <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              <span className="text-blue-600 text-sm">{selectedSeniors.length}</span> / {MAX_CARDS} Selected
             </div>
             <button
               onClick={handleBatchPrint}
               disabled={selectedSeniors.length === 0}
-              className="ios-btn-primary w-full md:w-auto px-6 py-3 rounded-2xl font-bold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full md:w-auto py-3 px-6 rounded-xl bg-systemBlue text-white font-bold text-sm hover:bg-blue-800 transition-all active:scale-[0.98] outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
             >
-              <Printer size={18} />
+              <Printer size={16} />
               Print Batch
             </button>
           </div>
@@ -156,37 +156,38 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
 
         {/* Selected Chips */}
         {selectedSeniors.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+          <div className="flex flex-wrap gap-2 mb-6 p-4 bg-slate-50/80 rounded-xl border border-slate-200/60">
             {selectedSeniors.map((s, idx) => (
-              <div key={s.id} className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 shadow-sm rounded-xl px-3 py-1.5 break-all">
-                <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-700 flex items-center justify-center text-[10px] font-black shrink-0">{idx + 1}</span>
-                <span className="text-sm font-bold text-slate-700">{s.name}</span>
-                <button onClick={() => removeSenior(s.id)} className="text-slate-400 hover:text-rose-500 transition-colors ml-1"><X size={14} /></button>
+              <div key={s.id} className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 shadow-sm rounded-lg px-2.5 py-1.5 break-all group">
+                <span className="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-black shrink-0">{idx + 1}</span>
+                <span className="text-xs font-bold text-slate-700">{s.name}</span>
+                <button onClick={() => removeSenior(s.id)} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-0.5 rounded transition-colors ml-1"><X size={14} /></button>
               </div>
             ))}
           </div>
         )}
 
         {/* Search Results as Responsive Cards */}
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 md:p-5">
+        <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 md:p-6">
           {searching ? (
-            <div className="p-8 text-center text-slate-400">
-              <Loader2 className="animate-spin inline mr-2" size={20} /> Searching...
+            <div className="py-12 text-center text-slate-400 flex flex-col items-center justify-center gap-3">
+              <Loader2 className="animate-spin" size={32} />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Searching...</span>
             </div>
           ) : searchResults.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {searchResults.map(senior => {
                 const isSelected = selectedSeniors.some(s => s.id === senior.id);
                 const isMaxedOut = selectedSeniors.length >= MAX_CARDS && !isSelected;
 
                 return (
-                  <div key={senior.id} className={`rounded-2xl border p-4 transition-all ${isSelected ? 'bg-blue-50 border-blue-200 shadow-sm' : 'bg-white border-slate-200'}`}>
-                    <div className="flex items-start justify-between gap-3">
+                  <div key={senior.id} className={`rounded-xl border p-5 transition-all ${isSelected ? 'bg-blue-50/50 border-blue-200 shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
+                    <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="text-xs font-black uppercase tracking-wider text-slate-400">OSCA ID</p>
-                        <p className="font-mono text-sm text-slate-700">{senior.id}</p>
-                        <p className="font-black text-slate-900 truncate mt-1">{senior.name}</p>
-                        <p className="text-sm text-slate-500">{senior.barangay}</p>
+                        <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">OSCA ID</p>
+                        <p className="font-mono text-xs font-bold text-slate-600 mb-2">{senior.id}</p>
+                        <p className="font-black text-slate-900 truncate tracking-tight text-sm">{senior.name}</p>
+                        <p className="text-xs text-slate-500 mt-1">{senior.barangay}</p>
                       </div>
                       <button
                         disabled={isMaxedOut}
@@ -194,7 +195,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
                           if (isSelected) removeSenior(senior.id);
                           else addSenior(senior);
                         }}
-                        className={`shrink-0 px-3 py-2 rounded-xl text-xs font-black uppercase tracking-wide flex items-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed ${isSelected ? 'bg-emerald-100 text-emerald-700' : 'bg-systemBlue text-white hover:bg-blue-800'}`}
+                        className={`shrink-0 px-3.5 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all disabled:opacity-40 disabled:cursor-not-allowed active:scale-95 ${isSelected ? 'bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100' : 'bg-systemBlue text-white hover:bg-blue-800 shadow-sm hover:shadow-md'}`}
                       >
                         {isSelected ? <CheckCircle2 size={14} /> : <Plus size={14} />}
                         {isSelected ? 'Added' : 'Add'}
@@ -205,36 +206,36 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
               })}
             </div>
           ) : searchTerm ? (
-            <div className="p-8 text-center text-slate-400">No results found for "{searchTerm}"</div>
+            <div className="py-12 text-center text-slate-400 text-sm font-bold">No results found for "{searchTerm}"</div>
           ) : (
-            <div className="p-8 text-center text-slate-400 italic">Type to search for seniors...</div>
+            <div className="py-12 text-center text-slate-400 text-sm font-bold italic">Type to search for seniors...</div>
           )}
         </div>
       </div>
 
       {/* On-screen ID Preview */}
-      <div className="print:hidden ios-section rounded-3xl p-6 md:p-8">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-6">
+      <div className="print:hidden bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h3 className="text-xl font-black text-slate-900">Batch ID Preview</h3>
-            <p className="text-sm text-slate-500">Responsive front/back preview, aligned for A4 print output.</p>
+            <h3 className="text-xl font-black text-slate-900 tracking-tight mb-1">Batch ID Preview</h3>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Responsive front/back preview, aligned for A4 print output.</p>
           </div>
-          <span className="inline-flex items-center px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-[10px] font-black uppercase tracking-widest">
+          <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 text-[10px] font-black uppercase tracking-widest">
             Match to final print layout
           </span>
         </div>
 
         {selectedSeniors.length === 0 ? (
-          <div className="border border-dashed border-slate-300 rounded-2xl p-10 text-center text-slate-400">
+          <div className="border border-dashed border-slate-300 rounded-xl p-16 text-center text-slate-400 font-bold text-sm">
             Select seniors above to generate the ID preview.
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {selectedSeniors.map((senior) => (
-              <div key={`preview-${senior.id}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3 md:p-4">
-                <div className="mb-2 px-1 flex items-center justify-between gap-2">
-                  <p className="text-xs md:text-sm font-black text-slate-700 truncate">{formatName(senior)}</p>
-                  <p className="text-[10px] md:text-xs font-mono text-slate-500">ID: {senior.id}</p>
+              <div key={`preview-${senior.id}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:p-6">
+                <div className="mb-4 flex items-center justify-between gap-4">
+                  <p className="text-sm md:text-base font-black text-slate-900 truncate tracking-tight">{formatName(senior)}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-white px-2.5 py-1 rounded-lg border border-slate-200 shrink-0">ID: <span className="text-slate-700 font-mono ml-1">{senior.id}</span></p>
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">

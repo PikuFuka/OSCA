@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import TransitionWrapper from './TransitionWrapper';
 import { createPortal } from 'react-dom';
 import { Search, Edit2, Plus, Users, Shield, FileText, Lock, X, Save, User, UserCheck, UserX, AlertOctagon, UserCog, UserPlus, Loader2 } from 'lucide-react';
 import { BARANGAYS } from '../types';
@@ -152,13 +153,11 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
     { id: 'Senior', label: 'Senior Citizens', icon: User, count: tabCounts.Senior },
   ] as const;
 
-  if (loading) {
-    return <AccountSkeleton />;
-  }
+  const isDataLoading = loading;
 
   if (error && accounts.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8 text-center bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4 p-8 text-center bg-white rounded-2xl border border-slate-200 shadow-sm">
         <div className="p-4 bg-rose-50 text-rose-600 rounded-2xl mb-2">
           <AlertOctagon size={48} />
         </div>
@@ -169,7 +168,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
         <div className="flex gap-3 mt-4">
           <button 
             onClick={() => window.location.reload()}
-            className="ios-btn-primary px-6 py-3"
+            className="bg-systemBlue text-white hover:bg-blue-800 transition-all active:scale-[0.98] outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 shadow-md hover:shadow-lg rounded-xl px-6 py-3"
           >
             Retry Connection
           </button>
@@ -299,16 +298,18 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <TransitionWrapper isLoading={isDataLoading} skeleton={<AccountSkeleton />}>
+      {!isDataLoading && (
+        <div className="space-y-6 stagger-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-            <h2 className="ios-page-title">Accounts Management</h2>
-            <p className="ios-page-subtitle mt-1">Manage system users and senior citizen portal accounts.</p>
+            <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-none mb-2">Accounts Management</h2>
+            <p className="text-sm font-bold text-slate-500 max-w-2xl mt-1">Manage system users and senior citizen portal accounts.</p>
         </div>
         {isAdmin && (
           <button 
             onClick={() => setIsCreateOpen(true)}
-            className="ios-btn-primary px-6 py-3 rounded-2xl text-sm font-black flex items-center gap-3"
+            className="bg-systemBlue text-white hover:bg-blue-800 transition-all active:scale-[0.98] outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 shadow-md hover:shadow-lg rounded-xl px-6 py-3 rounded-2xl text-sm font-black flex items-center gap-3"
           >
             <Plus size={20} />
             Create New Staff
@@ -317,9 +318,9 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
       </div>
 
       {/* ... Rest of the component (Tables, Modals) is largely identical structure, just wrapped in the same render ... */}
-      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden min-h-[600px] flex flex-col">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[600px] flex flex-col">
         {/* Tab Navigation */}
-        <div className="px-8 pt-8 pb-0 border-b border-slate-100 flex flex-nowrap overflow-x-auto gap-6 no-scrollbar">
+        <div className="px-6 py-4 border-b border-slate-100 flex flex-nowrap overflow-x-auto gap-3 no-scrollbar bg-slate-50/50">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -327,10 +328,10 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
               <button
                 key={tab.id}
                 onClick={() => { setActiveTab(tab.id as any); setPage(1); }}
-                className={`pb-4 flex items-center gap-2 transition-all border-b-4 ${
+                className={`px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all text-[11px] font-black uppercase tracking-widest ${
                   isActive 
-                    ? 'border-blue-900 text-blue-900' 
-                    : 'border-transparent text-slate-400 hover:text-slate-600 hover:border-slate-200'
+                    ? 'bg-white border border-slate-200 text-systemBlue shadow-sm' 
+                    : 'border border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800'
                 }`}
               >
                 <Icon size={18} className={isActive ? 'text-blue-900' : 'text-slate-400'} />
@@ -350,11 +351,11 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
         {/* ... Search Bar & Table ... */}
         <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50/30">
           <div className="relative w-full md:w-96">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input 
               type="text" 
               placeholder="Search by name, ID or email..."
-              className="w-full pl-14 pr-6 py-3 rounded-2xl bg-white border border-slate-200 focus:outline-none focus:ring-4 focus:ring-blue-50 transition-all text-sm font-medium shadow-sm"
+              className="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all text-sm font-semibold text-slate-900 placeholder:text-slate-400"
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             />
@@ -362,22 +363,22 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
         </div>
 
         <div className="overflow-x-auto flex-1">
-          <table className="ios-table">
-            <thead>
-              <tr>
-                <th className="px-10 py-6">Account Identity</th>
-                <th className="px-10 py-6">Access Role</th>
-                <th className="px-10 py-6">Assigned Unit/Area</th>
-                <th className="px-10 py-6">Status</th>
-                <th className="px-10 py-6 text-right">Settings</th>
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
+                <th className="px-8 py-4">Account Identity</th>
+                <th className="px-8 py-4">Access Role</th>
+                <th className="px-8 py-4">Assigned Unit/Area</th>
+                <th className="px-8 py-4">Status</th>
+                <th className="px-8 py-4 text-right">Settings</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-slate-100">
               {displayedAccounts.length > 0 ? displayedAccounts.map(acc => (
-                <tr key={acc.id}>
-                  <td className="px-10 py-6">
+                <tr key={acc.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-8 py-5">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-lg border-2 border-white shadow-sm shrink-0 overflow-hidden">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-sm border-2 border-white shadow-sm shrink-0 overflow-hidden">
                         {acc.type === 'Senior' && acc.originalData.idPhoto ? (
                            <img src={acc.originalData.idPhoto} alt={acc.name} className="w-full h-full object-cover" />
                         ) : (
@@ -390,16 +391,16 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
                       </div>
                     </div>
                   </td>
-                  <td className="px-10 py-6">
+                  <td className="px-8 py-5">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wide whitespace-nowrap ${getRoleBadgeColor(acc.role)}`}>
                       {acc.role === 'Admin' && <Shield size={12} />}
                       {acc.role}
                     </span>
                   </td>
-                  <td className="px-10 py-6 text-sm font-semibold text-slate-600">
+                  <td className="px-8 py-5 text-sm font-semibold text-slate-600">
                     {acc.barangay}
                   </td>
-                  <td className="px-10 py-6">
+                  <td className="px-8 py-5">
                     <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wide ${
                         acc.status === 'Active' ? 'bg-emerald-100 text-emerald-900' : 
                         acc.status === 'Pending' ? 'bg-amber-100 text-amber-900' : 
@@ -409,11 +410,11 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
                       {acc.status}
                     </span>
                   </td>
-                  <td className="px-10 py-6 text-right">
+                  <td className="px-8 py-5 text-right">
                     {isAdmin ? (
                       <button 
                         onClick={() => handleEditClick(acc)}
-                        className="w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded-ios border border-slate-200 flex items-center justify-center transition-all shadow-sm"
+                        className="w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded-xl border border-slate-200 flex items-center justify-center transition-all shadow-sm"
                         title="Manage Access"
                       >
                         <Lock size={18} />
@@ -588,6 +589,8 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
         onCancel={() => setIsConfirmOpen(false)}
       />
     </div>
+      )}
+    </TransitionWrapper>
   );
 };
 

@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import TransitionWrapper from './TransitionWrapper';
 import { createPortal } from 'react-dom';
 import { CheckCircle, XCircle, Search, Clock, FileText, User, Eye, MapPin, Calendar, CreditCard, X, Paperclip, Download, Loader2, UserPlus, IdCard } from 'lucide-react';
 import ConfirmModal, { ConfirmVariant } from './ConfirmModal';

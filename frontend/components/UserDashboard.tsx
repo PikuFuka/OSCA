@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import TransitionWrapper from './TransitionWrapper';
 import { 
   Activity, 
   CheckCircle, 
@@ -102,9 +103,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
     });
   };
 
-  if (loading) {
-    return <UserDashboardSkeleton />;
-  }
+  const isDataLoading = loading;
 
   if (fetchError) {
     return (
@@ -117,7 +116,7 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
           <p className="text-slate-500 font-medium text-sm mb-4">{fetchError}</p>
           <button
             onClick={fetchMemberData}
-            className="ios-btn-primary px-6 py-3"
+            className="bg-systemBlue text-white hover:bg-blue-800 transition-all active:scale-[0.98] outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 shadow-md hover:shadow-lg rounded-xl px-6 py-3"
           >
             Try Again
           </button>
@@ -143,7 +142,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
   const missingCount = requirements.filter(r => !r.doc).length;
 
   return (
-    <div className="space-y-8 pb-12">
+    <TransitionWrapper isLoading={isDataLoading} skeleton={<UserDashboardSkeleton />}>
+      {!isDataLoading && (
+        <div className="space-y-8 pb-12 stagger-in">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-systemBlue to-blue-600 rounded-[2.5rem] p-8 md:p-12 text-white shadow-xl shadow-blue-900/10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16"></div>
@@ -380,8 +381,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
         onCancel={() => setDeleteModal(prev => ({ ...prev, isOpen: false }))}
       />
     </div>
+      )}
+    </TransitionWrapper>
   );
 };
 
 export default UserDashboard;
-

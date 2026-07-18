@@ -7,11 +7,13 @@ import {
   UserPlus, UserCheck, HeartPulse, FileCheck, AlertCircle,
   SearchCheck, Users, Plus, Trash2, GraduationCap, Briefcase, Banknote,
   Wallet, Sparkles, Home as HomeIcon, UploadCloud, Paperclip, File as FileIcon,
-  Lock, Eye, EyeOff, Clock, RefreshCw
+  Lock, Eye, EyeOff, Clock, RefreshCw, Inbox
 } from 'lucide-react';
 import { BARANGAYS, CurrentUser } from '../types';
 import { seniorsAPI, requestsAPI, authAPI } from '../services/api';
 import ConfirmModal from './ConfirmModal';
+import TransitionWrapper from './TransitionWrapper';
+import Skeleton, { RegistrationFormSkeleton } from './SkeletonLoader';
 
 interface FormProps {
   onSuccess: () => void;
@@ -52,6 +54,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   const [errors, setErrors] = useState<string[]>([]);
   const [isMatchFound, setIsMatchFound] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [initLoading, setInitLoading] = useState(false);
   
   // Password visibility toggle
   const [showPassword, setShowPassword] = useState(false);
@@ -148,6 +151,57 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
 
   const normalizeUppercaseValue = (value: string) => value.toUpperCase();
 
+  // Spatial Navigation State
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    const currentTouch = e.targetTouches[0].clientX;
+    const diff = touchStart - currentTouch;
+    
+    if (diff > 50) {
+      if (step < 5) handleNextStep();
+      setTouchStart(null);
+    } else if (diff < -50) {
+      if (step > 1) handleBack();
+      setTouchStart(null);
+    }
+  };
+
+  const CARD_WIDTH = 'min(980px, 94vw)';
+  const CARD_GAP = '24px';
+
+  const getCardStyle = (index: number): React.CSSProperties => {
+    const isCurrent = step === index;
+    return {
+      width: `calc(${CARD_WIDTH})`,
+      flexShrink: 0,
+      opacity: isCurrent ? 1 : 0.25,
+      transform: isCurrent ? 'translate3d(0,0,0) scale(1)' : 'translate3d(0,0,0) scale(0.96)',
+      filter: isCurrent ? 'none' : 'blur(6px) saturate(0.4)',
+      boxShadow: isCurrent
+        ? '0 12px 40px -12px rgba(0,0,0,0.1)'
+        : 'none',
+      pointerEvents: isCurrent ? 'auto' : 'none',
+      willChange: 'transform, opacity, filter',
+      transition: 'all 360ms cubic-bezier(0.25, 1, 0.5, 1)', // Calm, decisive easeOutQuart
+    };
+  };
+
+  const getTrackStyle = (): React.CSSProperties => ({
+    display: 'flex',
+    gap: CARD_GAP,
+    alignItems: 'flex-start',
+    transform: `translate3d(calc(50% - (${CARD_WIDTH} / 2) - ${(step - 1)} * (${CARD_WIDTH} + ${CARD_GAP})), 0, 0)`,
+    willChange: 'transform',
+    transition: 'transform 360ms cubic-bezier(0.25, 1, 0.5, 1)',
+  });
+
+
   const setUppercaseFormField = (field: UppercaseFormField, value: string) => {
     setFormData(prev => ({
       ...prev,
@@ -159,6 +213,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   useEffect(() => {
     const initializeForm = async () => {
       if (isSeniorRole) {
+        setInitLoading(true);
         setMode('form');
         setApplicantType('existing');
         setFormData(prev => ({ ...prev, oscaId: currentUser.id }));
@@ -172,6 +227,8 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
           }
         } catch (error) {
           // Silent fail on API fetch
+        } finally {
+          setInitLoading(false);
         }
       } else if (isPublicUser) {
         setMode('form');
@@ -411,8 +468,8 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
     return newErrors;
   };
 
-  const handleNextStep = (e: React.MouseEvent) => {
-    e.preventDefault(); 
+  const handleNextStep = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault(); 
     const newErrors = validateStep(step);
     if (newErrors.length === 0) {
       setStep(prev => Math.min(prev + 1, 5));
@@ -425,8 +482,8 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
     }
   };
 
-  const handleBack = (e: React.MouseEvent) => {
-    e.preventDefault();
+  const handleBack = (e?: React.MouseEvent) => {
+    if (e) e.preventDefault();
     if (step === 1 && onCancel && isPublicUser) {
       onCancel();
     } else {
@@ -504,16 +561,16 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   // ... (ProgressStep, ReviewField, FileUploadField components remain same, omitting for brevity as they are unchanged)
   const ProgressStep = ({ num, title, isActive, isCompleted }: any) => (
     <div className={`flex items-center shrink-0`}>
-      <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-[10px] transition-all shrink-0
-        ${isActive ? 'bg-systemBlue text-white shadow-lg shadow-blue-100 ring-4 ring-blue-50' : 
+      <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] transition-all shrink-0
+        ${isActive ? 'bg-systemBlue text-white' : 
           isCompleted ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
-        {isCompleted ? <CheckCircle size={14} /> : num}
+        {isCompleted ? <CheckCircle size={12} /> : num}
       </div>
-      <span className={`text-[10px] font-black uppercase tracking-[0.1em] hidden xl:block ml-2 whitespace-nowrap transition-colors
-        ${isActive ? 'text-blue-900' : 'text-slate-300'}`}>
+      <span className={`text-[10px] font-bold uppercase tracking-widest hidden md:block ml-2 whitespace-nowrap transition-colors
+        ${isActive ? 'text-slate-900' : 'text-slate-400'}`}>
         {title}
       </span>
-      {title !== 'REVIEW' && <div className="w-4 md:w-6 lg:w-8 h-[2px] bg-slate-100 mx-2 md:mx-3 shrink-0"></div>}
+      {title !== 'REVIEW' && <div className="w-3 md:w-4 h-[1px] bg-slate-200 mx-2 md:mx-3 shrink-0"></div>}
     </div>
   );
 
@@ -531,14 +588,14 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   const FileUploadField = ({ label, id, accept, value, onChange }: any) => (
     <div className="relative group">
       <label htmlFor={id} className="block w-full cursor-pointer">
-        <div className={`h-24 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center p-4 text-center
+        <div className={`h-16 rounded-xl border border-dashed border-dashed transition-all flex flex-col items-center justify-center p-4 text-center
           ${value ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50'}`}>
           {value ? (
-             <FileIcon className="text-emerald-500 mb-1" size={24} />
+             <FileIcon className="text-emerald-500 mb-1" size={18} />
           ) : (
-             <UploadCloud className="text-slate-300 group-hover:text-blue-400 mb-1" size={24} />
+             <UploadCloud className="text-slate-300 group-hover:text-blue-400 mb-1" size={18} />
           )}
-          <span className={`text-[10px] font-bold uppercase tracking-wider ${value ? 'text-emerald-700' : 'text-slate-400 group-hover:text-blue-500'}`}>
+          <span className={`text-xs font-semibold ${value ? 'text-emerald-700' : 'text-slate-400 group-hover:text-blue-500'}`}>
              {label}
           </span>
           {value && <span className="text-[9px] text-emerald-600 mt-1 truncate w-full px-2">{value}</span>}
@@ -556,100 +613,159 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
 
   if (mode === 'selection') {
     return (
-      <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500">
-        <div className="text-center space-y-4 mb-12">
-          <h2 className="text-4xl font-black text-slate-900 tracking-tight">Select Application Type</h2>
-          <p className="text-slate-500 font-medium text-lg">Please choose the registration category to proceed.</p>
+      <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-500 pb-12">
+        
+        {/* Registration Gateway Hero */}
+        <div className="text-center space-y-3 mb-8 pt-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 mb-2">
+             <Clock size={12} className="text-blue-600" />
+             <span className="text-[10px] font-bold uppercase tracking-widest text-blue-700">Estimated Completion: 5–10 minutes</span>
+          </div>
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Registration Gateway</h2>
+          <p className="text-slate-500 font-medium max-w-lg mx-auto">
+            Choose a category to begin the registration process.
+          </p>
+          
+          {/* Workflow Indicator */}
+          <div className="flex items-center justify-center gap-2 sm:gap-4 mt-6 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+             <span className="text-systemBlue">Select Type</span>
+             <ArrowRight size={14} className="text-slate-300" />
+             <span>Complete Form</span>
+             <ArrowRight size={14} className="text-slate-300" />
+             <span>Verification</span>
+             <ArrowRight size={14} className="text-slate-300" />
+             <span>Approval</span>
+             <ArrowRight size={14} className="text-slate-300" />
+             <span>OSCA ID</span>
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-          <button onClick={() => handleStart('new')} className="group relative bg-white p-10 rounded-[2.5rem] border-2 border-slate-100 hover:border-blue-900 transition-all text-left shadow-xl shadow-slate-100 hover:shadow-2xl hover:shadow-blue-900/10">
-            <div className="w-20 h-20 rounded-3xl bg-blue-50 text-blue-900 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform"><UserPlus size={40} /></div>
-            <h3 className="text-2xl font-black text-slate-900 mb-3 group-hover:text-blue-900 transition-colors">New Applicant</h3>
-            <p className="text-slate-500 font-medium leading-relaxed">For senior citizens applying for their OSCA ID for the first time.</p>
+
+        {/* Premium Application Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <button 
+            onClick={() => handleStart('new')} 
+            className="group relative bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 hover:border-systemBlue transition-all text-left shadow-sm hover:shadow-xl hover:shadow-systemBlue/10 hover:-translate-y-1 flex flex-col h-full"
+          >
+            <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center mb-5 group-hover:bg-blue-50 group-hover:text-systemBlue transition-colors border border-slate-100 group-hover:border-blue-100">
+              <UserPlus size={18} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2 group-hover:text-systemBlue transition-colors">New Applicant</h3>
+            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-6 flex-grow">
+              For senior citizens applying for their official OSCA ID for the first time.
+            </p>
+            <div className="inline-flex items-center gap-2 text-sm font-bold text-systemBlue group-hover:text-blue-700 mt-auto">
+               Start New Registration <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </div>
           </button>
-          <button onClick={() => handleStart('existing')} className="group relative bg-white p-10 rounded-[2.5rem] border-2 border-slate-100 hover:border-emerald-600 transition-all text-left shadow-xl shadow-slate-100 hover:shadow-2xl hover:shadow-emerald-900/10">
-            <div className="w-20 h-20 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-8 group-hover:scale-110 transition-transform"><UserCheck size={40} /></div>
-            <h3 className="text-2xl font-black text-slate-900 mb-3 group-hover:text-emerald-700 transition-colors">Existing Applicant</h3>
-            <p className="text-slate-500 font-medium leading-relaxed">For replacement or updates. Input the existing OSCA ID.</p>
+
+          <button 
+            onClick={() => handleStart('existing')} 
+            className="group relative bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 hover:border-emerald-500 transition-all text-left shadow-sm hover:shadow-xl hover:shadow-emerald-500/10 hover:-translate-y-1 flex flex-col h-full"
+          >
+            <div className="w-10 h-10 rounded-lg bg-slate-50 text-slate-400 flex items-center justify-center mb-5 group-hover:bg-emerald-50 group-hover:text-emerald-600 transition-colors border border-slate-100 group-hover:border-emerald-100">
+              <UserCheck size={18} />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2 group-hover:text-emerald-700 transition-colors">Existing Applicant</h3>
+            <p className="text-slate-500 text-sm font-medium leading-relaxed mb-6 flex-grow">
+              For seniors who already have an OSCA record and require updates or replacements.
+            </p>
+            <div className="inline-flex items-center gap-2 text-sm font-bold text-emerald-600 group-hover:text-emerald-700 mt-auto">
+               Look up Member <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+            </div>
           </button>
         </div>
 
-        {/* Recently Created Accounts Section (Only for Admin/Staff) */}
+        {/* Recently Created Accounts Section (Live Activity Panel) */}
         {!isPublicUser && (
-          <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/30">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200 mt-12">
+            <div className="px-6 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 text-blue-900 rounded-xl">
-                  <Clock size={20} />
+                <div className="p-2 bg-slate-100 text-slate-500 rounded-lg border border-slate-200">
+                  <Clock size={16} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-900">Recently Created Accounts</h3>
-                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Live monitoring of system entries</p>
+                  <h3 className="text-sm font-bold text-slate-900">Recent Registrations</h3>
+                  <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest mt-0.5">Live monitoring of system entries</p>
                 </div>
               </div>
               <button 
                 onClick={fetchRecentSeniors}
-                className="p-2 text-slate-400 hover:text-blue-900 hover:bg-white rounded-xl transition-all border border-transparent hover:border-slate-100"
+                className="p-2 text-slate-400 hover:text-systemBlue hover:bg-slate-100 rounded-lg transition-colors"
                 title="Refresh List"
               >
-                <RefreshCw size={18} className={loadingRecent ? 'animate-spin' : ''} />
+                <RefreshCw size={16} className={loadingRecent ? 'animate-spin' : ''} />
               </button>
             </div>
             
             <div className="overflow-x-auto">
-              <table className="ios-table font-medium">
-                <thead>
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50/50 border-b border-slate-100">
                   <tr>
-                    <th className="px-10 py-5">Full Name</th>
-                    <th className="px-10 py-5">Barangay</th>
-                    <th className="px-10 py-5">Status</th>
-                    <th className="px-10 py-5 text-right">Date Joined</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500 w-1/3">Applicant Name</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500">Barangay</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500 text-center">Status</th>
+                    <th className="px-6 py-3 text-xs font-semibold text-slate-500 text-right">Date Created</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {loadingRecent ? (
-                    [1, 2, 3].map(i => (
-                      <tr key={i} className="animate-pulse">
-                        <td className="px-10 py-5"><div className="h-4 w-32 bg-slate-100 rounded"></div></td>
-                        <td className="px-10 py-5"><div className="h-4 w-24 bg-slate-50 rounded"></div></td>
-                        <td className="px-10 py-5"><div className="h-4 w-16 bg-slate-50 rounded-full"></div></td>
-                        <td className="px-10 py-5 text-right"><div className="h-4 w-20 bg-slate-50 rounded ml-auto"></div></td>
+                    [1, 2, 3, 4, 5].map(i => (
+                      <tr key={i} className="border-b border-slate-50">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
+                            <Skeleton className="h-4 w-32 rounded" />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Skeleton className="h-3 w-20 rounded" />
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <Skeleton className="h-5 w-16 rounded-full mx-auto" />
+                        </td>
+                        <td className="px-6 py-4 text-right flex justify-end">
+                          <Skeleton className="h-3 w-24 rounded mt-1" />
+                        </td>
                       </tr>
                     ))
                   ) : recentSeniors.length > 0 ? (
                     recentSeniors.map((senior) => (
-                      <tr key={senior.id}>
-                        <td className="px-10 py-5">
+                      <tr key={senior.id} className="group hover:bg-slate-50/80 transition-colors">
+                        <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center text-[10px] font-black border border-blue-100 overflow-hidden">
+                            <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center text-[10px] font-bold border border-slate-200 overflow-hidden shrink-0">
                               {senior.idPhoto ? (
                                 <img src={senior.idPhoto} alt={senior.name} className="w-full h-full object-cover" />
                               ) : (
                                 senior.name?.split(' ').map((n: string) => n[0]).join('')
                               )}
                             </div>
-                            <span className="text-slate-900 font-bold">{senior.name}</span>
+                            <span className="text-sm font-bold text-slate-900 group-hover:text-systemBlue transition-colors truncate">{senior.name}</span>
                           </div>
                         </td>
-                        <td className="px-10 py-5 text-slate-500 text-sm">{senior.barangay}</td>
-                        <td className="px-10 py-5">
-                          <span className={`inline-flex px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                            senior.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 
-                            senior.status === 'Pending' ? 'bg-amber-50 text-amber-600' : 
-                            'bg-slate-100 text-slate-400'
+                        <td className="px-6 py-4 text-xs font-semibold text-slate-500">Brgy. {senior.barangay}</td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${
+                            senior.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200/50' : 
+                            senior.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-200/50' : 
+                            'bg-slate-50 text-slate-600 border-slate-200'
                           }`}>
                             {senior.status}
                           </span>
                         </td>
-                        <td className="px-10 py-5 text-right text-slate-400 text-xs font-bold">
+                        <td className="px-6 py-4 text-right text-[10px] font-bold text-slate-400">
                           {senior.joinedDate}
                         </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={4} className="px-10 py-12 text-center text-slate-400 font-bold text-sm">
-                        No recent entries found.
+                      <td colSpan={4} className="px-6 py-16 text-center">
+                         <div className="flex flex-col items-center justify-center gap-2">
+                           <Inbox size={32} className="text-slate-300" strokeWidth={1.5} />
+                           <p className="text-sm font-semibold text-slate-600 mt-2">No recent registrations.</p>
+                           <p className="text-xs text-slate-400">Create the first registration using the options above.</p>
+                         </div>
                       </td>
                     </tr>
                   )}
@@ -663,45 +779,44 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8">
-      {/* Refined Header */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6 px-2">
-        <div className="text-center lg:text-left">
-          <div className="flex items-center justify-center lg:justify-start gap-3 mb-1 relative">
-            {!isPublicUser && !isSeniorRole && (
-               <button onClick={() => setMode('selection')} className="absolute left-0 lg:static text-slate-300 hover:text-slate-600 transition-colors">
-                <ArrowLeft size={20} />
-              </button>
-            )}
-            <h2 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
+    <TransitionWrapper isLoading={initLoading} skeleton={<RegistrationFormSkeleton />}>
+      {!initLoading && (
+        <div className="w-full space-y-4 stagger-in">
+          {/* Compact Header */}
+      <div className="flex items-center justify-between gap-4 px-1">
+        <div className="flex items-center gap-3">
+          {!isPublicUser && !isSeniorRole && (
+            <button onClick={() => setMode('selection')} className="text-slate-300 hover:text-slate-600 transition-colors">
+              <ArrowLeft size={18} />
+            </button>
+          )}
+          <div>
+            <h2 className="text-lg font-bold text-slate-900 tracking-tight leading-tight">
               {isSeniorRole ? 'Update Profile' : (applicantType === 'new' ? 'New Registration' : 'Update Record')}
             </h2>
+            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">
+              {step === 5 ? 'Review & Finalize' : `Step ${step} of 5: ${step === 1 ? 'Identity' : step === 2 ? 'Location' : step === 3 ? 'Family' : 'Documents'}`}
+            </p>
           </div>
-          <p className="text-slate-400 font-bold text-[10px] sm:text-xs uppercase tracking-widest">
-            {step === 5 ? 'Review & Finalize' : `Step ${step} of 5: ${step === 1 ? 'Identity' : step === 2 ? 'Location' : step === 3 ? 'Family' : 'Documents'}`}
-          </p>
         </div>
         
-        <div className="flex justify-center lg:justify-end">
-          <div className="flex items-center bg-white px-4 py-3 rounded-2xl border border-slate-100 shadow-sm w-fit transition-all">
-            <ProgressStep num={1} title="IDENTITY" isActive={step === 1} isCompleted={step > 1} />
-            <ProgressStep num={2} title="LOCATION" isActive={step === 2} isCompleted={step > 2} />
-            <ProgressStep num={3} title="FAMILY" isActive={step === 3} isCompleted={step > 3} />
-            <ProgressStep num={4} title="DOCS" isActive={step === 4} isCompleted={step > 4} />
-            <ProgressStep num={5} title="REVIEW" isActive={step === 5} isCompleted={false} />
-          </div>
+        <div className="flex items-center bg-white px-3 py-2 rounded-xl border border-slate-100 shadow-sm w-fit transition-all">
+          <ProgressStep num={1} title="IDENTITY" isActive={step === 1} isCompleted={step > 1} />
+          <ProgressStep num={2} title="LOCATION" isActive={step === 2} isCompleted={step > 2} />
+          <ProgressStep num={3} title="FAMILY" isActive={step === 3} isCompleted={step > 3} />
+          <ProgressStep num={4} title="DOCS" isActive={step === 4} isCompleted={step > 4} />
+          <ProgressStep num={5} title="REVIEW" isActive={step === 5} isCompleted={false} />
         </div>
       </div>
 
-      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/50 overflow-hidden">
-        <form onSubmit={handleSubmit} className="p-6 md:p-10">
+      <form onSubmit={handleSubmit} className="w-full overflow-hidden" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove}>
+        <div style={getTrackStyle()}>
           
           {/* STEP 1: IDENTITY */}
-          {step === 1 && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div style={getCardStyle(1)} className="p-6 bg-white rounded-xl border border-slate-200 overflow-hidden"><div className="space-y-5">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 text-blue-900">
-                  <User size={24} />
+                  <User size={18} />
                   <h3 className="text-xl font-black">Personal Information</h3>
                 </div>
                 {(isMatchFound || isSeniorRole) && (
@@ -713,13 +828,13 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
               </div>
               
               {/* Fields ... (Rest of Step 1 form structure) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {(applicantType === 'existing' || isSeniorRole) ? (
-                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 relative">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block">OSCA ID Number</label>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 relative">
+                  <label className="text-xs font-semibold text-slate-600 mb-1.5 block">OSCA ID Number</label>
                   <div className="flex items-center gap-3">
                     <input type="text" readOnly={isSeniorRole} disabled={isSeniorRole}
-                      className={`w-full text-4xl font-black tracking-widest bg-transparent border-none outline-none ${isSeniorRole ? 'text-blue-900 opacity-60' : 'text-emerald-700'}`}
+                      className={`w-full text-2xl font-bold tracking-widest bg-transparent border-none outline-none ${isSeniorRole ? 'text-blue-900 opacity-60' : 'text-emerald-700'}`}
                       value={formData.oscaId} onChange={e => setUppercaseFormField('oscaId', e.target.value)} />
                     {lookupLoading && (
                       <div className="w-6 h-6 border-2 border-blue-200 rounded-full border-t-blue-600 animate-spin"></div>
@@ -728,19 +843,19 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                   <p className="text-xs text-slate-400 font-bold mt-2">{isSeniorRole ? 'ID locked to your profile.' : 'Enter the OSCA ID to look up an existing member.'}</p>
                 </div>
                 ) : (
-                <div className="p-6 bg-blue-50 rounded-3xl border border-blue-100 relative">
+                <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 relative">
                   <label className="text-[10px] font-black uppercase tracking-widest text-blue-400 mb-2 block">OSCA ID Number</label>
                   <p className="text-lg font-black text-blue-900 mt-1">Assigned upon approval</p>
                   <p className="text-xs text-blue-400 font-bold mt-2">The admin will assign an OSCA ID when this application is approved.</p>
                 </div>
                 )}
                 
-                <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100 relative">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 block flex items-center gap-2">
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 relative">
+                  <label className="text-xs font-semibold text-slate-600 mb-1.5 flex items-center gap-2">
                     <Wallet size={12} /> Pension Category
                   </label>
                   <select 
-                    className="w-full text-xl font-black bg-transparent border-none outline-none text-slate-800 cursor-pointer mt-1"
+                    className="w-full text-base font-semibold bg-transparent border-none outline-none text-slate-800 cursor-pointer mt-1"
                     value={formData.pensionStatus}
                     onChange={e => setFormData({...formData, pensionStatus: e.target.value})}
                   >
@@ -756,33 +871,31 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 </div>
               </div>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Last Name *</label>
-                  <input type="text" className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700"
+              {/* Name Section */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3">
+                <div className="space-y-1 md:col-span-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Last Name *</label>
+                  <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
                     value={formData.lastName} onChange={e => setUppercaseFormField('lastName', e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">First Name *</label>
-                  <input type="text" className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700"
+                <div className="space-y-1 md:col-span-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">First Name *</label>
+                  <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
                     value={formData.firstName} onChange={e => setUppercaseFormField('firstName', e.target.value)} />
                 </div>
-              </div>
-              {/* ... Other Step 1 inputs ... */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Middle Name</label>
-                  <input type="text" className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700"
+                <div className="space-y-1 md:col-span-3">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Middle Name</label>
+                  <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
                     value={formData.middleName} onChange={e => setUppercaseFormField('middleName', e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Extension (Jr, Sr, etc.)</label>
+                <div className="space-y-1 md:col-span-1">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Ext</label>
                   <select
-                    className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 cursor-pointer"
+                    className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none cursor-pointer"
                     value={formData.extensionName}
                     onChange={e => setFormData({...formData, extensionName: e.target.value})}
                   >
-                    <option value="">None</option>
+                    <option value="">-</option>
                     <option value="Jr.">Jr.</option>
                     <option value="Sr.">Sr.</option>
                     <option value="III">III</option>
@@ -792,76 +905,81 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Birth Date *</label>
-                  <input type="date" className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 focus:ring-4 focus:ring-blue-50 font-bold text-slate-700"
-                    value={formData.dateOfBirth} onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} />
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Age</label>
-                  <input type="text" readOnly className="w-full px-6 py-4 rounded-2xl bg-slate-100 border border-slate-200 font-black text-slate-700 cursor-not-allowed" value={formData.age} />
-                </div>
-                <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Sex *</label>
-                    <select className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-slate-700 cursor-pointer"
-                        value={formData.sex} onChange={e => setFormData({...formData, sex: e.target.value})}>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                    </select>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Place of Birth</label>
-                  <input type="text" className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-slate-700"
-                    value={formData.placeOfBirth} onChange={e => setUppercaseFormField('placeOfBirth', e.target.value)} />
+              {/* Demographics Section */}
+              <div className="pt-5 border-t border-slate-100 mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Birth Date *</label>
+                    <input type="date" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
+                      value={formData.dateOfBirth} onChange={e => setFormData({...formData, dateOfBirth: e.target.value})} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Age</label>
+                    <input type="text" readOnly className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-100 border border-slate-200 font-bold text-slate-400 cursor-not-allowed outline-none" value={formData.age} />
+                  </div>
+                  <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Sex *</label>
+                      <select className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none cursor-pointer"
+                          value={formData.sex} onChange={e => setFormData({...formData, sex: e.target.value})}>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                      </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Place of Birth</label>
+                    <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
+                      value={formData.placeOfBirth} onChange={e => setUppercaseFormField('placeOfBirth', e.target.value)} />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            </div></div>
 
           {/* STEP 2: LOCATION */}
-          {step === 2 && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div style={getCardStyle(2)} className="p-6 bg-white rounded-xl border border-slate-200 overflow-hidden"><div className="space-y-8">
               <div className="flex items-center gap-3 text-blue-900 mb-6">
-                <MapPin size={24} />
+                <MapPin size={18} />
                 <h3 className="text-xl font-black">Address & Contact</h3>
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Street Address *</label>
-                <input type="text" placeholder="House No., Street Name" className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-slate-700"
-                  value={formData.streetAddress} onChange={e => setUppercaseFormField('streetAddress', e.target.value)} />
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Barangay</label>
-                  <select className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-slate-700 outline-none"
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+                <div className="space-y-1 md:col-span-8">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Street Address *</label>
+                  <input type="text" placeholder="House No., Street Name" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
+                    value={formData.streetAddress} onChange={e => setUppercaseFormField('streetAddress', e.target.value)} />
+                </div>
+                <div className="space-y-1 md:col-span-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Barangay</label>
+                  <select className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none cursor-pointer"
                     value={formData.barangay} onChange={e => setFormData({...formData, barangay: e.target.value})}>
                     {BARANGAYS.map(brgy => <option key={brgy} value={brgy}>{brgy}</option>)}
                   </select>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Phone Number *</label>
-                  <input
-                    type="tel"
-                    placeholder="09xx-xxx-xxxx"
-                    maxLength={11}
-                    pattern="[0-9]{11}"
-                    className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-slate-700"
-                    value={formData.contactNumber}
-                    onChange={e => {
-                      const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
-                      setFormData({...formData, contactNumber: digits});
-                    }}
-                  />
-                  <p className="text-[10px] text-slate-400 font-bold pl-2">Enter 11 digits (e.g., 09XXXXXXXXX)</p>
+              </div>
+              
+              <div className="pt-5 border-t border-slate-100 mt-6">
+                <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Contact Information</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Phone Number *</label>
+                    <input
+                      type="tel"
+                      placeholder="09xx-xxx-xxxx"
+                      maxLength={11}
+                      pattern="[0-9]{11}"
+                      className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
+                      value={formData.contactNumber}
+                      onChange={e => {
+                        const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+                        setFormData({...formData, contactNumber: digits});
+                      }}
+                    />
+                    <p className="text-[10px] text-slate-400 font-bold pl-2 pt-1">Enter 11 digits (e.g., 09XXXXXXXXX)</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            </div></div>
 
           {/* STEP 3: FAMILY */}
-          {step === 3 && (
-            <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div style={getCardStyle(3)} className="p-6 bg-white rounded-xl border border-slate-200 overflow-hidden"><div className="space-y-5">
                {/* ... Family code structure remains same ... */}
                <div className="flex flex-col md:flex-row gap-4 justify-between items-end mb-4">
                  <div>
@@ -877,21 +995,21 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                </div>
                
                {/* "Add Member" Light Panel */}
-               <div className="bg-white border-2 border-slate-100 rounded-[2rem] p-6 md:p-8 shadow-sm mb-8 relative overflow-hidden">
+               <div className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm mb-8 relative overflow-hidden">
                   <div className="relative z-10">
-                     <h4 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-800 mb-6 border-b border-slate-50 pb-4">
+                     <h4 className="flex items-center gap-2 text-sm font-bold text-slate-800 mb-4 pb-2 border-b border-slate-100">
                         <Plus size={16} className="text-blue-600" /> Add Household Member
                      </h4>
                      {/* ... Family Inputs ... */}
                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-                        <div className="md:col-span-4 space-y-2">
-                           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Full Name</label>
-                           <input className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 outline-none transition-all placeholder:text-slate-300"
+                        <div className="md:col-span-5 space-y-1">
+                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Full Name</label>
+                           <input className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
                           placeholder="e.g. Juan Dela Cruz" value={tempMember.name} onChange={e => setTempMember({...tempMember, name: normalizeUppercaseValue(e.target.value)})} />
                         </div>
-                        <div className="md:col-span-3 space-y-2">
-                           <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Relationship</label>
-                           <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 outline-none transition-all cursor-pointer"
+                        <div className="md:col-span-3 space-y-1">
+                           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Relationship</label>
+                           <select className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none cursor-pointer"
                               value={tempMember.relationship} onChange={e => setTempMember({...tempMember, relationship: e.target.value})} >
                               <option value="">Select...</option>
                               <option value="Spouse">Spouse</option>
@@ -902,15 +1020,14 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                               <option value="Other">Other</option>
                            </select>
                         </div>
-                        {/* ... rest of family inputs ... */}
-                        <div className="md:col-span-2 space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Age</label>
-                            <input className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 outline-none transition-all placeholder:text-slate-300"
+                        <div className="md:col-span-2 space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Age</label>
+                            <input className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
                               placeholder="0" type="number" value={tempMember.age} onChange={e => setTempMember({...tempMember, age: e.target.value})} />
                         </div>
-                        <div className="md:col-span-3 space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Civil Status</label>
-                            <select className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 outline-none transition-all cursor-pointer"
+                        <div className="md:col-span-2 space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Civil Status</label>
+                            <select className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none cursor-pointer"
                               value={tempMember.civilStatus} onChange={e => setTempMember({...tempMember, civilStatus: e.target.value})} >
                               <option value="">Select...</option>
                               <option value="Single">Single</option>
@@ -919,18 +1036,18 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                               <option value="Separated">Separated</option>
                            </select>
                         </div>
-                        <div className="md:col-span-4 space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Occupation</label>
-                            <input className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 outline-none transition-all placeholder:text-slate-300"
+                        <div className="md:col-span-4 space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Occupation</label>
+                            <input className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
                           placeholder="Work / Job" value={tempMember.occupation} onChange={e => setTempMember({...tempMember, occupation: normalizeUppercaseValue(e.target.value)})} />
                         </div>
-                        <div className="md:col-span-4 space-y-2">
-                            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider pl-1">Monthly Income</label>
-                            <input className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 outline-none transition-all placeholder:text-slate-300"
+                        <div className="md:col-span-4 space-y-1">
+                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Monthly Income</label>
+                            <input className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
                               placeholder="Amount" value={tempMember.income} onChange={e => setTempMember({...tempMember, income: e.target.value})} />
                         </div>
                         <div className="md:col-span-4 flex items-end">
-                           <button type="button" onClick={addFamilyMember} className="w-full bg-systemBlue hover:bg-blue-800 text-white font-bold py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100 mb-[1px]">
+                           <button type="button" onClick={addFamilyMember} className="w-full bg-systemBlue hover:bg-blue-800 text-white font-bold py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100 mb-[1px]">
                               <Plus size={18} /> Add to Roster
                            </button>
                         </div>
@@ -940,13 +1057,13 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                
                {/* Member List Rendering (Same as before) */}
                <div className="space-y-4">
-                  <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest pl-2">Current Household Roster</h4>
+                  <h4 className="text-xs font-bold text-slate-500 mb-2 block">Current Household Roster</h4>
                   {formData.familyMembers.length > 0 ? (
                     <div className="grid grid-cols-1 gap-3">
                       {formData.familyMembers.map((member, idx) => (
-                        <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:border-blue-100 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 group">
+                        <div key={idx} className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-blue-100 transition-all flex flex-col md:flex-row md:items-center justify-between gap-4 group">
                            <div className="flex items-center gap-4">
-                              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-900 flex items-center justify-center font-black text-lg border border-blue-100">{member.name.charAt(0)}</div>
+                              <div className="w-10 h-10 rounded-lg bg-blue-50 text-blue-900 flex items-center justify-center font-black text-lg border border-blue-100">{member.name.charAt(0)}</div>
                               <div>
                                  <h5 className="font-bold text-slate-900 text-lg">{member.name}</h5>
                                  <div className="flex items-center gap-2 mt-1">
@@ -955,7 +1072,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                                  </div>
                               </div>
                            </div>
-                           <div className="flex items-center gap-6 md:ml-auto border-t md:border-t-0 border-slate-50 pt-3 md:pt-0">
+                           <div className="flex items-center gap-4 md:ml-auto border-t md:border-t-0 border-slate-50 pt-3 md:pt-0">
                                 {/* ... Status/Work/Income display ... */}
                               <button onClick={() => removeFamilyMember(idx)} className="p-2 bg-white border border-slate-200 text-slate-400 hover:text-rose-500 hover:border-rose-200 rounded-xl transition-all ml-auto md:ml-0 shadow-sm"><Trash2 size={18} /></button>
                            </div>
@@ -970,15 +1087,13 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                     </div>
                   )}
                </div>
-            </div>
-          )}
+            </div></div>
 
           {/* STEP 4: DOCS */}
-          {step === 4 && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div style={getCardStyle(4)} className="p-6 bg-white rounded-xl border border-slate-200 overflow-hidden"><div className="space-y-8">
                {/* ... Document upload structure ... */}
                <div className="flex items-center gap-3 text-blue-900 mb-2">
-                <FileText size={24} />
+                <FileText size={18} />
                 <h3 className="text-xl font-black">Registry & ID Details</h3>
               </div>
               <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
@@ -991,22 +1106,22 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 </div>
               </div>
               {/* ... Inputs for RRN, National ID, Emergency ... */}
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">RRN No. (Optional)</label>
-                  <input type="text" className="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 outline-none"
+               <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mt-6 pt-5 border-t border-slate-100">
+                <div className="space-y-1 md:col-span-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">RRN No. (Optional)</label>
+                  <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
                     value={formData.rrn} onChange={e => setUppercaseFormField('rrn', e.target.value)} />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">National ID (Optional)</label>
-                  <input type="text" className="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 outline-none"
+                <div className="space-y-1 md:col-span-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">National ID (Optional)</label>
+                  <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
                     value={formData.nationalId} onChange={e => setUppercaseFormField('nationalId', e.target.value)} />
                 </div>
-              </div>
-              <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Mother's Maiden Name</label>
-                  <input type="text" className="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 outline-none"
+                <div className="space-y-1 md:col-span-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Mother's Maiden Name</label>
+                  <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
                     value={formData.mothersMaidenName} onChange={e => setUppercaseFormField('mothersMaidenName', e.target.value)} />
+                </div>
               </div>
               
               {/* Password Section - Only for New Applicants */}
@@ -1017,14 +1132,14 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                     <h4 className="font-black text-xs uppercase tracking-widest">Account Password</h4>
                   </div>
                   <p className="text-xs text-slate-500 font-medium -mt-2 mb-4">Create a password to access your OSCA portal account. Must be at least 8 characters with a number and special character.</p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Password *</label>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Password *</label>
                       <div className="relative">
                         <input 
                           type={showPassword ? "text" : "password"} 
                           placeholder="Min 8 chars, 1 number, 1 special" 
-                          className={`w-full px-6 py-4 pr-14 rounded-2xl bg-white border transition-all font-bold text-slate-700 outline-none ${passwordHasMin && passwordHasNumber && passwordHasSpecial ? 'border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900' : 'border-rose-300 focus:ring-4 focus:ring-rose-50 focus:border-rose-500'}`}
+                          className={`w-full px-3 py-2.5 pr-10 rounded-lg text-sm bg-slate-50 border hover:bg-slate-100 hover:border-slate-300 transition-all font-semibold text-slate-900 outline-none focus:bg-white focus:ring-2 ${passwordHasMin && passwordHasNumber && passwordHasSpecial ? 'border-slate-200 focus:ring-blue-100 focus:border-blue-500' : 'border-rose-300 focus:ring-rose-100 focus:border-rose-500'}`}
                           value={formData.password} 
                           onChange={e => setFormData({...formData, password: e.target.value})} 
                         />
@@ -1036,23 +1151,23 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                           {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                         </button>
                       </div>
-                      <p className={`mt-2 text-xs font-bold pl-2 flex items-center gap-1 ${isPasswordRuleComplete ? 'text-emerald-600' : 'text-rose-500'}`}>
+                      <p className={`mt-2 text-[10px] font-bold pl-2 flex items-center gap-1 ${isPasswordRuleComplete ? 'text-emerald-600' : 'text-rose-500'}`}>
                         {isPasswordRuleComplete ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
                         {nextPasswordRequirement}
                       </p>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Confirm Password *</label>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Confirm Password *</label>
                       <div className="relative">
                         <input 
                           type={showConfirmPassword ? "text" : "password"} 
                           placeholder="Re-enter password" 
-                          className={`w-full px-6 py-4 pr-14 rounded-2xl bg-white border transition-all font-bold text-slate-700 outline-none
+                          className={`w-full px-3 py-2.5 pr-10 rounded-lg text-sm bg-slate-50 border hover:bg-slate-100 hover:border-slate-300 transition-all font-semibold text-slate-900 outline-none focus:bg-white focus:ring-2
                             ${formData.confirmPassword && formData.password !== formData.confirmPassword 
-                              ? 'border-rose-300 focus:ring-4 focus:ring-rose-50 focus:border-rose-500' 
+                              ? 'border-rose-300 focus:ring-rose-100 focus:border-rose-500' 
                               : formData.confirmPassword && formData.password === formData.confirmPassword
-                              ? 'border-emerald-300 focus:ring-4 focus:ring-emerald-50 focus:border-emerald-500'
-                              : 'border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900'}`}
+                              ? 'border-emerald-300 focus:ring-emerald-100 focus:border-emerald-500'
+                              : 'border-slate-200 focus:ring-blue-100 focus:border-blue-500'}`}
                           value={formData.confirmPassword} 
                           onChange={e => setFormData({...formData, confirmPassword: e.target.value})} 
                         />
@@ -1084,33 +1199,37 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                   <HeartPulse size={20} />
                   <h4 className="font-black text-xs uppercase tracking-widest">Emergency Contact</h4>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                   <input type="text" placeholder="Contact Name" className="w-full px-6 py-4 rounded-2xl bg-rose-50/30 border border-rose-100 font-bold text-slate-700 outline-none focus:border-rose-300"
-                    value={formData.emergencyName} onChange={e => setUppercaseFormField('emergencyName', e.target.value)} />
-                  <input
-                    type="tel"
-                    placeholder="Contact Number"
-                    maxLength={11}
-                    pattern="[0-9]{11}"
-                    className="w-full px-6 py-4 rounded-2xl bg-rose-50/30 border border-rose-100 font-bold text-slate-700 outline-none focus:border-rose-300"
-                    value={formData.emergencyContact}
-                    onChange={e => {
-                      const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
-                      setFormData({...formData, emergencyContact: digits});
-                    }}
-                  />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-rose-400 uppercase tracking-widest pl-1">Contact Name</label>
+                    <input type="text" placeholder="e.g. Maria Dela Cruz" className="w-full px-3 py-2.5 rounded-lg text-sm bg-rose-50/50 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-rose-300"
+                      value={formData.emergencyName} onChange={e => setUppercaseFormField('emergencyName', e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold text-rose-400 uppercase tracking-widest pl-1">Contact Number</label>
+                    <input
+                      type="tel"
+                      placeholder="09xx-xxx-xxxx"
+                      maxLength={11}
+                      pattern="[0-9]{11}"
+                      className="w-full px-3 py-2.5 rounded-lg text-sm bg-rose-50/50 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-rose-300"
+                      value={formData.emergencyContact}
+                      onChange={e => {
+                        const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+                        setFormData({...formData, emergencyContact: digits});
+                      }}
+                    />
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            </div></div>
 
           {/* STEP 5: REVIEW - Same as before */}
-          {step === 5 && (
-            <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-300">
+          <div style={getCardStyle(5)} className="p-6 bg-white rounded-xl border border-slate-200 overflow-hidden"><div className="space-y-8">
                {/* ... Review UI ... */}
                <div className="flex items-center justify-between border-b border-slate-100 pb-4">
                 <div className="flex items-center gap-3 text-blue-900">
-                  <FileCheck size={24} />
+                  <FileCheck size={18} />
                   <h3 className="text-xl font-black">Review Summary</h3>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1121,7 +1240,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 </div>
               </div>
                {/* Review Details... omitting code for brevity, structure identical to prev */}
-               <div className="bg-slate-50/50 rounded-3xl p-8 border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-10">
+               <div className="bg-slate-50 rounded-2xl p-6 border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="space-y-6">
                   <ReviewField label="OSCA ID" value={formData.oscaId} highlight={true} />
                   <ReviewField label="Applicant Name" value={`${formData.lastName}, ${formData.firstName} ${formData.middleName}${formData.extensionName ? ' ' + formData.extensionName : ''}`.trim()} fullWidth={true} />
@@ -1141,12 +1260,12 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 <AlertCircle size={20} className="text-blue-900 shrink-0 mt-0.5" />
                 <p className="text-xs text-blue-900/70 font-bold leading-relaxed">By submitting, you confirm that all information provided is accurate and subject to verification by OSCA Pagsanjan.</p>
               </div>
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row items-center justify-between mt-12 pt-8 border-t border-slate-50 gap-4">
+            </div></div>
+        </div>
+        {/* NAVIGATION BUTTONS */}
+        <div className="flex flex-col sm:flex-row items-center justify-between mt-5 pt-4 border-t border-slate-100 gap-3 px-1">
             {step > 1 ? (
-              <button type="button" onClick={handleBack} className="order-2 sm:order-1 w-full sm:w-auto px-8 py-4 rounded-2xl font-black text-xs uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-slate-50 flex items-center justify-center gap-2 transition-all">
+              <button type="button" onClick={handleBack} className="order-2 sm:order-1 w-full sm:w-auto px-5 py-2 rounded-xl font-bold text-sm uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-slate-50 hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 transition-all">
                 <ArrowLeft size={16} /> Back
               </button>
             ) : <div className="hidden sm:block" />}
@@ -1155,8 +1274,8 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
               type={step === 5 ? "submit" : "button"} 
               onClick={step === 5 ? undefined : handleNextStep}
               disabled={loading}
-              className={`order-1 sm:order-2 w-full sm:w-auto px-10 py-4 rounded-2xl font-black text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-xl 
-                ${loading ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : (step === 5 ? 'bg-emerald-600 text-white shadow-emerald-100 hover:bg-emerald-700' : 'bg-slate-900 text-white shadow-slate-200 hover:bg-black')}`}>
+              className={`order-1 sm:order-2 w-full sm:w-auto px-5 py-2 rounded-lg font-bold text-sm uppercase tracking-widest transition-all flex items-center justify-center gap-3 shadow-xl 
+                ${loading ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none' : (step === 5 ? 'bg-emerald-600 text-white shadow-emerald-100 hover:bg-emerald-700 hover:-translate-y-0.5 active:scale-95' : 'bg-slate-900 text-white shadow-slate-200 hover:bg-black hover:-translate-y-0.5 active:scale-95')}`}>
               {loading ? (
                 <>
                   <RefreshCw size={16} className="animate-spin" />
@@ -1170,15 +1289,15 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
               )}
             </button>
           </div>
-        </form>
-      </div>
-
+      </form>
+      
       <ConfirmModal isOpen={isConfirmOpen} title="Finalize Registration?" variant="success" confirmLabel="Confirm Submission"
         message={isPublicUser ? "Confirm your application. You will receive a reference number shortly." : `Submit record for ${formData.firstName} to the registry?`}
         onConfirm={handleConfirmSubmit} onCancel={() => setIsConfirmOpen(false)} />
-    </div>
+        </div>
+      )}
+    </TransitionWrapper>
   );
 };
 
 export default AddMemberForm;
-

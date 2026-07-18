@@ -1,5 +1,6 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
+import TransitionWrapper from './TransitionWrapper';
 import { createPortal } from 'react-dom';
 import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock, Edit2Icon } from 'lucide-react';
 import { BARANGAYS, SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } from '../types';
@@ -896,63 +897,60 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   
   return (
     <div className="space-y-6 md:space-y-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-10">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
         <div>
-          <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight">Member Registry</h2>
-          <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px] mt-3 bg-white/50 w-fit px-3 py-1 rounded-full border border-slate-200 shadow-sm">Official Records</p>
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Member Registry</h2>
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mt-2 bg-white/50 w-fit px-3 py-1.5 rounded-md border border-slate-200 shadow-sm">Official Records</p>
         </div>
 
-        <div className="flex flex-col xl:flex-row xl:items-center gap-5 w-full xl:w-auto">
-          <div className="w-full xl:w-[450px]">
-            <div className="relative group">
-              <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-systemBlue/5 rounded-lg flex items-center justify-center text-slate-400 group-focus-within:text-systemBlue transition-colors">
-                <Search size={18} />
-              </div>
-              <input 
-                id="registry-search"
-                name="registrySearch"
-                type="text" 
-                placeholder="Search name, ID, or barangay..." 
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-14 pr-6 py-4 bg-white/80 backdrop-blur-md border border-slate-200 rounded-ios text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-4 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm"
-              />
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
+          <div className="w-full sm:w-[380px] relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <Search size={16} />
             </div>
+            <input 
+              id="registry-search"
+              name="registrySearch"
+              type="text" 
+              placeholder="Search name, ID, or barangay..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+            />
           </div>
 
-          <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md p-2 rounded-ios border border-slate-200 shadow-sm">
-            <div className="w-10 h-10 bg-systemBlue/10 rounded-ios flex items-center justify-center shrink-0 border border-systemBlue/10">
-              <MapPin size={20} className="text-systemBlue" />
+          <div className="relative w-full sm:w-[200px]">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <MapPin size={16} />
             </div>
             <select 
               id="registry-barangay-filter"
               name="registryBarangayFilter"
               value={filterBarangay}
               onChange={(e) => { setFilterBarangay(e.target.value); setPage(1); }}
-              className="bg-transparent text-sm font-bold text-slate-700 outline-none cursor-pointer w-full min-w-[180px] pr-8"
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none cursor-pointer appearance-none"
             >
-              <option className="bg-white">All Barangays</option>
+              <option value="All Barangays">All Barangays</option>
               {BARANGAYS.map(b => (
-                <option key={b} value={b} className="bg-white">{b}</option>
+                <option key={b} value={b}>{b}</option>
               ))}
             </select>
           </div>
         </div>
       </div>
 
-      {/* Note banner directing admin/staff to For Approvals */}
       {setView && (
-        <div className="bg-systemBlue/5 border border-systemBlue/10 rounded-ios p-6 mb-10 flex flex-col md:flex-row md:items-center gap-5 backdrop-blur-sm shadow-sm">
-          <div className="w-12 h-12 bg-systemBlue text-white rounded-2xl flex items-center justify-center shrink-0 shadow-lg shadow-systemBlue/20">
-            <FileCheck size={24} />
+        <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 mb-8 flex flex-col md:flex-row md:items-center gap-4 shadow-sm">
+          <div className="w-10 h-10 bg-systemBlue text-white rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-blue-200">
+            <FileCheck size={20} />
           </div>
           <div className="flex-1">
-            <h4 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-1">Queue Management</h4>
-            <p className="text-sm font-medium text-slate-600 leading-relaxed">
+            <h4 className="text-[10px] font-bold text-blue-900 uppercase tracking-widest mb-0.5">Queue Management</h4>
+            <p className="text-sm font-semibold text-slate-600">
               Only validated members appear in this registry. Pending applicants or updates are stored in the{' '}
               <button
                 onClick={() => setView(ViewType.APPROVAL)}
-                className="text-systemBlue font-bold decoration-2 underline underline-offset-4 hover:text-blue-700 transition-colors"
+                className="text-systemBlue font-bold decoration-2 underline underline-offset-4 hover:text-blue-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-200 rounded-sm"
               >
                 Approval Queue
               </button>
@@ -962,12 +960,11 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
         </div>
       )}
       
-      <div className="ios-card shadow-xl shadow-slate-200/50">
+      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
         <div className="w-full overflow-x-hidden">
-          {loading ? (
-            <MemberRegistrySkeleton />
-          ) : (
-            <table className="ios-table w-full table-fixed">
+          <TransitionWrapper isLoading={loading} skeleton={<MemberRegistrySkeleton />}>
+            {!loading && (
+            <table className="w-full text-left table-fixed">
               <thead>
                 <tr>
                   <th className="px-4 lg:px-6 py-4 lg:py-5 w-[30%]">Member Identity</th>
@@ -987,9 +984,9 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                       <div className="flex items-center gap-3 lg:gap-4">
                         <div className="relative">
                           {senior.idPhoto ? (
-                            <img src={senior.idPhoto} alt={senior.name} loading="lazy" className="w-11 h-11 lg:w-12 lg:h-12 rounded-ios object-cover border border-slate-200 shadow-sm shrink-0 bg-slate-50" />
+                            <img src={senior.idPhoto} alt={senior.name} loading="lazy" className="w-11 h-11 lg:w-12 lg:h-12 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0 bg-slate-50" />
                           ) : (
-                            <div className="w-11 h-11 lg:w-12 lg:h-12 rounded-ios bg-systemBlue/20 flex items-center justify-center text-systemBlue font-bold border border-slate-200 shadow-sm shrink-0 text-sm">
+                            <div className="w-11 h-11 lg:w-12 lg:h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold border border-slate-200 shadow-sm shrink-0 text-sm">
                               {senior.name.split(' ').map(n => n[0]).join('')}
                             </div>
                           )}
@@ -1045,7 +1042,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                       <div className="flex flex-nowrap items-center justify-center gap-0.5 lg:gap-1">
                         <button
                            onClick={() => handleViewDetails(senior)}
-                           className="w-6 h-6 lg:w-8 lg:h-8 bg-systemBlue/5 hover:bg-systemBlue text-systemBlue hover:text-white rounded-ios border border-systemBlue/10 flex items-center justify-center transition-all duration-300 shadow-sm"
+                           className="w-7 h-7 lg:w-8 lg:h-8 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg border border-slate-200 flex items-center justify-center transition-all duration-300 shadow-sm active:scale-95"
                            title="Inspect"
                         >
                            <Eye size={12} />
@@ -1054,7 +1051,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                         {canGenerateID && (
                           <button
                             onClick={() => openEditMember(senior)}
-                            className="w-6 h-6 lg:w-8 lg:h-8 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-ios border border-emerald-100 flex items-center justify-center transition-all duration-300 shadow-sm"
+                            className="w-7 h-7 lg:w-8 lg:h-8 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg border border-slate-200 flex items-center justify-center transition-all duration-300 shadow-sm active:scale-95"
                             title="Edit"
                           >
                             <Edit2 size={12} />
@@ -1065,10 +1062,10 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                           <button 
                             disabled={senior.status !== 'Active'}
                             onClick={() => handleGenerateID(senior)} 
-                            className={`w-6 h-6 lg:w-8 lg:h-8 border rounded-ios flex items-center justify-center transition-all duration-300 shadow-sm ${
+                            className={`w-7 h-7 lg:w-8 lg:h-8 border rounded-lg flex items-center justify-center transition-all duration-300 shadow-sm active:scale-95 ${
                               senior.status !== 'Active' 
-                                ? 'bg-slate-50 opacity-30 cursor-not-allowed text-slate-400 border-slate-200' 
-                                : 'bg-amber-50 text-amber-600 border-amber-100 hover:bg-amber-600 hover:text-white hover:border-amber-600'
+                                ? 'bg-slate-50 opacity-50 cursor-not-allowed text-slate-300 border-slate-200' 
+                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
                             }`} 
                             title={senior.status === 'Active' ? "Issue ID" : "Approval Restricted"}
                           >
@@ -1081,7 +1078,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                              {senior.status !== 'Deceased' && (
                                <button
                                  onClick={() => setConfirmState({ isOpen: true, type: 'Decease', senior })}
-                                 className="w-6 h-6 lg:w-8 lg:h-8 bg-slate-100 hover:bg-slate-900 text-slate-500 hover:text-white rounded-ios border border-slate-200 flex items-center justify-center transition-all duration-300 shadow-sm"
+                                 className="w-7 h-7 lg:w-8 lg:h-8 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg border border-slate-200 flex items-center justify-center transition-all duration-300 shadow-sm active:scale-95"
                                  title="Mark as Deceased"
                                >
                                  <UserX size={12} />
@@ -1089,7 +1086,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                              )}
                              <button 
                                onClick={() => setConfirmState({ isOpen: true, type: 'Delete', senior })} 
-                               className="w-6 h-6 lg:w-8 lg:h-8 bg-rose-50 hover:bg-rose-600 text-rose-500 hover:text-white rounded-ios border border-rose-100 flex items-center justify-center transition-all duration-300 shadow-sm" 
+                               className="w-7 h-7 lg:w-8 lg:h-8 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-500 rounded-lg border border-slate-200 flex items-center justify-center transition-all duration-300 shadow-sm active:scale-95" 
                                title="Delete"
                              >
                                <Trash2 size={12} />
@@ -1112,15 +1109,20 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                 )}
               </tbody>
             </table>
-          )}
+            )}
+          </TransitionWrapper>
         </div>
 
         <div className="p-6 md:px-10 md:py-8 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest border-t border-slate-200 gap-6">
           <p className="px-4 py-2 bg-white rounded-full border border-slate-200">Dataset Range: {displayedSeniors.length} / {totalCount} records</p>
-          <div className="flex items-center gap-6">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-6 py-2.5 bg-white border border-slate-200 rounded-ios text-slate-700 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-20 transition-all font-bold">Previous</button>
-            <span className="text-systemBlue px-4">Page {page} <span className="opacity-30 mx-2">/</span> {totalPages}</span>
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-6 py-2.5 bg-white border border-slate-200 rounded-ios text-slate-700 hover:bg-slate-100 hover:text-slate-900 disabled:opacity-20 transition-all font-bold">Next</button>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 transition-all font-bold active:scale-[0.98]">Previous</button>
+            <div className="flex items-center gap-1.5 px-3">
+              <span className="text-sm font-bold text-slate-900">{page}</span>
+              <span className="text-sm font-medium text-slate-400">of</span>
+              <span className="text-sm font-bold text-slate-600">{totalPages}</span>
+            </div>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 transition-all font-bold active:scale-[0.98]">Next</button>
           </div>
         </div>
       </div>
@@ -1538,67 +1540,67 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
       {/* Senior Profile Modal (Edit) */}
       {selectedSenior && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col my-auto max-h-full">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white z-10">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 text-blue-900 rounded-xl">
-                  <User size={24} />
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-300 ease-out overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 ease-out flex flex-col my-auto max-h-full border border-slate-200">
+            <div className="p-6 md:px-8 md:py-6 border-b border-slate-100 flex items-center justify-between bg-white z-10">
+              <div className="flex items-center gap-4">
+                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100/50">
+                  <User size={20} />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-900">Edit Member Profile</h3>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{getMemberOscaId(selectedSenior)}</p>
+                  <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Edit Member Profile</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{getMemberOscaId(selectedSenior)}</p>
                 </div>
               </div>
-              <button onClick={() => setSelectedSenior(null)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-full transition-colors"><X size={24} /></button>
+              <button onClick={() => setSelectedSenior(null)} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-full transition-colors outline-none focus:ring-2 focus:ring-slate-200"><X size={20} /></button>
             </div>
             <div className="overflow-y-auto p-6 md:p-8">
-              <div className="flex flex-col md:flex-row gap-8 mb-8 items-start">
+              <div className="flex flex-col md:flex-row gap-8 mb-10 items-start">
                 {selectedSenior.idPhoto ? (
-                  <img src={selectedSenior.idPhoto} alt={selectedSenior.name} loading="lazy" className="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] object-cover shadow-xl shadow-blue-100 mx-auto md:mx-0 bg-slate-100" />
+                  <img src={selectedSenior.idPhoto} alt={selectedSenior.name} loading="lazy" className="w-24 h-24 md:w-32 md:h-32 rounded-2xl object-cover shadow-sm border border-slate-200 mx-auto md:mx-0 bg-slate-50" />
                 ) : (
-                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-[2rem] bg-systemBlue text-white flex items-center justify-center text-3xl md:text-4xl font-black shrink-0 shadow-xl shadow-blue-100 mx-auto md:mx-0">
+                  <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-3xl md:text-4xl font-black shrink-0 border border-slate-200 shadow-sm mx-auto md:mx-0">
                     {selectedSenior.name.split(' ').map(n => n[0]).join('')}
                   </div>
                 )}
-                <div className="flex-1 space-y-4 text-center md:text-left w-full">
+                <div className="flex-1 space-y-4 text-center md:text-left w-full pt-2">
                   <div>
-                    <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-2">{formatIdDisplayName(selectedSenior)}</h2>
+                    <h2 className="text-2xl md:text-3xl font-black text-slate-900 leading-tight mb-2 tracking-tight">{formatIdDisplayName(selectedSenior)}</h2>
                     <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                      <span className={`px-3 py-1 rounded-lg text-xs font-black uppercase tracking-wide ${
-                        selectedSenior.status === 'Active' ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                      <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest ${
+                        selectedSenior.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-slate-50 text-slate-600 border border-slate-200'
                       }`}>{selectedSenior.status}</span>
                     </div>
                   </div>
-                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Registration Date</p>
+                  <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Registration Date</p>
                     <p className="text-sm font-bold text-slate-800">{selectedSenior.joinedDate}</p>
                   </div>
                 </div>
               </div>
               <div className="space-y-6">
                 <div>
-                  <h4 className="flex items-center gap-2 text-sm font-black uppercase tracking-widest text-slate-500 mb-4 border-b border-slate-100 pb-2"><Edit2 size={16} /> Edit Information</h4>
+                  <h4 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 pb-2 border-b border-slate-100"><Edit2 size={12} /> Edit Information</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="md:col-span-2">
-                      <label htmlFor="edit-oscaId" className="text-[10px] font-black uppercase tracking-widest text-blue-500 mb-1 block">OSCA ID (Can be updated)</label>
-                      <input id="edit-oscaId" name="oscaId" type="text" value={editFormData.oscaId || ''} onChange={e => setEditFormData(prev => ({ ...prev, oscaId: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-blue-50 border border-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-900 font-bold text-blue-900" />
+                      <label htmlFor="edit-oscaId" className="text-[10px] font-bold uppercase tracking-widest text-blue-500 mb-1 block pl-1">OSCA ID (Can be updated)</label>
+                      <input id="edit-oscaId" name="oscaId" type="text" value={editFormData.oscaId || ''} onChange={e => setEditFormData(prev => ({ ...prev, oscaId: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-blue-50/50 border border-blue-200 hover:bg-blue-50 hover:border-blue-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-blue-900 outline-none" />
                     </div>
                     <div>
-                      <label htmlFor="edit-firstName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">First Name</label>
-                      <input id="edit-firstName" name="firstName" type="text" value={editFormData.firstName || ''} onChange={e => setEditFormData(prev => ({ ...prev, firstName: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
+                      <label htmlFor="edit-firstName" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">First Name</label>
+                      <input id="edit-firstName" name="firstName" type="text" value={editFormData.firstName || ''} onChange={e => setEditFormData(prev => ({ ...prev, firstName: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
                     </div>
                     <div>
-                      <label htmlFor="edit-middleName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Middle Name</label>
-                      <input id="edit-middleName" name="middleName" type="text" value={editFormData.middleName || ''} onChange={e => setEditFormData(prev => ({ ...prev, middleName: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
+                      <label htmlFor="edit-middleName" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Middle Name</label>
+                      <input id="edit-middleName" name="middleName" type="text" value={editFormData.middleName || ''} onChange={e => setEditFormData(prev => ({ ...prev, middleName: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
                     </div>
                     <div>
-                      <label htmlFor="edit-lastName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Last Name</label>
-                      <input id="edit-lastName" name="lastName" type="text" value={editFormData.lastName || ''} onChange={e => setEditFormData(prev => ({ ...prev, lastName: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
+                      <label htmlFor="edit-lastName" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Last Name</label>
+                      <input id="edit-lastName" name="lastName" type="text" value={editFormData.lastName || ''} onChange={e => setEditFormData(prev => ({ ...prev, lastName: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
                     </div>
                     <div>
-                      <label htmlFor="edit-extensionName" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Extension Name</label>
-                      <select id="edit-extensionName" name="extensionName" value={editFormData.extensionName || ''} onChange={e => setEditFormData(prev => ({ ...prev, extensionName: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700">
+                      <label htmlFor="edit-extensionName" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Extension Name</label>
+                      <select id="edit-extensionName" name="extensionName" value={editFormData.extensionName || ''} onChange={e => setEditFormData(prev => ({ ...prev, extensionName: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none appearance-none">
                         <option value="">None</option>
                         <option value="Jr.">Jr.</option>
                         <option value="Sr.">Sr.</option>
@@ -1608,12 +1610,12 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="edit-dateOfBirth" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Birthday</label>
-                      <input id="edit-dateOfBirth" name="dateOfBirth" type="date" value={editFormData.dateOfBirth || ''} onChange={e => setEditFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
+                      <label htmlFor="edit-dateOfBirth" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Birthday</label>
+                      <input id="edit-dateOfBirth" name="dateOfBirth" type="date" value={editFormData.dateOfBirth || ''} onChange={e => setEditFormData(prev => ({ ...prev, dateOfBirth: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
                     </div>
                     <div>
-                      <label htmlFor="edit-pensionStatus" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Pension Status</label>
-                      <select id="edit-pensionStatus" name="pensionStatus" value={editFormData.pensionStatus || ''} onChange={e => setEditFormData(prev => ({ ...prev, pensionStatus: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700">
+                      <label htmlFor="edit-pensionStatus" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Pension Status</label>
+                      <select id="edit-pensionStatus" name="pensionStatus" value={editFormData.pensionStatus || ''} onChange={e => setEditFormData(prev => ({ ...prev, pensionStatus: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none appearance-none">
                         <option value="Indigent">Indigent</option>
                         <option value="Pensioner">Pensioner</option>
                         <option value="National Social Pensioner">National Social Pensioner</option>
@@ -1622,18 +1624,18 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="edit-barangay" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Barangay</label>
-                      <select id="edit-barangay" name="barangay" value={editFormData.barangay || ''} onChange={e => setEditFormData(prev => ({ ...prev, barangay: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700">
+                      <label htmlFor="edit-barangay" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Barangay</label>
+                      <select id="edit-barangay" name="barangay" value={editFormData.barangay || ''} onChange={e => setEditFormData(prev => ({ ...prev, barangay: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none appearance-none">
                         {BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
                       </select>
                     </div>
                     <div>
-                      <label htmlFor="edit-contactNumber" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Contact Number</label>
-                      <input id="edit-contactNumber" name="contactNumber" type="text" value={editFormData.contactNumber || ''} onChange={e => setEditFormData(prev => ({ ...prev, contactNumber: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
+                      <label htmlFor="edit-contactNumber" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Contact Number</label>
+                      <input id="edit-contactNumber" name="contactNumber" type="text" value={editFormData.contactNumber || ''} onChange={e => setEditFormData(prev => ({ ...prev, contactNumber: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
                     </div>
                     <div className="md:col-span-2">
-                      <label htmlFor="edit-streetAddress" className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1 block">Street Address</label>
-                      <input id="edit-streetAddress" name="streetAddress" type="text" value={editFormData.streetAddress || ''} onChange={e => setEditFormData(prev => ({ ...prev, streetAddress: e.target.value }))} className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-900 font-medium text-slate-700" />
+                      <label htmlFor="edit-streetAddress" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Street Address</label>
+                      <input id="edit-streetAddress" name="streetAddress" type="text" value={editFormData.streetAddress || ''} onChange={e => setEditFormData(prev => ({ ...prev, streetAddress: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
                     </div>
                   </div>
                 </div>
@@ -1641,7 +1643,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
             </div>
 
             <div className="p-6 border-t border-slate-100 bg-slate-50 flex items-center justify-end gap-3 z-10 flex-wrap">
-              <button onClick={() => setSelectedSenior(null)} className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-200 transition-colors flex-1 md:flex-none">Cancel</button>
+              <button onClick={() => setSelectedSenior(null)} className="py-2.5 px-5 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-white hover:border-slate-300 transition-all active:scale-[0.98] outline-none focus:ring-2 focus:ring-slate-200 flex-1 md:flex-none">Cancel</button>
               <button
                 disabled={isProcessing}
                 onClick={async () => {
@@ -1657,9 +1659,9 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                     setIsProcessing(false);
                   }
                 }}
-                className="px-8 py-3 rounded-xl bg-systemBlue text-white font-bold hover:bg-blue-800 transition-colors shadow-lg shadow-blue-100 flex items-center justify-center gap-2 flex-1 md:flex-none disabled:opacity-70"
+                className="py-2.5 px-6 rounded-xl bg-systemBlue text-white font-bold text-sm hover:bg-blue-800 transition-all active:scale-[0.98] outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 shadow-md hover:shadow-lg flex items-center justify-center gap-2 flex-1 md:flex-none disabled:opacity-70 disabled:shadow-none"
               >
-                {isProcessing ? <Loader2 size={18} className="animate-spin" /> : <Edit2 size={18} />}
+                {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <Edit2 size={16} />}
                 {isProcessing ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
@@ -1670,68 +1672,68 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
       {/* View Information & Documents Modal */}
       {viewModalOpen && createPortal(
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="p-6 md:p-8 flex items-center justify-between border-b border-slate-100 bg-slate-50">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-300 ease-out">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 ease-out border border-slate-200">
+            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white z-10">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-2xl bg-systemBlue flex items-center justify-center text-white">
-                  <Eye size={24} />
+                <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100/50">
+                  <Eye size={20} />
                 </div>
                 <div>
-                  <h3 className="text-xl md:text-2xl font-black text-slate-900 uppercase tracking-tight">Member Details</h3>
-                  <p className="text-sm font-bold text-slate-400">View information and documents</p>
+                  <h3 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Member Details</h3>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">View information and documents</p>
                 </div>
               </div>
               <button 
                 onClick={() => setViewModalOpen(false)}
-                className="p-3 text-slate-400 hover:bg-slate-200 hover:text-slate-700 rounded-2xl transition-all"
+                className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-full transition-colors outline-none focus:ring-2 focus:ring-slate-200"
               >
-                <X size={24} />
+                <X size={20} />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6 md:p-10">
+            <div className="flex-1 overflow-y-auto p-6 md:p-8">
               {fetchingDetails ? (
                 <div className="h-64 flex flex-col items-center justify-center gap-4 text-slate-400">
-                  <Loader2 className="animate-spin" size={48} />
-                  <p className="font-bold animate-pulse">Fetching member data...</p>
+                  <Loader2 className="animate-spin" size={40} />
+                  <p className="font-bold animate-pulse text-sm">Fetching member data...</p>
                 </div>
               ) : selectedSeniorForView ? (
                 <div className="space-y-12">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     <div className="lg:col-span-1 space-y-6">
-                      <div className="aspect-square rounded-[3rem] bg-slate-100 border-4 border-white shadow-xl shadow-slate-200 overflow-hidden relative">
+                      <div className="aspect-square rounded-2xl bg-slate-50 border border-slate-200 shadow-sm overflow-hidden relative">
                         {selectedSeniorForView.idPhoto ? (
                           <img src={selectedSeniorForView.idPhoto} alt="" className="w-full h-full object-cover" />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-systemBlue text-white text-5xl font-black">
+                          <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400 text-5xl font-black">
                             {selectedSeniorForView.firstName?.[0]}{selectedSeniorForView.lastName?.[0]}
                           </div>
                         )}
                         <div className="absolute top-4 right-4">
-                           <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider shadow-lg ${
-                            selectedSeniorForView.status === 'Active' ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
+                           <span className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm ${
+                            selectedSeniorForView.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 'bg-rose-50 text-rose-600 border border-rose-100'
                           }`}>{selectedSeniorForView.status}</span>
                         </div>
                       </div>
                       
-                      <div className="space-y-2 text-center lg:text-left">
-                        <h2 className="text-3xl font-black text-slate-900 leading-none">
+                      <div className="space-y-1 text-center lg:text-left">
+                        <h2 className="text-2xl font-black text-slate-900 leading-none tracking-tight">
                           {formatIdDisplayName(selectedSeniorForView)}
                         </h2>
-                        <p className="text-blue-600 font-black text-sm uppercase tracking-widest">{selectedSeniorForView.oscaId}</p>
+                        <p className="text-blue-600 font-bold text-[10px] uppercase tracking-widest">{selectedSeniorForView.oscaId}</p>
                       </div>
                       
-                      <div className="p-5 bg-blue-50 rounded-[2rem] border border-blue-100">
-                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-[0.2em] mb-1">Date Joined</p>
-                        <p className="text-blue-900 font-bold">{selectedSeniorForView.joinedDate}</p>
+                      <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Date Joined</p>
+                        <p className="text-slate-800 font-bold text-sm">{selectedSeniorForView.joinedDate}</p>
                       </div>
                     </div>
 
                     <div className="lg:col-span-2 space-y-8">
                        <section>
-                         <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-5 pb-2 border-b border-slate-100">
-                           <User size={14} /> Personal Information
+                         <h4 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 pb-2 border-b border-slate-100">
+                           <User size={12} /> Personal Information
                          </h4>
                          <div className="grid grid-cols-2 gap-y-6 gap-x-4">
                             <InfoField label="Sex" value={selectedSeniorForView.sex} />
@@ -1746,8 +1748,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                        </section>
 
                        <section>
-                         <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-5 pb-2 border-b border-slate-100">
-                           <MapPin size={14} /> Contact & Address
+                         <h4 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 pb-2 border-b border-slate-100">
+                           <MapPin size={12} /> Contact & Location
                          </h4>
                          <div className="grid grid-cols-2 gap-y-6 gap-x-4">
                             <InfoField label="Barangay" value={selectedSeniorForView.barangay} />
@@ -1758,9 +1760,9 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                        </section>
 
                        <section>
-                         <h4 className="flex items-center justify-between text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-5 pb-2 border-b border-slate-100">
+                         <h4 className="flex items-center justify-between text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4 pb-2 border-b border-slate-100">
                            <span className="flex items-center gap-2">
-                             <Users size={14} /> Family Information
+                             <Users size={12} /> Family Information
                            </span>
                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-[10px] text-slate-600 font-black">
                              {selectedSeniorForView.familyMembers?.length || 0} MEMBERS
@@ -1803,8 +1805,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   </div>
 
                   <section>
-                    <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-6 pb-2 border-b border-slate-100">
-                      <FileText size={14} /> Uploaded Documents
+                    <h4 className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-slate-400 mb-6 pb-2 border-b border-slate-100">
+                      <FileText size={12} /> Uploaded Documents
                     </h4>
                     {selectedSeniorForView.documents && selectedSeniorForView.documents.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1844,10 +1846,10 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
               )}
             </div>
 
-            <div className="p-6 md:p-8 bg-slate-50 border-t border-slate-100 flex justify-end">
+            <div className="p-6 border-t border-slate-100 bg-white flex justify-end">
               <button 
                 onClick={() => setViewModalOpen(false)}
-                className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
+                className="py-2.5 px-6 rounded-xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-[0.98] outline-none focus:ring-2 focus:ring-slate-200"
               >
                 Close View
               </button>

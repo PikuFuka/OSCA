@@ -81,11 +81,11 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div>
-        <h2 className="ios-page-title">Backup & Recovery</h2>
-        <p className="ios-page-subtitle mt-1">Export or restore the OSCA database. Always download a backup before importing.</p>
+        <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-none mb-2">Backup & Recovery</h2>
+        <p className="text-sm font-bold text-slate-500 max-w-2xl mt-1">Export or restore the OSCA database. Always download a backup before importing.</p>
       </div>
 
-      <div className="ios-section flex flex-col gap-4 p-5 md:flex-row md:items-center md:justify-between">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Protected Tools</p>
           <p className="mt-1 text-sm font-medium text-slate-500">Archive access is nested here to reduce accidental record actions.</p>
@@ -119,7 +119,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Export Card */}
-        <div className="ios-section p-8 flex flex-col">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 flex flex-col">
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 bg-blue-50 text-blue-900 rounded-2xl">
               <FileDown size={28} />
@@ -175,7 +175,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
         </div>
 
         {/* Import Card */}
-        <div className="ios-section p-8 flex flex-col">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 flex flex-col">
           <div className="flex items-center gap-4 mb-6">
             <div className="p-3 bg-amber-50 text-amber-700 rounded-2xl">
               <FileUp size={28} />

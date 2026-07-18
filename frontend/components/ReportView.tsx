@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import TransitionWrapper from './TransitionWrapper';
 import { 
   FileSpreadsheet, 
   ChevronRight, 
@@ -140,24 +141,24 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
     }
   };
 
-  if (loading) {
-    return <ReportSkeleton />;
-  }
+  const isDataLoading = loading;
 
   return (
-    <div className="space-y-8 pb-12 relative">
+    <TransitionWrapper isLoading={loading} skeleton={<div className="pb-12"><ReportSkeleton /></div>}>
+      {!loading && (
+        <div className="space-y-8 pb-12 relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">
         <div>
-          <h2 className="ios-page-title uppercase">Excel Final Report</h2>
-          <p className="ios-page-subtitle">Audited batch reporting for OSCA.</p>
+          <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-none mb-2 uppercase">Excel Final Report</h2>
+          <p className="text-sm font-bold text-slate-500 max-w-2xl">Audited batch reporting for OSCA.</p>
         </div>
         <div className="flex items-center gap-3">
           <button 
             onClick={handleExcelExport}
             disabled={isExporting}
-            className={`ios-btn-success px-4 sm:px-8 py-3 text-sm font-black flex items-center justify-center gap-3 w-full sm:w-auto ${isExporting ? 'opacity-50 cursor-not-allowed' : ''}`}
+            className={`py-2.5 px-6 rounded-xl bg-emerald-600 text-white font-bold text-sm hover:bg-emerald-700 transition-all active:scale-[0.98] outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 shadow-md hover:shadow-lg flex items-center justify-center gap-2 w-full sm:w-auto ${isExporting ? 'opacity-50 cursor-not-allowed shadow-none' : ''}`}
           >
-            {isExporting ? <Clock className="animate-spin" size={20} /> : <FileSpreadsheet size={20} />}
+            {isExporting ? <Clock className="animate-spin" size={16} /> : <FileSpreadsheet size={16} />}
             <span className="hidden sm:inline">
               {isExporting ? 'GENERATING REPORT...' : 'GENERATE EXCEL REPORT'}
             </span>
@@ -167,14 +168,14 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
 
       <div className="grid grid-cols-1 gap-8">
         <div className="w-full space-y-6">
-          <div className="top-0 z-10 w-fit max-w-full bg-white/90 backdrop-blur-ios rounded-2xl border border-slate-200 p-3 inline-flex flex-wrap items-center gap-2 shadow-ios no-print">
+          <div className="top-0 z-10 w-fit max-w-full bg-white/90 backdrop-blur-sm rounded-xl border border-slate-200 p-2 inline-flex flex-wrap items-center gap-2 shadow-sm no-print">
             <button
               type="button"
               onClick={() => setActiveSection('masterlist')}
-              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+              className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 activeSection === 'masterlist'
-                  ? 'bg-systemBlue text-white'
-                  : 'bg-white text-slate-500 border border-slate-200 hover:text-blue-900 hover:border-blue-200'
+                  ? 'bg-systemBlue text-white shadow-sm'
+                  : 'bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800'
               }`}
             >
               Masterlist
@@ -182,10 +183,10 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             <button
               type="button"
               onClick={() => setActiveSection('centenarians')}
-              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+              className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 activeSection === 'centenarians'
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-white text-slate-500 border border-slate-200 hover:text-purple-700 hover:border-purple-200'
+                  ? 'bg-purple-600 text-white shadow-sm'
+                  : 'bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800'
               }`}
             >
               Living Centenarians
@@ -193,10 +194,10 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             <button
               type="button"
               onClick={() => setActiveSection('newly-registered')}
-              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+              className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 activeSection === 'newly-registered'
-                  ? 'bg-emerald-600 text-white'
-                  : 'bg-white text-slate-500 border border-slate-200 hover:text-emerald-700 hover:border-emerald-200'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800'
               }`}
             >
               New Registered
@@ -204,10 +205,10 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             <button
               type="button"
               onClick={() => setActiveSection('deceased')}
-              className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+              className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all ${
                 activeSection === 'deceased'
-                  ? 'bg-slate-700 text-white'
-                  : 'bg-white text-slate-500 border border-slate-200 hover:text-slate-700 hover:border-slate-300'
+                  ? 'bg-slate-700 text-white shadow-sm'
+                  : 'bg-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800'
               }`}
             >
               Deceased Seniors
@@ -215,7 +216,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
           </div>
 
           {activeSection === 'masterlist' && (
-          <div className="ios-section border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
             <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-systemBlue/10 text-systemBlue rounded-xl">
@@ -244,9 +245,9 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             </div>
             
             <div className="overflow-x-auto">
-              <table className="ios-table">
-                <thead className="sticky top-0 z-[2]">
-                  <tr>
+              <table className="w-full text-left">
+                <thead className="sticky top-0 z-[2] bg-slate-50 border-b border-slate-200">
+                  <tr className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
                     <th className="px-8 py-4">Full Name</th>
                     <th className="px-8 py-4">Address</th>
                     <th className="px-8 py-4 text-center">Sex</th>
@@ -257,10 +258,10 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <th className="px-8 py-4 text-center">Pension</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {seniorsData.length > 0 ? (
                     seniorsData.map((item) => (
-                      <tr key={item.id}>
+                      <tr key={item.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-8 py-5">
                           <p className="text-base font-bold text-slate-900">{item.name}</p>
                           <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mt-0.5">{item.barangay || '-'}</p>
@@ -314,7 +315,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
           )}
 
           {activeSection === 'centenarians' && (
-          <div className="ios-section border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
             <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-purple-600/10 text-purple-600 rounded-xl">
@@ -346,9 +347,9 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             </div>
 
             <div className="overflow-x-auto">
-              <table className="ios-table">
-                <thead className="sticky top-0 z-[2]">
-                  <tr>
+              <table className="w-full text-left">
+                <thead className="sticky top-0 z-[2] bg-slate-50 border-b border-slate-200">
+                  <tr className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
                     <th className="px-8 py-4">Full Name</th>
                     <th className="px-8 py-4">Address</th>
                     <th className="px-8 py-4 text-center">Sex</th>
@@ -359,7 +360,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <th className="px-8 py-4 text-center">Pension</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {centenariansData.length > 0 ? (
                     centenariansData.map((item) => (
                       <tr key={`cent-${item.id}`}>
@@ -394,7 +395,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
           )}
 
           {activeSection === 'deceased' && (
-          <div className="ios-section border border-slate-200 overflow-hidden">
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
             <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-slate-700/10 text-slate-700 rounded-xl">
@@ -426,9 +427,9 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             </div>
 
             <div className="overflow-x-auto">
-              <table className="ios-table">
-                <thead className="sticky top-0 z-[2]">
-                  <tr>
+              <table className="w-full text-left">
+                <thead className="sticky top-0 z-[2] bg-slate-50 border-b border-slate-200">
+                  <tr className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
                     <th className="px-8 py-4">Full Name</th>
                     <th className="px-8 py-4">Address</th>
                     <th className="px-8 py-4 text-center">Sex</th>
@@ -439,7 +440,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <th className="px-8 py-4 text-center">Pension</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {deceasedData.length > 0 ? (
                     deceasedData.map((item) => (
                       <tr key={`dec-${item.id}`}>
@@ -474,7 +475,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
           )}
 
           {activeSection === 'newly-registered' && (
-          <div className="ios-section border border-slate-200 overflow-hidden print:overflow-visible print:border-none print:shadow-none print:m-0 print:p-0">
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm print:overflow-visible print:border-none print:shadow-none print:m-0 print:p-0">
             <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-emerald-50/40 no-print">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-emerald-600/10 text-emerald-600 rounded-xl">
@@ -502,7 +503,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                 <button
                   type="button"
                   onClick={() => window.print()}
-                  className="ios-btn-success px-4 py-2 text-xs font-black uppercase tracking-wider flex items-center gap-2"
+                  className="bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider flex items-center gap-2"
                 >
                   <FileText size={14} />
                   Print List
@@ -520,9 +521,9 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             </div>
 
             <div className="overflow-x-auto print:overflow-visible">
-              <table className="ios-table w-full">
-                <thead className="sticky top-0 z-[2] print:static">
-                  <tr>
+              <table className="w-full text-left">
+                <thead className="sticky top-0 z-[2] print:static bg-slate-50 border-b border-slate-200">
+                  <tr className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
                     <th className="px-8 py-4 text-left print:px-2 print:py-2">Full Name</th>
                     <th className="px-8 py-4 text-left print:px-2 print:py-2">Address</th>
                     <th className="px-8 py-4 text-center print:px-2 print:py-2">Sex</th>
@@ -532,7 +533,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <th className="px-8 py-4 text-center print:px-2 print:py-2">RRN No</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-slate-100">
                   {newlyRegisteredData.length > 0 ? (
                     newlyRegisteredData.map((item) => (
                       <tr key={`new-${item.id}`} className="print:border-b print:border-slate-200">
@@ -563,6 +564,8 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
         </div>
       </div>
     </div>
+      )}
+    </TransitionWrapper>
   );
 };
 

@@ -4,6 +4,7 @@ import { seniorsAPI } from '../services/api';
 import { SeniorCitizen } from '../types';
 import { ArchiveSkeleton } from './SkeletonLoader';
 import ConfirmModal from './ConfirmModal';
+import TransitionWrapper from './TransitionWrapper';
 
 interface ArchiveViewProps {
   notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
@@ -96,7 +97,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
               <input 
                 type="text" 
                 placeholder="Search archive..."
-                className="w-full pl-14 pr-6 py-4 bg-white/80 backdrop-blur-md border border-slate-200 rounded-ios text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-4 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm"
+                className="w-full pl-14 pr-6 py-4 bg-white/80 backdrop-blur-md border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-4 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -105,18 +106,18 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
         </div>
       )}
 
-      <div className="ios-card shadow-xl shadow-slate-200/50 overflow-hidden flex flex-col min-h-[500px]">
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
         <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2 bg-slate-200/50 p-1.5 rounded-ios backdrop-blur-sm border border-slate-200">
+          <div className="flex items-center gap-2 bg-slate-200/50 p-1.5 rounded-xl backdrop-blur-sm border border-slate-200">
             <button 
               onClick={() => setActiveTab('deleted')}
-              className={`px-8 py-3 rounded-ios text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'deleted' ? 'bg-white text-systemBlue shadow-lg shadow-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'deleted' ? 'bg-white text-systemBlue shadow-lg shadow-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Deleted
             </button>
             <button 
               onClick={() => setActiveTab('deceased')}
-              className={`px-8 py-3 rounded-ios text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'deceased' ? 'bg-white text-systemBlue shadow-lg shadow-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
+              className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'deceased' ? 'bg-white text-systemBlue shadow-lg shadow-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Deceased
             </button>
@@ -124,12 +125,9 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
         </div>
 
         <div className="overflow-x-auto border-t border-slate-50">
-{loading ? (
-             <div className="p-10">
-               <ArchiveSkeleton />
-             </div>
-           ) : (
-            <table className="ios-table">
+          <TransitionWrapper isLoading={loading} skeleton={<div className="p-10"><ArchiveSkeleton /></div>}>
+            {!loading && (
+            <table className="w-full text-left">
               <thead>
                 <tr>
                   <th className="px-8 py-5">Member Profile</th>
@@ -169,7 +167,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
                       {activeTab === 'deleted' ? (
                         <button 
                           onClick={() => triggerRestore(senior)}
-                          className="w-10 h-10 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-ios border border-emerald-100 flex items-center justify-center transition-all duration-300 shadow-sm ml-auto"
+                          className="w-10 h-10 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-xl border border-emerald-100 flex items-center justify-center transition-all duration-300 shadow-sm ml-auto"
                           title="Restore Record"
                         >
                           <RefreshCw size={18} />
@@ -177,7 +175,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
                       ) : (
                         <button 
                           onClick={() => triggerUnDeceased(senior)}
-                          className="w-10 h-10 bg-systemBlue/5 hover:bg-systemBlue text-systemBlue hover:text-white rounded-ios border border-systemBlue/10 flex items-center justify-center transition-all duration-300 shadow-sm ml-auto"
+                          className="w-10 h-10 bg-systemBlue/5 hover:bg-systemBlue text-systemBlue hover:text-white rounded-xl border border-systemBlue/10 flex items-center justify-center transition-all duration-300 shadow-sm ml-auto"
                           title="Revert to Active"
                         >
                           <RefreshCw size={18} />
@@ -194,7 +192,8 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
                 )}
               </tbody>
             </table>
-          )}
+            )}
+          </TransitionWrapper>
         </div>
       </div>
 
