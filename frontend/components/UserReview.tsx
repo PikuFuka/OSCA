@@ -6,7 +6,9 @@ import {
 } from 'lucide-react';
 import { CurrentUser, INITIAL_ID_CONFIG } from '../types';
 import { seniorsAPI } from '../services/api';
-import { ProfileSkeleton } from './SkeletonLoader';
+import { Loader2 } from 'lucide-react';
+import Skeleton from './Skeleton';
+import TransitionWrapper from './TransitionWrapper';
 
 interface UserReviewProps {
   currentUser: CurrentUser;
@@ -57,6 +59,33 @@ const StaticLabel = ({
       {text}
     </div>
   );
+  );
+};
+
+const UserReviewSkeleton = () => {
+  return (
+    <div className="space-y-8 pb-12 w-full">
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div>
+          <Skeleton.Text className="w-48 h-8 mb-2" />
+          <Skeleton.Text className="w-64 h-4" />
+        </div>
+        <Skeleton.Rect className="w-32 h-8 rounded-xl" />
+      </div>
+
+      <div className="flex justify-center mb-8">
+        <div className="flex flex-col items-center">
+            <Skeleton.Text className="w-48 h-4 mb-4" />
+            <Skeleton.Rect className="w-[480px] h-[300px] rounded-xl" />
+            <Skeleton.Text className="w-32 h-4 mt-4" />
+        </div>
+      </div>
+
+      <div className="flex justify-center mb-8">
+        <Skeleton.Button className="w-64 h-14 rounded-2xl" />
+      </div>
+    </div>
+  );
 };
 
 const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
@@ -80,12 +109,7 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
     fetchMemberData();
   }, [currentUser.id]);
 
-  if (loading) {
-    return <ProfileSkeleton />;
-  }
-
-  // If user is not approved, show pending message
-  if (memberData?.status !== 'Active') {
+  if (!loading && memberData?.status !== 'Active') {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
         <div className="p-6 bg-amber-50 rounded-full">
@@ -114,11 +138,13 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
     nationalId: memberData.nationalId || 'N/A',
     mother: memberData.mothersMaidenName || 'Not provided',
     emergency: `${memberData.emergencyName || ''} (${memberData.emergencyContact || ''})`.trim() || 'Not provided',
-    familyCount: memberData.familyMembers?.length || 0
+    familyCount: memberData?.familyMembers?.length || 0
   };
 
   return (
-    <div className="space-y-8 pb-12">
+    <TransitionWrapper isLoading={loading} skeleton={<UserReviewSkeleton />}>
+      {!loading && (
+      <div className="space-y-8 pb-12">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">My Record</h2>
@@ -373,7 +399,9 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+      )}
+    </TransitionWrapper>
   );
 };
 

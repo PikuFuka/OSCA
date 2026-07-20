@@ -7,13 +7,13 @@ import {
   UserPlus, UserCheck, HeartPulse, FileCheck, AlertCircle,
   SearchCheck, Users, Plus, Trash2, GraduationCap, Briefcase, Banknote,
   Wallet, Sparkles, Home as HomeIcon, UploadCloud, Paperclip, File as FileIcon,
-  Lock, Eye, EyeOff, Clock, RefreshCw, Inbox
+  Lock, Eye, EyeOff, Clock, RefreshCw, Inbox, Loader2
 } from 'lucide-react';
 import { BARANGAYS, CurrentUser } from '../types';
 import { seniorsAPI, requestsAPI, authAPI } from '../services/api';
 import ConfirmModal from './ConfirmModal';
 import TransitionWrapper from './TransitionWrapper';
-import Skeleton, { RegistrationFormSkeleton } from './SkeletonLoader';
+import Skeleton from './Skeleton';
 
 interface FormProps {
   onSuccess: () => void;
@@ -46,6 +46,76 @@ type UppercaseFormField =
   | 'nationalId'
   | 'mothersMaidenName'
   | 'emergencyName';
+
+const FormSkeleton = () => {
+  return (
+    <div className="w-full space-y-4">
+      {/* Compact Header Skeleton */}
+      <div className="flex items-center justify-between gap-4 px-1">
+        <div className="flex items-center gap-3">
+          <div>
+            <Skeleton.Text className="w-48 h-6 mb-1" />
+            <Skeleton.Text className="w-32 h-3" />
+          </div>
+        </div>
+        <Skeleton.Rect className="w-80 h-10 rounded-xl" />
+      </div>
+
+      {/* Form Card Skeleton */}
+      <div className="p-6 bg-white rounded-xl border border-slate-200 w-full min-h-[500px]">
+        <div className="space-y-5">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Skeleton.Circle className="w-5 h-5" />
+              <Skeleton.Text className="w-48 h-6" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+               <Skeleton.Text className="w-24 h-3 mb-2" />
+               <Skeleton.Rect className="w-full h-8 mb-2" />
+               <Skeleton.Text className="w-48 h-3" />
+            </div>
+            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
+               <Skeleton.Text className="w-24 h-3 mb-2" />
+               <Skeleton.Rect className="w-full h-8 mb-2" />
+               <Skeleton.Text className="w-48 h-3" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-4">
+            <div className="md:col-span-4 space-y-1">
+               <Skeleton.Text className="w-20 h-3 mb-1" />
+               <Skeleton.Rect className="w-full h-10" />
+            </div>
+            <div className="md:col-span-4 space-y-1">
+               <Skeleton.Text className="w-20 h-3 mb-1" />
+               <Skeleton.Rect className="w-full h-10" />
+            </div>
+            <div className="md:col-span-3 space-y-1">
+               <Skeleton.Text className="w-20 h-3 mb-1" />
+               <Skeleton.Rect className="w-full h-10" />
+            </div>
+            <div className="md:col-span-1 space-y-1">
+               <Skeleton.Text className="w-10 h-3 mb-1" />
+               <Skeleton.Rect className="w-full h-10" />
+            </div>
+          </div>
+
+          <div className="pt-5 border-t border-slate-100 mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
+             {[...Array(4)].map((_, i) => (
+                <div key={i} className="space-y-1">
+                   <Skeleton.Text className="w-20 h-3 mb-1" />
+                   <Skeleton.Rect className="w-full h-10" />
+                </div>
+             ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, notify }) => {
   const [mode, setMode] = useState<ApplicationMode>('selection');
@@ -709,25 +779,14 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {loadingRecent ? (
-                    [1, 2, 3, 4, 5].map(i => (
-                      <tr key={i} className="border-b border-slate-50">
-                        <td className="px-6 py-4">
-                          <div className="flex items-center gap-3">
-                            <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
-                            <Skeleton className="h-4 w-32 rounded" />
-                          </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Skeleton className="h-3 w-20 rounded" />
-                        </td>
-                        <td className="px-6 py-4 text-center">
-                          <Skeleton className="h-5 w-16 rounded-full mx-auto" />
-                        </td>
-                        <td className="px-6 py-4 text-right flex justify-end">
-                          <Skeleton className="h-3 w-24 rounded mt-1" />
-                        </td>
-                      </tr>
-                    ))
+                    <tr>
+                      <td colSpan={4} className="px-6 py-12 text-center">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="animate-spin text-systemBlue" size={18} strokeWidth={2.5} />
+                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Loading recent entries...</span>
+                        </div>
+                      </td>
+                    </tr>
                   ) : recentSeniors.length > 0 ? (
                     recentSeniors.map((senior) => (
                       <tr key={senior.id} className="group hover:bg-slate-50/80 transition-colors">
@@ -779,7 +838,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   }
 
   return (
-    <TransitionWrapper isLoading={initLoading} skeleton={<RegistrationFormSkeleton />}>
+    <TransitionWrapper isLoading={initLoading} skeleton={<FormSkeleton />}>
       {!initLoading && (
         <div className="w-full space-y-4 stagger-in">
           {/* Compact Header */}

@@ -11,13 +11,79 @@ import {
 } from 'lucide-react';
 import { BARANGAYS } from '../types';
 import { seniorsAPI, reportsAPI } from '../services/api';
-import { ReportSkeleton } from './SkeletonLoader';
-
+import Skeleton from './Skeleton';
 interface ReportViewProps {
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
     setGlobalLoading?: (loading: boolean) => void;
     initialSection?: 'masterlist' | 'centenarians' | 'deceased' | 'newly-registered';
 }
+
+const ReportSkeleton = () => {
+  return (
+    <div className="space-y-8 pb-12 relative">
+      {/* Header Skeleton */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <Skeleton.Text className="w-80 h-10 mb-2" />
+          <Skeleton.Text className="w-64 h-4" />
+        </div>
+        <div className="flex items-center gap-3">
+          <Skeleton.Button className="w-full sm:w-48" />
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-8">
+        <div className="w-full space-y-6">
+          {/* Tabs Skeleton */}
+          <div className="w-fit bg-white/90 rounded-xl border border-slate-200 p-2 flex gap-2">
+            {[...Array(4)].map((_, i) => (
+              <Skeleton.Rect key={i} className="w-32 h-8 rounded-lg" />
+            ))}
+          </div>
+
+          {/* Table Card Skeleton */}
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+            <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
+              <div className="flex items-center gap-3">
+                <Skeleton.Rect className="w-9 h-9 rounded-xl" />
+                <div>
+                  <Skeleton.Text className="w-32 h-4 mb-1" />
+                  <Skeleton.Text className="w-20 h-3" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Skeleton.Rect className="w-40 h-10 rounded-xl" />
+              </div>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 border-b border-slate-200">
+                  <tr>
+                    <th className="px-8 py-4"><Skeleton.Text className="w-24 h-3" /></th>
+                    <th className="px-8 py-4"><Skeleton.Text className="w-24 h-3" /></th>
+                    <th className="px-8 py-4"><Skeleton.Text className="w-24 h-3" /></th>
+                    <th className="px-8 py-4"><Skeleton.Text className="w-24 h-3" /></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {[...Array(8)].map((_, i) => (
+                    <tr key={i}>
+                      <td className="px-8 py-5"><Skeleton.Text className="w-32 h-4" /></td>
+                      <td className="px-8 py-5"><Skeleton.Text className="w-48 h-4" /></td>
+                      <td className="px-8 py-5"><Skeleton.Text className="w-24 h-4" /></td>
+                      <td className="px-8 py-5"><Skeleton.Text className="w-24 h-4" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initialSection = 'masterlist' }) => {
   const [isExporting, setIsExporting] = useState(false);
@@ -144,7 +210,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
   const isDataLoading = loading;
 
   return (
-    <TransitionWrapper isLoading={loading} skeleton={<div className="pb-12"><ReportSkeleton /></div>}>
+    <TransitionWrapper isLoading={loading} skeleton={<ReportSkeleton />}>
       {!loading && (
         <div className="space-y-8 pb-12 relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">

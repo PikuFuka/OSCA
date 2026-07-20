@@ -2,8 +2,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, CheckCircle2, AlertCircle, RefreshCcw, User, Loader2, Search, Trash2, Info } from 'lucide-react';
 import { activityLogsAPI } from '../services/api';
-import { HistoryLogSkeleton } from './SkeletonLoader';
 import ConfirmModal from './ConfirmModal';
+import Skeleton from './Skeleton';
+import TransitionWrapper from './TransitionWrapper';
 
 interface HistoryLogViewProps {
   notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
@@ -16,6 +17,28 @@ interface ActivityLog {
   type: string;
   user: string;
 }
+
+const HistoryLogSkeleton = () => {
+  return (
+    <>
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="p-5 flex items-start justify-between">
+          <div className="flex items-start gap-4 w-full">
+            <Skeleton.Circle className="w-5 h-5 shrink-0 mt-1" />
+            <div className="w-full">
+              <Skeleton.Text className="w-64 h-4 mb-2" />
+              <Skeleton.Text className="w-32 h-3" />
+            </div>
+          </div>
+          <div className="text-right shrink-0 ml-4 flex flex-col items-end gap-2">
+             <Skeleton.Text className="w-24 h-3" />
+             <Skeleton.Rect className="w-20 h-6 rounded-lg" />
+          </div>
+        </div>
+      ))}
+    </>
+  );
+};
 
 const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);
@@ -120,10 +143,6 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
     }
   };
 
-  if (loading) {
-    return <HistoryLogSkeleton />;
-  }
-
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -166,12 +185,9 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
         </div>
         
         <div className="divide-y divide-slate-100">
-          {loading ? (
-            <div className="p-12 flex flex-col items-center justify-center">
-              <Loader2 className="animate-spin text-slate-400 mb-2" size={24} />
-              <p className="text-sm text-slate-400">Loading activity logs...</p>
-            </div>
-          ) : logs.length === 0 ? (
+          <TransitionWrapper isLoading={loading} skeleton={<HistoryLogSkeleton />}>
+          {!loading && (
+            logs.length === 0 ? (
             <div className="p-12 text-center text-slate-400">
               <Clock size={32} className="mx-auto mb-3 text-slate-200" />
               <p className="font-bold">No activity logs found.</p>
@@ -198,7 +214,8 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
                 </div>
               </div>
             ))
-          )}
+          ))}
+          </TransitionWrapper>
         </div>
       </div>
 

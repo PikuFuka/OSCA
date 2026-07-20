@@ -4,9 +4,9 @@ import { createPortal } from 'react-dom';
 import { Search, Edit2, Plus, Users, Shield, FileText, Lock, X, Save, User, UserCheck, UserX, AlertOctagon, UserCog, UserPlus, Loader2 } from 'lucide-react';
 import { BARANGAYS } from '../types';
 import { usersAPI, seniorsAPI } from '../services/api';
-import { AccountSkeleton } from './SkeletonLoader';
 import { CurrentUser } from '../types';
 import ConfirmModal from './ConfirmModal';
+import Skeleton from './Skeleton';
 
 // Unified Account Type for Display
 interface UnifiedAccount {
@@ -24,6 +24,73 @@ interface AccountProps {
     currentUser: CurrentUser;
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
+
+const AccountSkeleton = () => {
+  return (
+    <div className="space-y-6 stagger-in">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+           <Skeleton.Text className="w-64 h-10 mb-2" />
+           <Skeleton.Text className="w-80 h-4 mt-1" />
+        </div>
+        <Skeleton.Button className="w-40" />
+      </div>
+
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[600px] flex flex-col">
+        {/* Tab Navigation Skeleton */}
+        <div className="px-6 py-4 border-b border-slate-100 flex gap-3 bg-slate-50/50">
+          {[...Array(4)].map((_, i) => (
+             <Skeleton.Rect key={i} className="w-32 h-10 rounded-lg" />
+          ))}
+        </div>
+        
+        {/* Search Bar Skeleton */}
+        <div className="p-8 border-b border-slate-50 bg-slate-50/30">
+          <Skeleton.Rect className="w-full md:w-96 h-12 rounded-xl" />
+        </div>
+
+        {/* Table Skeleton */}
+        <div className="overflow-x-auto flex-1">
+          <table className="w-full text-left">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-8 py-4"><Skeleton.Text className="w-32 h-3" /></th>
+                <th className="px-8 py-4"><Skeleton.Text className="w-24 h-3" /></th>
+                <th className="px-8 py-4"><Skeleton.Text className="w-32 h-3" /></th>
+                <th className="px-8 py-4"><Skeleton.Text className="w-20 h-3" /></th>
+                <th className="px-8 py-4"><Skeleton.Text className="w-16 h-3 ml-auto" /></th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {[...Array(8)].map((_, i) => (
+                <tr key={i}>
+                  <td className="px-8 py-5">
+                    <div className="flex items-center gap-4">
+                      <Skeleton.Rect className="w-10 h-10 rounded-xl shrink-0" />
+                      <div className="w-full">
+                        <Skeleton.Text className="w-48 h-4 mb-1" />
+                        <Skeleton.Text className="w-32 h-3" />
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-8 py-5"><Skeleton.Rect className="w-24 h-6 rounded-xl" /></td>
+                  <td className="px-8 py-5"><Skeleton.Text className="w-32 h-4" /></td>
+                  <td className="px-8 py-5"><Skeleton.Rect className="w-20 h-6 rounded-xl" /></td>
+                  <td className="px-8 py-5"><Skeleton.Rect className="w-10 h-10 rounded-xl ml-auto" /></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Pagination Skeleton */}
+        <div className="p-6 border-t border-slate-50 flex items-center justify-between">
+           <Skeleton.Rect className="w-48 h-8 rounded-lg" />
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   const [accounts, setAccounts] = useState<UnifiedAccount[]>([]);

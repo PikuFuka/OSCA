@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import TransitionWrapper from './TransitionWrapper';
+import Skeleton from './Skeleton';
 import { useCountUp } from '../utils/useCountUp';
 import { 
   BarChart, 
@@ -22,8 +23,6 @@ import {
 } from 'lucide-react';
 import { ViewType, BARANGAYS } from '../types';
 import { seniorsAPI, requestsAPI } from '../services/api';
-import { DashboardSkeleton } from './SkeletonLoader';
-
 interface DashboardProps {
   setView?: (view: ViewType) => void;
   onCardNavigate?: (view: ViewType, reportSection?: 'masterlist' | 'centenarians' | 'deceased' | 'newly-registered') => void;
@@ -114,6 +113,133 @@ const KPICard = ({
          <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{statusLabel}</span>
       </div>
     </button>
+  );
+};
+
+const DashboardSkeleton = () => {
+  return (
+    <div className="space-y-5 pb-16 bg-[#f8fafc] min-h-screen w-full">
+      {/* Utility / Control Bar Skeleton */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+        <div>
+          <Skeleton.Text className="w-48 h-8 mb-2" />
+          <Skeleton.Text className="w-64 h-4" />
+        </div>
+        <div className="flex items-center gap-3">
+          <Skeleton.Rect className="w-24 h-10" />
+          <Skeleton.Rect className="w-32 h-10" />
+          <div className="w-px h-6 bg-slate-200 hidden sm:block"></div>
+          <Skeleton.Rect className="w-24 h-10" />
+        </div>
+      </div>
+
+      {/* Primary KPIs */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        {[...Array(4)].map((_, i) => (
+          <div key={i} className="bg-white border border-slate-200 p-5 flex flex-col gap-4 w-full h-[180px]">
+            <div className="flex justify-between items-start w-full">
+              <div>
+                <Skeleton.Text className="w-24 h-3 mb-2" />
+                <Skeleton.Text className="w-32 h-8" />
+              </div>
+              <Skeleton.Rect className="w-10 h-10 rounded-lg" />
+            </div>
+            <Skeleton.Rect className="w-full h-10 mt-2" />
+            <div className="flex items-center justify-between w-full pt-4 border-t border-slate-100 mt-2">
+               <Skeleton.Text className="w-24 h-3" />
+               <Skeleton.Text className="w-20 h-3" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Asymmetrical Layout - Tier 1 */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        {/* Registration Trends (Dominant) */}
+        <div className="xl:col-span-8 bg-white border border-slate-200 p-6 flex flex-col h-[400px]">
+          <div className="flex justify-between items-start mb-6">
+            <div>
+              <Skeleton.Text className="w-40 h-5 mb-2" />
+              <Skeleton.Text className="w-64 h-3" />
+            </div>
+          </div>
+          <Skeleton.Rect className="flex-1 w-full" />
+        </div>
+
+        {/* Population Leaderboard (Supporting) */}
+        <div className="xl:col-span-4 bg-white border border-slate-200 flex flex-col h-[400px]">
+          <div className="p-5 border-b border-slate-100">
+             <Skeleton.Text className="w-48 h-5 mb-2" />
+             <Skeleton.Text className="w-40 h-3" />
+          </div>
+          <div className="flex-1 p-0 flex flex-col">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="border-b border-slate-50 flex items-center justify-between py-4 px-5">
+                 <Skeleton.Text className="w-4 h-4" />
+                 <Skeleton.Text className="w-24 h-4" />
+                 <Skeleton.Text className="w-12 h-4" />
+                 <Skeleton.Rect className="w-16 h-2" />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Asymmetrical Layout - Tier 2 */}
+      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
+        {/* Gender Breakdown */}
+        <div className="xl:col-span-3 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
+          <Skeleton.Text className="w-32 h-5 mb-2" />
+          <Skeleton.Text className="w-48 h-3 mb-6" />
+          <div className="flex-1 flex flex-col justify-center gap-8">
+             <div>
+                <Skeleton.Text className="w-full h-4 mb-2" />
+                <Skeleton.Rect className="w-full h-2 mb-1" />
+                <Skeleton.Text className="w-8 h-3 ml-auto" />
+             </div>
+             <div>
+                <Skeleton.Text className="w-full h-4 mb-2" />
+                <Skeleton.Rect className="w-full h-2 mb-1" />
+                <Skeleton.Text className="w-8 h-3 ml-auto" />
+             </div>
+          </div>
+        </div>
+
+        {/* Age Distribution */}
+        <div className="xl:col-span-5 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
+          <Skeleton.Text className="w-48 h-5 mb-2" />
+          <Skeleton.Text className="w-40 h-3 mb-6" />
+          <Skeleton.Rect className="flex-1 w-full" />
+        </div>
+
+        {/* Mortality Analytics */}
+        <div className="xl:col-span-4 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
+          <Skeleton.Text className="w-40 h-5 mb-2" />
+          <Skeleton.Text className="w-32 h-3 mb-6" />
+          <Skeleton.Rect className="flex-1 w-full" />
+        </div>
+      </div>
+
+       {/* Full Width Grid Bottom */}
+       <div className="grid grid-cols-1">
+         <div className="bg-white border border-slate-200 p-6 flex flex-col">
+          <div className="mb-6">
+            <Skeleton.Text className="w-64 h-5 mb-2" />
+            <Skeleton.Text className="w-48 h-3" />
+          </div>
+          <div className="w-full border border-slate-100">
+             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 w-full">
+               {[...Array(12)].map((_, i) => (
+                 <div key={i} className="p-3 flex flex-col border-r border-b border-white/50 aspect-square justify-between bg-slate-50">
+                    <Skeleton.Text className="w-16 h-3" />
+                    <Skeleton.Text className="w-12 h-6 mt-auto" />
+                 </div>
+               ))}
+             </div>
+          </div>
+        </div>
+       </div>
+    </div>
   );
 };
 

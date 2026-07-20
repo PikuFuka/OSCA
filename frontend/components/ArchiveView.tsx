@@ -2,14 +2,54 @@ import React, { useState, useEffect } from 'react';
 import { Search, RefreshCw, UserX, UserMinus, Loader2 } from 'lucide-react';
 import { seniorsAPI } from '../services/api';
 import { SeniorCitizen } from '../types';
-import { ArchiveSkeleton } from './SkeletonLoader';
 import ConfirmModal from './ConfirmModal';
 import TransitionWrapper from './TransitionWrapper';
+import Skeleton from './Skeleton';
 
 interface ArchiveViewProps {
   notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
   embedded?: boolean;
 }
+
+const ArchiveSkeleton = () => {
+  return (
+    <table className="w-full text-left">
+      <thead>
+        <tr>
+          <th className="px-8 py-5"><Skeleton.Text className="w-32 h-3" /></th>
+          <th className="px-8 py-5"><Skeleton.Text className="w-24 h-3" /></th>
+          <th className="px-8 py-5"><Skeleton.Text className="w-24 h-3" /></th>
+          <th className="px-8 py-5"><Skeleton.Text className="w-24 h-3" /></th>
+          <th className="px-8 py-5 text-right"><Skeleton.Text className="w-16 h-3 ml-auto" /></th>
+        </tr>
+      </thead>
+      <tbody>
+        {[...Array(6)].map((_, i) => (
+          <tr key={i}>
+            <td className="px-8 py-4">
+              <div className="flex items-center gap-3">
+                <Skeleton.Rect className="w-10 h-10 rounded-xl shrink-0" />
+                <div>
+                  <Skeleton.Text className="w-40 h-4 mb-1" />
+                  <Skeleton.Text className="w-20 h-3" />
+                </div>
+              </div>
+            </td>
+            <td className="px-8 py-4">
+              <Skeleton.Text className="w-16 h-4 mb-1" />
+              <Skeleton.Text className="w-12 h-3" />
+            </td>
+            <td className="px-8 py-4"><Skeleton.Text className="w-24 h-4" /></td>
+            <td className="px-8 py-4"><Skeleton.Rect className="w-24 h-6 rounded-lg" /></td>
+            <td className="px-8 py-4 text-right">
+              <Skeleton.Rect className="w-10 h-10 rounded-xl ml-auto" />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
 
 const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) => {
   const [deletedSeniors, setDeletedSeniors] = useState<SeniorCitizen[]>([]);
@@ -125,7 +165,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
         </div>
 
         <div className="overflow-x-auto border-t border-slate-50">
-          <TransitionWrapper isLoading={loading} skeleton={<div className="p-10"><ArchiveSkeleton /></div>}>
+          <TransitionWrapper isLoading={loading} skeleton={<ArchiveSkeleton />}>
             {!loading && (
             <table className="w-full text-left">
               <thead>

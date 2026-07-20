@@ -2,16 +2,65 @@
 import React, { useState, useEffect } from 'react';
 import TransitionWrapper from './TransitionWrapper';
 import { createPortal } from 'react-dom';
-import { CheckCircle, XCircle, Search, Clock, FileText, User, Eye, MapPin, Calendar, CreditCard, X, Paperclip, Download, Loader2, UserPlus, IdCard } from 'lucide-react';
+import { 
+  CheckCircle, XCircle, Search, Clock, FileText, User, Eye, MapPin, 
+  Calendar, CreditCard, X, Paperclip, Download, Loader2, UserPlus, 
+  IdCard, ChevronLeft, ChevronRight, Filter, ArrowUpRight, 
+  ShieldCheck, AlertTriangle, Inbox
+} from 'lucide-react';
 import ConfirmModal, { ConfirmVariant } from './ConfirmModal';
 import { PendingRequest, ViewType } from '../types';
 import { requestsAPI, seniorsAPI } from '../services/api';
-import { ApprovalSkeleton } from './SkeletonLoader';
-
+import Skeleton from './Skeleton';
 interface ApprovalViewProps {
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
     setView?: (view: ViewType) => void;
 }
+
+const ApprovalSkeleton = () => {
+  return (
+    <table className="w-full text-left">
+      <thead>
+        <tr className="border-b border-slate-100">
+          <th className="px-6 py-4"><Skeleton.Text className="w-24 h-3" /></th>
+          <th className="px-5 py-4"><Skeleton.Text className="w-16 h-3" /></th>
+          <th className="px-5 py-4"><Skeleton.Text className="w-20 h-3" /></th>
+          <th className="px-5 py-4"><Skeleton.Text className="w-16 h-3" /></th>
+          <th className="px-5 py-4"><Skeleton.Text className="w-16 h-3" /></th>
+          <th className="px-5 py-4"><Skeleton.Text className="w-16 h-3" /></th>
+          <th className="px-6 py-4"><Skeleton.Text className="w-16 h-3 ml-auto" /></th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-slate-50">
+        {[...Array(8)].map((_, i) => (
+          <tr key={i}>
+            <td className="px-6 py-4">
+              <div className="flex items-center gap-3">
+                <Skeleton.Rect className="w-9 h-9 rounded-xl shrink-0" />
+                <div className="min-w-0">
+                  <Skeleton.Text className="w-32 h-3.5 mb-1" />
+                  <Skeleton.Text className="w-16 h-2.5" />
+                </div>
+              </div>
+            </td>
+            <td className="px-5 py-4"><Skeleton.Text className="w-16 h-3.5" /></td>
+            <td className="px-5 py-4"><Skeleton.Rect className="w-24 h-6 rounded-lg" /></td>
+            <td className="px-5 py-4"><Skeleton.Rect className="w-20 h-6 rounded-lg" /></td>
+            <td className="px-5 py-4"><Skeleton.Text className="w-20 h-3.5" /></td>
+            <td className="px-5 py-4"><Skeleton.Rect className="w-20 h-6 rounded-full" /></td>
+            <td className="px-6 py-4 text-right">
+              <div className="flex items-center justify-end gap-1.5">
+                 {[...Array(3)].map((_, j) => (
+                    <Skeleton.Rect key={j} className="w-8 h-8 rounded-lg" />
+                 ))}
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
 
 const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
   const [requests, setRequests] = useState<PendingRequest[]>([]);
@@ -167,186 +216,266 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
   };
 
   const DetailRow = ({ icon: Icon, label, value }: any) => (
-    <div className="flex items-start gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
-      <div className="mt-0.5 text-slate-400"><Icon size={16} /></div>
-      <div>
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</p>
-        <p className="text-sm font-bold text-slate-800">{value}</p>
+    <div className="flex items-start gap-3 p-3.5 bg-slate-50/80 rounded-2xl border border-slate-100/80 hover:border-slate-200 transition-colors">
+      <div className="mt-0.5 w-7 h-7 rounded-lg bg-white border border-slate-100 flex items-center justify-center text-slate-400 shrink-0">
+        <Icon size={14} />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-slate-400 mb-0.5">{label}</p>
+        <p className="text-[13px] font-semibold text-slate-800 truncate">{value || 'N/A'}</p>
       </div>
     </div>
   );
 
+  const getInitials = (name: string) => {
+    return name.split(' ').map((n: string) => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase();
+  };
+
+  const getTypeConfig = (type: string) => {
+    if (type === 'New Application') {
+      return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100', dot: 'bg-blue-500' };
+    }
+    return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100', dot: 'bg-amber-500' };
+  };
+
+  const getReasonConfig = (type: string) => {
+    if (type === 'New Application') {
+      return { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'New Member' };
+    }
+    return { bg: 'bg-violet-50', text: 'text-violet-700', label: 'New ID' };
+  };
+
   return (
-    <div className="space-y-10">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-10">
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>
-          <h2 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight">For Approvals</h2>
-          <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-[10px] mt-3 bg-white/50 w-fit px-3 py-1 rounded-full border border-slate-200 shadow-sm">Review & Verification</p>
+          <div className="mb-2">
+            <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
+              Approvals
+            </h2>
+            <p className="text-[11px] font-semibold text-slate-400 tracking-wide mt-1">
+              Review & verify pending registrations
+            </p>
+          </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-5 w-full sm:w-auto">
-          <div className="relative group w-full sm:w-[350px]">
-            <div className="absolute left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-systemBlue/5 rounded-lg flex items-center justify-center text-slate-400 group-focus-within:text-systemBlue transition-colors">
-              <Search size={18} />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+          {/* Search Bar */}
+          <div className="relative group flex-1 lg:w-[320px]">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-systemBlue transition-colors pointer-events-none">
+              <Search size={16} strokeWidth={2.5} />
             </div>
             <input 
               type="text" 
-              placeholder="Search request..."
-              className="w-full pl-14 pr-6 py-4 bg-white/80 backdrop-blur-md border border-slate-200 rounded-ios text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-4 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm"
+              placeholder="Search by name, ID, or type..."
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-medium shadow-sm"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
+          {/* Pending Count Badge */}
+          <div className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-100 rounded-xl">
+            <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="text-[12px] font-bold text-amber-700">
+              {pagination.total} Pending
+            </span>
+          </div>
+
+          {/* New Registration Button */}
           {setView && (
             <button
               onClick={() => setView(ViewType.ADD_MEMBER)}
-              className="w-full sm:w-auto px-8 py-4 bg-systemBlue text-white font-bold rounded-ios hover:bg-blue-600 transition-all shadow-lg shadow-systemBlue/20 flex items-center justify-center gap-3 text-sm active:scale-95"
+              className="px-5 py-2.5 bg-systemBlue text-white font-semibold rounded-xl hover:bg-blue-600 transition-all shadow-md shadow-blue-500/15 flex items-center justify-center gap-2 text-[13px] active:scale-[0.97] whitespace-nowrap"
             >
-              <UserPlus size={18} /> 
+              <UserPlus size={16} strokeWidth={2.5} /> 
               <span>New Registration</span>
             </button>
           )}
         </div>
       </div>
 
-      <div className="ios-card shadow-xl shadow-slate-200/50 overflow-hidden min-h-[500px]">
-
+      {/* Main Table Card */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          {loading ? (
-               <div className="p-20">
-                 <ApprovalSkeleton />
-               </div>
-            ) : (
-              <table className="ios-table">
-            <thead>
-              <tr>
-                <th className="px-10 py-6">Applicant</th>
-                <th className="px-10 py-6">OSCA ID</th>
-                <th className="px-10 py-6">Request Type</th>
-                <th className="px-10 py-6">Reason for ID</th>
-                <th className="px-10 py-6">Date Submitted</th>
-                <th className="px-10 py-6">Status</th>
-                <th className="px-10 py-6 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredRequests.length > 0 ? filteredRequests.map((req) => (
-                <tr key={req.id}>
-                  <td className="px-10 py-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center overflow-hidden border border-slate-200 shrink-0">
-                        {req.details.profilePicture ? (
-                           <img src={req.details.profilePicture} alt={req.name} className="w-full h-full object-cover" />
+          <TransitionWrapper isLoading={loading} skeleton={<ApprovalSkeleton />}>
+            {!loading && filteredRequests.length > 0 ? (
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-slate-100">
+                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Applicant</th>
+                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">OSCA ID</th>
+                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Request Type</th>
+                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Reason</th>
+                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Submitted</th>
+                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Status</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {filteredRequests.map((req, idx) => {
+                  const typeConfig = getTypeConfig(req.type);
+                  const reasonConfig = getReasonConfig(req.type);
+                  return (
+                    <tr 
+                      key={req.id} 
+                      className="group hover:bg-slate-50/60 transition-colors cursor-pointer"
+                      onClick={() => setSelectedRequest(req)}
+                    >
+                      {/* Applicant */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0">
+                            {req.details.profilePicture ? (
+                              <img src={req.details.profilePicture} alt={req.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <span className="text-[10px] font-extrabold text-slate-500 leading-none">
+                                {getInitials(req.name)}
+                              </span>
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-[13px] font-semibold text-slate-900 leading-tight truncate group-hover:text-systemBlue transition-colors">{req.name}</p>
+                            <p className="text-[11px] text-slate-400 font-medium mt-0.5">#{req.id}</p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* OSCA ID */}
+                      <td className="px-5 py-4">
+                        {req.senior_id ? (
+                          <span className="text-[13px] font-bold text-slate-800 tabular-nums">{req.senior_id}</span>
                         ) : (
-                           <span className="text-xs font-black text-blue-900 leading-none">
-                             {req.name.split(' ').map((n: string) => n[0]).join('')}
-                           </span>
+                          <span className="text-[11px] font-medium text-slate-400 italic">Unassigned</span>
                         )}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold text-slate-900 leading-tight">{req.name}</p>
-                        <p className="text-xs text-slate-400 font-medium">{req.id}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-10 py-6">
-                    <span className={`text-sm font-bold ${req.senior_id ? 'text-blue-900' : 'text-slate-400 italic'}`}>
-                      {req.senior_id || 'To be assigned'}
-                    </span>
-                  </td>
-                  <td className="px-10 py-6">
-                    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wide ${
-                      req.type === 'New Application' ? 'bg-blue-50 text-blue-700' : 'bg-amber-50 text-amber-700'
-                    }`}>
-                      <FileText size={12} />
-                      {req.type}
-                    </span>
-                  </td>
-                  <td className="px-10 py-6">
-                    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wide ${
-                      req.type === 'New Application' ? 'bg-emerald-50 text-emerald-700' : 'bg-purple-50 text-purple-700'
-                    }`}>
-                      {req.type === 'New Application' ? 'New Member' : 'New ID'}
-                    </span>
-                  </td>
-                  <td className="px-10 py-6 text-sm font-semibold text-slate-600">
-                    <div className="flex items-center gap-2">
-                      <Clock size={14} className="text-slate-400" />
-                      {req.date}
-                    </div>
-                  </td>
-                  <td className="px-10 py-6">
-                    <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
-                      req.status === 'Pending' ? 'bg-amber-50 text-amber-600' : 
-                      req.status === 'Approved' ? 'bg-emerald-50 text-emerald-600' : 
-                      'bg-rose-50 text-rose-600'
-                    }`}>
-                      {req.status}
-                    </span>
-                  </td>
-                  <td className="px-10 py-6 text-right">
-                    <div className="flex items-center justify-end gap-3">
-                      <button 
-                        onClick={() => setSelectedRequest(req)}
-                        className="w-10 h-10 bg-systemBlue/5 hover:bg-systemBlue text-systemBlue hover:text-white rounded-ios border border-systemBlue/10 flex items-center justify-center transition-all duration-300 shadow-sm"
-                        title="View Details"
-                      >
-                        <Eye size={18} />
-                      </button>
-                      <button 
-                        onClick={() => triggerConfirm(req.id, 'Reject')}
-                        className="w-10 h-10 bg-rose-50 hover:bg-rose-600 text-rose-500 hover:text-white rounded-ios border border-rose-100 flex items-center justify-center transition-all duration-300 shadow-sm" 
-                        title="Reject"
-                      >
-                        <XCircle size={18} />
-                      </button>
-                      <button 
-                        onClick={() => triggerConfirm(req.id, 'Approve')}
-                        className="w-10 h-10 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-ios border border-emerald-100 flex items-center justify-center transition-all duration-300 shadow-sm" 
-                        title="Approve"
-                      >
-                        <CheckCircle size={18} />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan={7} className="px-10 py-20 text-center">
-                    <div className="flex flex-col items-center gap-4">
-                      <div className="p-4 bg-slate-50 rounded-full text-slate-300"><CheckCircle size={32} /></div>
-                      <p className="text-slate-400 font-bold text-sm">No pending requests at the moment</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
+                      </td>
+
+                      {/* Request Type */}
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide ${typeConfig.bg} ${typeConfig.text} border ${typeConfig.border}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${typeConfig.dot}`} />
+                          {req.type}
+                        </span>
+                      </td>
+
+                      {/* Reason */}
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wide ${reasonConfig.bg} ${reasonConfig.text}`}>
+                          {reasonConfig.label}
+                        </span>
+                      </td>
+
+                      {/* Date */}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-1.5">
+                          <Clock size={12} className="text-slate-300" />
+                          <span className="text-[12px] font-medium text-slate-600">{req.date}</span>
+                        </div>
+                      </td>
+
+                      {/* Status */}
+                      <td className="px-5 py-4">
+                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${
+                          req.status === 'Pending' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 
+                          req.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
+                          'bg-rose-50 text-rose-600 border border-rose-100'
+                        }`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${
+                            req.status === 'Pending' ? 'bg-amber-500 animate-pulse' : 
+                            req.status === 'Approved' ? 'bg-emerald-500' : 'bg-rose-500'
+                          }`} />
+                          {req.status}
+                        </span>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); setSelectedRequest(req); }}
+                            className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-systemBlue hover:text-white text-slate-400 hover:shadow-md hover:shadow-blue-500/15 flex items-center justify-center transition-all duration-200 border border-slate-100 hover:border-systemBlue"
+                            title="View Details"
+                          >
+                            <Eye size={14} strokeWidth={2.5} />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); triggerConfirm(req.id, 'Reject'); }}
+                            className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-rose-500 hover:text-white text-slate-400 hover:shadow-md hover:shadow-rose-500/15 flex items-center justify-center transition-all duration-200 border border-slate-100 hover:border-rose-500" 
+                            title="Reject"
+                          >
+                            <XCircle size={14} strokeWidth={2.5} />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); triggerConfirm(req.id, 'Approve'); }}
+                            className="w-8 h-8 rounded-lg bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 hover:shadow-md hover:shadow-emerald-500/15 flex items-center justify-center transition-all duration-200 border border-emerald-100 hover:border-emerald-500" 
+                            title="Approve"
+                          >
+                            <CheckCircle size={14} strokeWidth={2.5} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
+          ) : (
+            /* Empty State */
+            <div className="flex flex-col items-center justify-center py-24 px-8">
+              <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-5">
+                <Inbox size={28} className="text-slate-300" />
+              </div>
+              <h3 className="text-[15px] font-bold text-slate-700 mb-1">All Clear</h3>
+              <p className="text-[13px] text-slate-400 font-medium text-center max-w-xs">
+                {searchTerm ? `No requests matching "${searchTerm}"` : 'No pending requests at the moment. New submissions will appear here.'}
+              </p>
+            </div>
           )}
+          </TransitionWrapper>
         </div>
 
+        {/* Pagination */}
         {!loading && pagination.lastPage > 1 && (
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-8 py-6 border-t border-slate-100 bg-slate-50/30">
-            <p className="text-sm font-semibold text-slate-500">
-              Page {pagination.currentPage} of {pagination.lastPage}
+          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/30">
+            <p className="text-[12px] font-medium text-slate-400">
+              Showing <span className="font-bold text-slate-600">{pagination.from}</span>–<span className="font-bold text-slate-600">{pagination.to}</span> of <span className="font-bold text-slate-600">{pagination.total}</span>
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
               <button
                 type="button"
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={pagination.currentPage <= 1}
-                className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:border-blue-200 hover:text-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-systemBlue hover:text-systemBlue transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                Previous
+                <ChevronLeft size={16} />
               </button>
+              
+              {/* Page Numbers */}
+              {Array.from({ length: Math.min(pagination.lastPage, 5) }, (_, i) => {
+                const pageNum = i + 1;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-all flex items-center justify-center ${
+                      pagination.currentPage === pageNum
+                        ? 'bg-systemBlue text-white shadow-sm shadow-blue-500/20'
+                        : 'border border-slate-200 bg-white text-slate-500 hover:border-systemBlue hover:text-systemBlue'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+
               <button
                 type="button"
                 onClick={() => setCurrentPage(prev => Math.min(pagination.lastPage, prev + 1))}
                 disabled={pagination.currentPage >= pagination.lastPage}
-                className="px-4 py-2 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:border-blue-200 hover:text-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-systemBlue hover:text-systemBlue transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
               >
-                Next
+                <ChevronRight size={16} />
               </button>
             </div>
           </div>
@@ -355,30 +484,33 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
 
       {/* Detail Modal */}
       {selectedRequest && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2rem] w-full max-w-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col">
-            <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl shadow-slate-900/10 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-2 duration-300 max-h-[90vh] flex flex-col">
+            
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-white">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-100 text-blue-900 rounded-xl">
-                  <FileText size={24} />
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-md shadow-blue-500/20">
+                  <FileText size={18} className="text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-black text-slate-900">Application Review</h3>
-                  <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">{selectedRequest.id}</p>
+                  <h3 className="text-[15px] font-bold text-slate-900">Application Review</h3>
+                  <p className="text-[11px] font-medium text-slate-400">Request #{selectedRequest.id}</p>
                 </div>
               </div>
               <button 
                 onClick={() => setSelectedRequest(null)}
-                className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-full transition-colors"
+                className="w-8 h-8 rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 flex items-center justify-center transition-colors"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
             
-            <div className="p-8 overflow-y-auto">
-              <div className="flex items-center gap-4 mb-8">
-                {/* Profile Picture Display */}
-                <div className="w-20 h-20 rounded-[1.2rem] bg-slate-100 flex items-center justify-center text-slate-500 overflow-hidden border border-slate-200 shadow-sm shrink-0">
+            {/* Modal Body */}
+            <div className="p-5 sm:p-6 overflow-y-auto flex-1">
+              {/* Applicant Header Card */}
+              <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-slate-50 to-blue-50/30 rounded-2xl border border-slate-100/80 mb-6">
+                <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-500 overflow-hidden shrink-0 shadow-sm">
                   {selectedRequest.details.profilePicture ? (
                     <img 
                       src={selectedRequest.details.profilePicture} 
@@ -386,23 +518,30 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                       className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-xl font-black text-blue-900">
-                      {selectedRequest.name.split(' ').map((n: string) => n[0]).join('')}
+                    <span className="text-lg font-extrabold text-slate-400">
+                      {getInitials(selectedRequest.name)}
                     </span>
                   )}
                 </div>
-                <div>
-                  <h2 className="text-2xl font-black text-slate-900 leading-none mb-1">{selectedRequest.name}</h2>
-                  <div className="flex items-center gap-2 mt-2">
-                    <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-800 text-[10px] font-black uppercase tracking-wide">
-                      {selectedRequest.type}
-                    </span>
-                    <span className="text-xs text-slate-400 font-bold">• Submitted: {selectedRequest.date}</span>
+                <div className="min-w-0 flex-1">
+                  <h2 className="text-xl font-extrabold text-slate-900 leading-tight truncate">{selectedRequest.name}</h2>
+                  <div className="flex flex-wrap items-center gap-2 mt-1.5">
+                    {(() => {
+                      const tc = getTypeConfig(selectedRequest.type);
+                      return (
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wide ${tc.bg} ${tc.text} border ${tc.border}`}>
+                          <span className={`w-1 h-1 rounded-full ${tc.dot}`} />
+                          {selectedRequest.type}
+                        </span>
+                      );
+                    })()}
+                    <span className="text-[11px] text-slate-400 font-medium">Submitted {selectedRequest.date}</span>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              {/* Detail Grid */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
                 <DetailRow icon={Calendar} label="Date of Birth" value={selectedRequest.details.dateOfBirth} />
                 <DetailRow icon={User} label="Gender" value={selectedRequest.details.gender || 'N/A'} />
                 <DetailRow icon={Clock} label="Age" value={`${selectedRequest.details.age} years old`} />
@@ -412,95 +551,97 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                 <DetailRow icon={User} label="Emergency Contact" value={selectedRequest.details.emergency} />
               </div>
 
-              {/* Uploaded Documents Section */}
+              {/* Documents Section */}
               {selectedRequest.details.documents && selectedRequest.details.documents.length > 0 && (
-                <div className="pt-6 border-t border-slate-100">
-                    <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
-                      <Paperclip size={16} /> Submitted Documents
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        {selectedRequest.details.documents.map((doc, idx) => (
-                            <div key={idx} className="flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-blue-200 hover:shadow-md transition-all group cursor-pointer">
-                                <div className={`p-2 rounded-lg border flex items-center justify-center shrink-0 ${
-                                  doc.type === 'pdf' ? 'bg-rose-50 border-rose-100 text-rose-500' : 'bg-blue-50 border-blue-100 text-blue-500'
-                                }`}>
-                                  <FileText size={18} />
-                                </div>
-                                <div className="overflow-hidden min-w-0 flex-1">
-                                    <p className="text-sm font-bold text-slate-700 truncate">{doc.name}</p>
-                                    <p className="text-[10px] font-bold text-slate-400 truncate">{doc.filename}</p>
-                                </div>
-                                <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
-                                  <button 
-                                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600 transition-colors" 
-                                    title="View"
-                                    onClick={async (e) => { 
-                                      e.stopPropagation(); 
-                                      if (selectedRequest.senior_id && doc.id) {
-                                        try {
-                                          const blob = await seniorsAPI.viewDocument(selectedRequest.senior_id, doc.id);
-                                          const url = URL.createObjectURL(blob);
-                                          window.open(url, '_blank');
-                                          setTimeout(() => URL.revokeObjectURL(url), 60000);
-                                        } catch (err) { notify("Error opening file", "error"); }
-                                      } else {
-                                        notify(`Viewing ${doc.filename}`, 'info'); 
-                                      }
-                                    }}
-                                  >
-                                      <Eye size={16} />
-                                  </button>
-                                  <button 
-                                    className="p-1.5 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-emerald-600 transition-colors" 
-                                    title="Download"
-                                    onClick={async (e) => { 
-                                      e.stopPropagation(); 
-                                      if (selectedRequest.senior_id && doc.id) {
-                                        try {
-                                          const blob = await seniorsAPI.viewDocument(selectedRequest.senior_id, doc.id);
-                                          const url = URL.createObjectURL(blob);
-                                          const link = document.createElement('a');
-                                          link.href = url;
-                                          link.setAttribute('download', doc.filename);
-                                          document.body.appendChild(link);
-                                          link.click();
-                                          link.remove();
-                                          setTimeout(() => URL.revokeObjectURL(url), 60000);
-                                        } catch (err) { notify("Download failed", "error"); }
-                                      } else {
-                                        notify(`Downloading ${doc.filename}`, 'success'); 
-                                      }
-                                    }}
-                                  >
-                                      <Download size={16} />
-                                  </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                <div className="pt-5 border-t border-slate-100">
+                  <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-400 mb-3">
+                    <Paperclip size={12} /> Attached Documents
+                    <span className="ml-auto text-[9px] font-bold text-slate-300 normal-case">{selectedRequest.details.documents.length} file(s)</span>
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    {selectedRequest.details.documents.map((doc, idx) => (
+                      <div key={idx} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-white hover:border-slate-200 hover:shadow-sm transition-all group">
+                        <div className={`w-9 h-9 rounded-lg border flex items-center justify-center shrink-0 ${
+                          doc.type === 'pdf' ? 'bg-rose-50 border-rose-100 text-rose-500' : 'bg-blue-50 border-blue-100 text-blue-500'
+                        }`}>
+                          <FileText size={16} />
+                        </div>
+                        <div className="overflow-hidden min-w-0 flex-1">
+                          <p className="text-[12px] font-semibold text-slate-700 truncate">{doc.name}</p>
+                          <p className="text-[10px] font-medium text-slate-400 truncate">{doc.filename}</p>
+                        </div>
+                        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            className="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-blue-600 transition-colors flex items-center justify-center" 
+                            title="View"
+                            onClick={async (e) => { 
+                              e.stopPropagation(); 
+                              if (selectedRequest.senior_id && doc.id) {
+                                try {
+                                  const blob = await seniorsAPI.viewDocument(selectedRequest.senior_id, doc.id);
+                                  const url = URL.createObjectURL(blob);
+                                  window.open(url, '_blank');
+                                  setTimeout(() => URL.revokeObjectURL(url), 60000);
+                                } catch (err) { notify("Error opening file", "error"); }
+                              } else {
+                                notify(`Viewing ${doc.filename}`, 'info'); 
+                              }
+                            }}
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button 
+                            className="w-7 h-7 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-emerald-600 transition-colors flex items-center justify-center" 
+                            title="Download"
+                            onClick={async (e) => { 
+                              e.stopPropagation(); 
+                              if (selectedRequest.senior_id && doc.id) {
+                                try {
+                                  const blob = await seniorsAPI.viewDocument(selectedRequest.senior_id, doc.id);
+                                  const url = URL.createObjectURL(blob);
+                                  const link = document.createElement('a');
+                                  link.href = url;
+                                  link.setAttribute('download', doc.filename);
+                                  document.body.appendChild(link);
+                                  link.click();
+                                  link.remove();
+                                  setTimeout(() => URL.revokeObjectURL(url), 60000);
+                                } catch (err) { notify("Download failed", "error"); }
+                              } else {
+                                notify(`Downloading ${doc.filename}`, 'success'); 
+                              }
+                            }}
+                          >
+                            <Download size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
-            <div className="p-4 sm:p-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:gap-3 bg-white z-10">
-                 <button 
-                  onClick={() => setSelectedRequest(null)}
-                  className="w-full sm:w-auto px-6 py-4 rounded-xl font-bold text-slate-500 hover:bg-slate-50 transition-colors text-center order-3 sm:order-1 text-sm bg-slate-50/50 sm:bg-transparent"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={() => triggerConfirm(selectedRequest.id, 'Reject')}
-                  className="w-full sm:w-auto px-4 sm:px-6 py-4 rounded-xl bg-rose-50 text-rose-600 font-bold hover:bg-rose-100 transition-colors flex items-center justify-center gap-2 order-2 text-sm"
-                >
-                  <XCircle size={18} /> Reject
-                </button>
-                <button 
-                  onClick={() => triggerConfirm(selectedRequest.id, 'Approve')}
-                  className="w-full sm:w-auto px-4 sm:px-8 py-4 rounded-xl bg-emerald-500 text-white font-bold hover:bg-emerald-600 transition-colors shadow-lg shadow-emerald-200 flex items-center justify-center gap-2 order-1 sm:order-3 text-sm"
-                >
-                  <CheckCircle size={18} /> Approve
-                </button>
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-5 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center sm:justify-end gap-2.5 bg-slate-50/30">
+              <button 
+                onClick={() => setSelectedRequest(null)}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-semibold text-slate-500 hover:bg-slate-100 transition-colors text-center order-3 sm:order-1 text-[13px]"
+              >
+                Close
+              </button>
+              <button 
+                onClick={() => triggerConfirm(selectedRequest.id, 'Reject')}
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-rose-50 text-rose-600 border border-rose-100 font-semibold hover:bg-rose-100 transition-colors flex items-center justify-center gap-2 order-2 text-[13px]"
+              >
+                <XCircle size={16} /> Reject
+              </button>
+              <button 
+                onClick={() => triggerConfirm(selectedRequest.id, 'Approve')}
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition-colors shadow-md shadow-emerald-500/15 flex items-center justify-center gap-2 order-1 sm:order-3 text-[13px]"
+              >
+                <CheckCircle size={16} /> Approve
+              </button>
             </div>
           </div>
         </div>,
@@ -520,7 +661,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
       >
         {confirmState.type === 'Approve' && (
           <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-            <label htmlFor="confirm-approval-osca-id" className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-2 block">Assign OSCA ID</label>
+            <label htmlFor="confirm-approval-osca-id" className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-600 mb-2 block">Assign OSCA ID</label>
             <input
               id="confirm-approval-osca-id"
               name="confirmApprovalOscaId"
@@ -530,7 +671,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
               value={approvalOscaId}
               onChange={e => setApprovalOscaId(e.target.value)}
             />
-            <p className="text-xs text-emerald-500 font-bold mt-2">Enter the OSCA ID to assign to this member.</p>
+            <p className="text-[11px] text-emerald-500 font-semibold mt-2">Enter the OSCA ID to assign to this member.</p>
           </div>
         )}
       </ConfirmModal>

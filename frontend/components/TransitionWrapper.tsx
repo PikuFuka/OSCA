@@ -1,51 +1,58 @@
 import React, { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 
 interface TransitionWrapperProps {
   isLoading: boolean;
-  skeleton: React.ReactNode;
+  skeleton?: React.ReactNode;
   children: React.ReactNode;
 }
 
 /**
  * Enterprise loading transition wrapper.
- * Achieves a seamless cross-fade by keeping the skeleton in the DOM
- * during the transition window while the real data fades in.
+ * Renders a custom skeleton or fallback spinner, with smooth transition fade state.
  */
 export const TransitionWrapper: React.FC<TransitionWrapperProps> = ({ isLoading, skeleton, children }) => {
-  const [showSkeleton, setShowSkeleton] = useState(true);
+  const [showLoader, setShowLoader] = useState(true);
   const [fadeState, setFadeState] = useState<'in' | 'out'>('in');
 
   useEffect(() => {
     if (isLoading) {
-      setShowSkeleton(true);
+      setShowLoader(true);
       setFadeState('in');
     } else {
-      // Trigger fade out
       setFadeState('out');
-      // Remove skeleton completely after animation completes
       const timer = setTimeout(() => {
-        setShowSkeleton(false);
-      }, 300); // 300ms matches the CSS transition-fade-out duration
+        setShowLoader(false);
+      }, 500); // 500ms matches the CSS transition-fade-out duration
       
       return () => clearTimeout(timer);
     }
   }, [isLoading]);
 
   return (
-    <div className="relative w-full">
+    <div className="relative w-full h-full">
       {/* Real content - renders when data is loaded, and gently fades in via CSS */}
       {!isLoading && (
-        <div className="transition-fade-in w-full">
+        <div className="transition-fade-in w-full h-full">
           {children}
         </div>
       )}
       
-      {/* Skeleton overlay - normal flow when loading, absolute when transitioning out */}
-      {showSkeleton && (
+      {/* Loading overlay / Skeleton */}
+      {showLoader && (
         <div 
-          className={`w-full rounded-2xl bg-white ${fadeState === 'out' ? 'absolute top-0 left-0 z-10 transition-fade-out pointer-events-none' : 'relative z-10'}`}
+          className={`w-full ${!skeleton ? 'min-h-[300px]' : ''} ${
+            fadeState === 'out' ? 'absolute top-0 left-0 w-full z-50 transition-fade-out pointer-events-none' : 'relative z-10 h-full flex flex-col bg-transparent'
+          }`}
         >
-          {skeleton}
+          {skeleton ? (
+            <div className="w-full h-full">{skeleton}</div>
+          ) : (
+            <div className="flex flex-col items-center justify-center gap-3 py-16 flex-1 bg-white/50 backdrop-blur-sm rounded-2xl">
+              <Loader2 className="w-8 h-8 animate-spin text-systemBlue" strokeWidth={2.5} />
+              <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Loading records...</span>
+            </div>
+          )}
         </div>
       )}
     </div>

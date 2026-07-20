@@ -2,11 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { Search, Printer, X, Loader2, Plus, CheckCircle2 } from 'lucide-react';
 import { SeniorCitizen, INITIAL_ID_CONFIG, CurrentUser } from '../types';
 import { seniorsAPI } from '../services/api';
+import Skeleton from './Skeleton';
+import TransitionWrapper from './TransitionWrapper';
 
 interface BatchPrintProps {
   currentUser: CurrentUser;
   notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
+
+const BatchPrintSkeleton = () => {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="rounded-xl border p-5 bg-white border-slate-200">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0 w-full">
+              <Skeleton.Text className="w-16 h-3 mb-1" />
+              <Skeleton.Text className="w-24 h-4 mb-3" />
+              <Skeleton.Text className="w-48 h-5 mb-2" />
+              <Skeleton.Text className="w-32 h-3" />
+            </div>
+            <Skeleton.Rect className="w-20 h-10 rounded-lg shrink-0" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const StaticLabel = ({ text, config, className = "" }: { text: string, config: { x: number, y: number, fontSize: number }, className?: string }) => (
   <div
@@ -169,12 +191,9 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
 
         {/* Search Results as Responsive Cards */}
         <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 md:p-6">
-          {searching ? (
-            <div className="py-12 text-center text-slate-400 flex flex-col items-center justify-center gap-3">
-              <Loader2 className="animate-spin" size={32} />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Searching...</span>
-            </div>
-          ) : searchResults.length > 0 ? (
+          <TransitionWrapper isLoading={searching} skeleton={<BatchPrintSkeleton />}>
+          {!searching && (
+            searchResults.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {searchResults.map(senior => {
                 const isSelected = selectedSeniors.some(s => s.id === senior.id);
@@ -209,7 +228,8 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
             <div className="py-12 text-center text-slate-400 text-sm font-bold">No results found for "{searchTerm}"</div>
           ) : (
             <div className="py-12 text-center text-slate-400 text-sm font-bold italic">Type to search for seniors...</div>
-          )}
+          ))}
+          </TransitionWrapper>
         </div>
       </div>
 

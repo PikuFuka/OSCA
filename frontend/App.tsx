@@ -569,6 +569,14 @@ const App: React.FC = () => {
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           currentUser={currentUser}
           onLogout={requestLogout}
+          setView={navigateToView}
+          onSelectSenior={(senior) => {
+            navigateToView(ViewType.MEMBER_REGISTRY);
+            // Dispatch custom event with a short delay so MemberRegistry can pick it up after mount
+            setTimeout(() => {
+              window.dispatchEvent(new CustomEvent('header-search-senior', { detail: senior }));
+            }, 150);
+          }}
         />
         
         <main className="flex-1 overflow-y-auto print:overflow-visible p-4 md:p-6 lg:p-8">

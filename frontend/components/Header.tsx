@@ -1,13 +1,15 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   User, Menu, LogOut, Settings, ChevronDown, Lock, X, Save,
   Search, Bell, MessageSquare, Plus, FileCheck, FileSpreadsheet,
   Printer, DatabaseBackup, CloudSun, UserCircle, Activity,
-  UserPlus, AlertCircle, CheckCircle2, ShieldAlert
+  UserPlus, AlertCircle, CheckCircle2, ShieldAlert,
+  MapPin, LayoutDashboard, ClipboardList, History, HardDrive,
+  Users, ArrowRight, Command
 } from 'lucide-react';
-import { CurrentUser } from '../types';
+import { CurrentUser, BARANGAYS, ViewType } from '../types';
 import { requestsAPI, activityLogsAPI, seniorsAPI } from '../services/api';
 
 interface NotificationItem {
@@ -19,11 +21,23 @@ interface NotificationItem {
   isRead: boolean;
 }
 
+interface SearchResultItem {
+  id: string;
+  category: 'person' | 'barangay' | 'action' | 'page';
+  label: string;
+  sublabel?: string;
+  icon: React.ReactNode;
+  iconBg: string;
+  data?: any;
+}
+
 interface HeaderProps {
   viewTitle: string;
   toggleSidebar: () => void;
   currentUser: CurrentUser;
   onLogout: () => void;
+  setView?: (view: ViewType) => void;
+  onSelectSenior?: (senior: any) => void;
 }
 
 const getHeaderContent = (viewTitle: string) => {
@@ -44,13 +58,15 @@ const getHeaderContent = (viewTitle: string) => {
   return map[normalized] || { title: normalized, subtitle: 'View and manage system information.' };
 };
 
-const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, onLogout }) => {
+const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, onLogout, setView, onSelectSenior }) => {
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [activeResultIndex, setActiveResultIndex] = useState(-1);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
@@ -58,15 +74,35 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
+  // Page directory items (always available, filtered by query)
+  const pageDirectory: SearchResultItem[] = useMemo(() => [
+    { id: 'page-dashboard', category: 'page', label: 'Dashboard', sublabel: 'Overview & statistics', icon: <LayoutDashboard size={14} />, iconBg: 'bg-blue-50 text-blue-600', data: ViewType.DASHBOARD },
+    { id: 'page-members', category: 'page', label: 'Member Registry', sublabel: 'View all senior citizen records', icon: <Users size={14} />, iconBg: 'bg-indigo-50 text-indigo-600', data: ViewType.MEMBER_REGISTRY },
+    { id: 'page-approval', category: 'page', label: 'Approvals', sublabel: 'Review pending registrations', icon: <FileCheck size={14} />, iconBg: 'bg-amber-50 text-amber-600', data: ViewType.APPROVAL },
+    { id: 'page-reports', category: 'page', label: 'Reports', sublabel: 'Generate & export reports', icon: <FileSpreadsheet size={14} />, iconBg: 'bg-emerald-50 text-emerald-600', data: ViewType.FINAL_REPORT },
+    { id: 'page-batch', category: 'page', label: 'Batch Print', sublabel: 'Print ID cards in bulk', icon: <Printer size={14} />, iconBg: 'bg-violet-50 text-violet-600', data: ViewType.BATCH_PRINT },
+    { id: 'page-accounts', category: 'page', label: 'Accounts', sublabel: 'Manage system users', icon: <UserCircle size={14} />, iconBg: 'bg-rose-50 text-rose-600', data: ViewType.ACCOUNT },
+    { id: 'page-history', category: 'page', label: 'System Logs', sublabel: 'Activity & audit trails', icon: <History size={14} />, iconBg: 'bg-slate-100 text-slate-600', data: ViewType.HISTORY },
+    { id: 'page-backup', category: 'page', label: 'Backup', sublabel: 'Database backup & restore', icon: <HardDrive size={14} />, iconBg: 'bg-cyan-50 text-cyan-600', data: ViewType.BACKUP },
+  ], []);
+
+  // Quick action items
+  const actionDirectory: SearchResultItem[] = useMemo(() => [
+    { id: 'action-register', category: 'action', label: 'Register New Senior', sublabel: 'Go to registration form', icon: <UserPlus size={14} />, iconBg: 'bg-emerald-50 text-emerald-600', data: ViewType.ADD_MEMBER },
+    { id: 'action-report', category: 'action', label: 'Generate Report', sublabel: 'Export active members', icon: <FileSpreadsheet size={14} />, iconBg: 'bg-amber-50 text-amber-600', data: ViewType.FINAL_REPORT },
+    { id: 'action-print', category: 'action', label: 'Print Batch IDs', sublabel: 'Batch print ID cards', icon: <Printer size={14} />, iconBg: 'bg-violet-50 text-violet-600', data: ViewType.BATCH_PRINT },
+    { id: 'action-backup', category: 'action', label: 'Backup Database', sublabel: 'Create database backup', icon: <DatabaseBackup size={14} />, iconBg: 'bg-cyan-50 text-cyan-600', data: ViewType.BACKUP },
+  ], []);
+
   // Search Debounce Effect
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      if (searchQuery.length > 2) {
+      if (searchQuery.length > 1) {
         setIsSearching(true);
         try {
           const res = await seniorsAPI.getAll({ search: searchQuery });
           const items = res.data || res || [];
-          setSearchResults(items.slice(0, 4));
+          setSearchResults(items.slice(0, 6));
         } catch (e) {
           console.error("Search failed", e);
         } finally {
@@ -79,6 +115,134 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchQuery]);
+
+  // Reset active index when search changes
+  useEffect(() => {
+    setActiveResultIndex(-1);
+  }, [searchQuery]);
+
+  // Barangay matches (local, instant filtering)
+  const matchedBarangays = useMemo(() => {
+    if (searchQuery.length < 2) return [];
+    const q = searchQuery.toLowerCase();
+    return BARANGAYS.filter(b => b.toLowerCase().includes(q)).slice(0, 5);
+  }, [searchQuery]);
+
+  // Filtered pages & actions
+  const filteredPages = useMemo(() => {
+    if (searchQuery.length < 1) return pageDirectory;
+    const q = searchQuery.toLowerCase();
+    return pageDirectory.filter(p => p.label.toLowerCase().includes(q) || (p.sublabel || '').toLowerCase().includes(q));
+  }, [searchQuery, pageDirectory]);
+
+  const filteredActions = useMemo(() => {
+    if (searchQuery.length < 1) return actionDirectory;
+    const q = searchQuery.toLowerCase();
+    return actionDirectory.filter(a => a.label.toLowerCase().includes(q) || (a.sublabel || '').toLowerCase().includes(q));
+  }, [searchQuery, actionDirectory]);
+
+  // Build the flat list of all results for keyboard nav
+  const allFlatResults = useMemo(() => {
+    const results: SearchResultItem[] = [];
+    
+    // People
+    searchResults.forEach(senior => {
+      results.push({
+        id: `person-${senior.id}`,
+        category: 'person',
+        label: `${senior.first_name || senior.firstName || ''} ${senior.last_name || senior.lastName || senior.name || ''}`.trim(),
+        sublabel: `${senior.osca_id || senior.oscaId || 'Pending ID'} • Brgy. ${senior.barangay || 'N/A'}`,
+        icon: <User size={14} />,
+        iconBg: 'bg-slate-100 text-slate-600',
+        data: senior,
+      });
+    });
+
+    // Barangays
+    matchedBarangays.forEach(b => {
+      results.push({
+        id: `barangay-${b}`,
+        category: 'barangay',
+        label: `Brgy. ${b}`,
+        sublabel: 'View members in this barangay',
+        icon: <MapPin size={14} />,
+        iconBg: 'bg-orange-50 text-orange-600',
+        data: b,
+      });
+    });
+
+    // Actions
+    filteredActions.forEach(a => results.push(a));
+
+    // Pages
+    filteredPages.forEach(p => results.push(p));
+
+    return results;
+  }, [searchResults, matchedBarangays, filteredActions, filteredPages]);
+
+  // Handle selecting a search result
+  const handleSelectResult = useCallback((item: SearchResultItem) => {
+    setIsSearchFocused(false);
+    setSearchQuery('');
+    setSearchResults([]);
+
+    switch (item.category) {
+      case 'person':
+        if (onSelectSenior) {
+          onSelectSenior(item.data);
+        } else if (setView) {
+          setView(ViewType.MEMBER_REGISTRY);
+        }
+        break;
+      case 'barangay':
+        if (setView) {
+          setView(ViewType.MEMBER_REGISTRY);
+        }
+        // Dispatch a custom event so MemberRegistry can pick up the barangay filter
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('header-search-barangay', { detail: item.data }));
+        }, 100);
+        break;
+      case 'action':
+      case 'page':
+        if (setView) {
+          setView(item.data as ViewType);
+        }
+        break;
+    }
+  }, [setView, onSelectSenior]);
+
+  // Keyboard navigation for search
+  const handleSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (!isSearchFocused || allFlatResults.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveResultIndex(prev => (prev < allFlatResults.length - 1 ? prev + 1 : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveResultIndex(prev => (prev > 0 ? prev - 1 : allFlatResults.length - 1));
+    } else if (e.key === 'Enter' && activeResultIndex >= 0) {
+      e.preventDefault();
+      handleSelectResult(allFlatResults[activeResultIndex]);
+    } else if (e.key === 'Escape') {
+      setIsSearchFocused(false);
+      searchInputRef.current?.blur();
+    }
+  }, [isSearchFocused, allFlatResults, activeResultIndex, handleSelectResult]);
+
+  // Ctrl+K shortcut to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+        setIsSearchFocused(true);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Fetch real notifications data
   useEffect(() => {
@@ -217,7 +381,7 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
         </div>
       </div>
 
-      {/* Center Section: Search */}
+      {/* Center Section: Universal Search */}
       <div className="flex-1 max-w-2xl px-6 lg:px-12 hidden lg:flex" ref={searchRef}>
         <div className="relative w-full">
           <div className={`flex items-center w-full bg-slate-50 border transition-all duration-200 rounded-2xl overflow-hidden shadow-sm group ${isSearchFocused ? 'border-systemBlue/50 ring-4 ring-systemBlue/5 bg-white' : 'border-slate-200/80 hover:border-slate-300'}`}>
@@ -225,10 +389,12 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
               <Search size={18} strokeWidth={2.5} />
             </div>
             <input 
+              ref={searchInputRef}
               type="text" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search Senior Citizen, OSCA ID, Action..." 
+              onKeyDown={handleSearchKeyDown}
+              placeholder="Search people, barangay, pages..." 
               className="w-full bg-transparent border-none outline-none py-2.5 text-[13px] font-semibold text-slate-800 placeholder:text-slate-400 placeholder:font-medium"
               onFocus={() => setIsSearchFocused(true)}
             />
@@ -238,78 +404,208 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
             </div>
           </div>
           
-          {/* Search Dropdown / Palette */}
+          {/* Search Directory / Command Palette */}
           {isSearchFocused && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200/80 rounded-[18px] shadow-xl shadow-slate-200/50 py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50 overflow-hidden flex flex-col max-h-[400px]">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white border border-slate-200/80 rounded-[18px] shadow-xl shadow-slate-200/50 py-2 animate-in fade-in slide-in-from-top-2 duration-200 z-50 overflow-hidden flex flex-col max-h-[460px]">
               
               {searchQuery.length === 0 ? (
-                <div className="px-4 py-4 flex flex-col items-center justify-center gap-2 text-slate-400 opacity-80">
-                   <Search size={24} strokeWidth={2} />
-                   <p className="text-[12px] font-medium">Type anything to search the system...</p>
+                <div className="flex flex-col">
+                  {/* Hint */}
+                  <div className="px-4 pt-3 pb-2 flex items-center gap-2 text-slate-400">
+                    <Command size={14} />
+                    <p className="text-[12px] font-medium">Search people, barangays, or navigate anywhere...</p>
+                  </div>
+                  
+                  {/* Recent / Quick Nav when empty */}
+                  <div className="overflow-y-auto no-scrollbar flex flex-col">
+                    <span className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/80 border-y border-slate-100/50 sticky top-0 z-10 backdrop-blur-md">Quick Navigation</span>
+                    {pageDirectory.slice(0, 4).map((item, idx) => (
+                      <button
+                        key={item.id}
+                        onClick={() => handleSelectResult(item)}
+                        className="flex items-center gap-3 px-4 py-2.5 text-left hover:bg-slate-50 transition-colors group"
+                      >
+                        <div className={`w-8 h-8 rounded-lg ${item.iconBg} flex items-center justify-center shrink-0`}>
+                          {item.icon}
+                        </div>
+                        <div className="flex flex-col flex-1 min-w-0">
+                          <span className="text-[13px] font-semibold text-slate-800 group-hover:text-systemBlue transition-colors">{item.label}</span>
+                          <span className="text-[11px] font-medium text-slate-500 truncate">{item.sublabel}</span>
+                        </div>
+                        <ArrowRight size={14} className="text-slate-300 group-hover:text-systemBlue transition-colors shrink-0" />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               ) : (
                 <div className="overflow-y-auto no-scrollbar flex flex-col">
-                  
-                  {/* Senior Citizens Result */}
-                  {(searchResults.length > 0 || isSearching) && (
-                    <div className="flex flex-col pb-1">
-                      <span className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/80 border-y border-slate-100/50 sticky top-0 z-10 backdrop-blur-md">Senior Citizens</span>
-                      {isSearching ? (
-                        <div className="px-4 py-3 text-[12px] text-slate-500 font-medium">Searching records...</div>
-                      ) : (
-                        searchResults.map(senior => (
-                          <button key={senior.id} className="flex items-center gap-3 px-4 py-2 text-left hover:bg-slate-50 transition-colors group">
-                             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center group-hover:bg-systemBlue/10 group-hover:text-systemBlue transition-colors shrink-0">
-                               <User size={14} />
-                             </div>
-                             <div className="flex flex-col">
-                               <span className="text-[13px] font-semibold text-slate-800">{senior.first_name} {senior.last_name}</span>
-                               <span className="text-[11px] font-medium text-slate-500">{senior.osca_id || 'Pending ID'} • Brgy. {senior.barangay}</span>
-                             </div>
-                          </button>
-                        ))
-                      )}
+                  {/* Loading state */}
+                  {isSearching && searchResults.length === 0 && (
+                    <div className="px-4 py-3 text-[12px] text-slate-500 font-medium flex items-center gap-2">
+                      <div className="w-3.5 h-3.5 border-2 border-systemBlue/30 border-t-systemBlue rounded-full animate-spin" />
+                      Searching records...
                     </div>
                   )}
 
-                  {/* Quick Actions Result */}
-                  <div className="flex flex-col pb-1">
-                    <span className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/80 border-y border-slate-100/50 sticky top-0 z-10 backdrop-blur-md">Quick Actions</span>
-                    <button className="flex items-center gap-3 px-4 py-2 text-left hover:bg-slate-50 transition-colors group">
-                       <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-                         <UserPlus size={14} />
-                       </div>
-                       <div className="flex flex-col">
-                         <span className="text-[13px] font-semibold text-slate-800 group-hover:text-systemBlue transition-colors">Register New Senior</span>
-                         <span className="text-[11px] font-medium text-slate-500">Go to registration form</span>
-                       </div>
-                    </button>
-                    <button className="flex items-center gap-3 px-4 py-2 text-left hover:bg-slate-50 transition-colors group">
-                       <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-                         <FileSpreadsheet size={14} />
-                       </div>
-                       <div className="flex flex-col">
-                         <span className="text-[13px] font-semibold text-slate-800 group-hover:text-systemBlue transition-colors">Generate Reports</span>
-                         <span className="text-[11px] font-medium text-slate-500">Export active members to CSV/Excel</span>
-                       </div>
-                    </button>
-                  </div>
+                  {/* No results */}
+                  {!isSearching && searchQuery.length > 1 && allFlatResults.length === 0 && (
+                    <div className="px-4 py-6 flex flex-col items-center justify-center gap-2 text-slate-400">
+                      <Search size={20} strokeWidth={2} />
+                      <p className="text-[12px] font-semibold">No results for "{searchQuery}"</p>
+                      <p className="text-[11px] font-medium">Try a different keyword or name</p>
+                    </div>
+                  )}
                   
-                  {/* Views/Pages */}
-                  <div className="flex flex-col pb-1">
-                    <span className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/80 border-y border-slate-100/50 sticky top-0 z-10 backdrop-blur-md">Pages</span>
-                    <button className="flex items-center gap-3 px-4 py-2 text-left hover:bg-slate-50 transition-colors group">
-                       <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center shrink-0">
-                         <Settings size={14} className="text-slate-500" />
-                       </div>
-                       <div className="flex flex-col">
-                         <span className="text-[13px] font-semibold text-slate-800 group-hover:text-systemBlue transition-colors">System Settings</span>
-                         <span className="text-[11px] font-medium text-slate-500">Navigate to Preferences</span>
-                       </div>
-                    </button>
-                  </div>
+                  {/* Senior Citizens Results */}
+                  {searchResults.length > 0 && (
+                    <div className="flex flex-col pb-1">
+                      <span className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/80 border-y border-slate-100/50 sticky top-0 z-10 backdrop-blur-md flex items-center gap-1.5">
+                        <User size={10} /> People
+                        <span className="ml-auto text-[9px] font-bold text-slate-300 normal-case">{searchResults.length} found</span>
+                      </span>
+                      {searchResults.map(senior => {
+                        const itemId = `person-${senior.id}`;
+                        const flatIdx = allFlatResults.findIndex(r => r.id === itemId);
+                        const isActive = flatIdx === activeResultIndex;
+                        return (
+                          <button
+                            key={senior.id}
+                            onClick={() => handleSelectResult({ id: itemId, category: 'person', label: '', icon: null, iconBg: '', data: senior })}
+                            className={`flex items-center gap-3 px-4 py-2.5 text-left transition-colors group ${
+                              isActive ? 'bg-systemBlue/5' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors ${
+                              isActive ? 'bg-systemBlue/10 text-systemBlue' : 'bg-slate-100 group-hover:bg-systemBlue/10 group-hover:text-systemBlue'
+                            }`}>
+                              {senior.idPhoto ? (
+                                <img src={senior.idPhoto} alt="" className="w-full h-full rounded-full object-cover" />
+                              ) : (
+                                <User size={14} />
+                              )}
+                            </div>
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <span className={`text-[13px] font-semibold truncate transition-colors ${isActive ? 'text-systemBlue' : 'text-slate-800'}`}>
+                                {senior.first_name || senior.firstName} {senior.last_name || senior.lastName || senior.name}
+                              </span>
+                              <span className="text-[11px] font-medium text-slate-500 truncate">
+                                {senior.osca_id || senior.oscaId || 'Pending ID'} • Brgy. {senior.barangay || 'N/A'}
+                              </span>
+                            </div>
+                            <ArrowRight size={14} className={`shrink-0 transition-colors ${isActive ? 'text-systemBlue' : 'text-slate-300 group-hover:text-systemBlue'}`} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Barangay Results */}
+                  {matchedBarangays.length > 0 && (
+                    <div className="flex flex-col pb-1">
+                      <span className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/80 border-y border-slate-100/50 sticky top-0 z-10 backdrop-blur-md flex items-center gap-1.5">
+                        <MapPin size={10} /> Barangays
+                        <span className="ml-auto text-[9px] font-bold text-slate-300 normal-case">{matchedBarangays.length} match</span>
+                      </span>
+                      {matchedBarangays.map(b => {
+                        const itemId = `barangay-${b}`;
+                        const flatIdx = allFlatResults.findIndex(r => r.id === itemId);
+                        const isActive = flatIdx === activeResultIndex;
+                        return (
+                          <button
+                            key={b}
+                            onClick={() => handleSelectResult({ id: itemId, category: 'barangay', label: `Brgy. ${b}`, sublabel: '', icon: <MapPin size={14} />, iconBg: 'bg-orange-50 text-orange-600', data: b })}
+                            className={`flex items-center gap-3 px-4 py-2.5 text-left transition-colors group ${
+                              isActive ? 'bg-systemBlue/5' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                              isActive ? 'bg-orange-100 text-orange-600' : 'bg-orange-50 text-orange-600'
+                            }`}>
+                              <MapPin size={14} />
+                            </div>
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <span className={`text-[13px] font-semibold truncate transition-colors ${isActive ? 'text-systemBlue' : 'text-slate-800'}`}>
+                                Brgy. {b}
+                              </span>
+                              <span className="text-[11px] font-medium text-slate-500">View members in this barangay</span>
+                            </div>
+                            <ArrowRight size={14} className={`shrink-0 transition-colors ${isActive ? 'text-systemBlue' : 'text-slate-300 group-hover:text-systemBlue'}`} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Quick Actions Results */}
+                  {filteredActions.length > 0 && (
+                    <div className="flex flex-col pb-1">
+                      <span className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/80 border-y border-slate-100/50 sticky top-0 z-10 backdrop-blur-md flex items-center gap-1.5">
+                        <Plus size={10} /> Quick Actions
+                      </span>
+                      {filteredActions.map(action => {
+                        const flatIdx = allFlatResults.findIndex(r => r.id === action.id);
+                        const isActive = flatIdx === activeResultIndex;
+                        return (
+                          <button
+                            key={action.id}
+                            onClick={() => handleSelectResult(action)}
+                            className={`flex items-center gap-3 px-4 py-2.5 text-left transition-colors group ${
+                              isActive ? 'bg-systemBlue/5' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg ${action.iconBg} flex items-center justify-center shrink-0`}>
+                              {action.icon}
+                            </div>
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <span className={`text-[13px] font-semibold truncate transition-colors ${isActive ? 'text-systemBlue' : 'text-slate-800 group-hover:text-systemBlue'}`}>{action.label}</span>
+                              <span className="text-[11px] font-medium text-slate-500 truncate">{action.sublabel}</span>
+                            </div>
+                            <ArrowRight size={14} className={`shrink-0 transition-colors ${isActive ? 'text-systemBlue' : 'text-slate-300 group-hover:text-systemBlue'}`} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  
+                  {/* Pages Results */}
+                  {filteredPages.length > 0 && (
+                    <div className="flex flex-col pb-1">
+                      <span className="px-4 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50/80 border-y border-slate-100/50 sticky top-0 z-10 backdrop-blur-md flex items-center gap-1.5">
+                        <LayoutDashboard size={10} /> Pages
+                      </span>
+                      {filteredPages.map(page => {
+                        const flatIdx = allFlatResults.findIndex(r => r.id === page.id);
+                        const isActive = flatIdx === activeResultIndex;
+                        return (
+                          <button
+                            key={page.id}
+                            onClick={() => handleSelectResult(page)}
+                            className={`flex items-center gap-3 px-4 py-2.5 text-left transition-colors group ${
+                              isActive ? 'bg-systemBlue/5' : 'hover:bg-slate-50'
+                            }`}
+                          >
+                            <div className={`w-8 h-8 rounded-lg ${page.iconBg} flex items-center justify-center shrink-0`}>
+                              {page.icon}
+                            </div>
+                            <div className="flex flex-col flex-1 min-w-0">
+                              <span className={`text-[13px] font-semibold truncate transition-colors ${isActive ? 'text-systemBlue' : 'text-slate-800 group-hover:text-systemBlue'}`}>{page.label}</span>
+                              <span className="text-[11px] font-medium text-slate-500 truncate">{page.sublabel}</span>
+                            </div>
+                            <ArrowRight size={14} className={`shrink-0 transition-colors ${isActive ? 'text-systemBlue' : 'text-slate-300 group-hover:text-systemBlue'}`} />
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               )}
+
+              {/* Footer hint */}
+              <div className="px-4 py-2 border-t border-slate-100 flex items-center gap-3 text-[10px] font-semibold text-slate-400">
+                <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[9px] font-bold border border-slate-200">↑↓</kbd> Navigate</span>
+                <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[9px] font-bold border border-slate-200">↵</kbd> Select</span>
+                <span className="flex items-center gap-1"><kbd className="px-1.5 py-0.5 bg-slate-100 rounded text-[9px] font-bold border border-slate-200">Esc</kbd> Close</span>
+              </div>
             </div>
           )}
         </div>

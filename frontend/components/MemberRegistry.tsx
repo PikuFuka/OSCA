@@ -1,11 +1,11 @@
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import TransitionWrapper from './TransitionWrapper';
+import Skeleton from './Skeleton';
 import { createPortal } from 'react-dom';
-import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock, Edit2Icon } from 'lucide-react';
+import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock, Edit2Icon, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 import { BARANGAYS, SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } from '../types';
 import { seniorsAPI, activityLogsAPI } from '../services/api';
-import { MemberRegistrySkeleton } from './SkeletonLoader';
 import ConfirmModal from './ConfirmModal';
 
 // Initial draggable positions from shared config
@@ -196,6 +196,70 @@ const InfoField = ({ label, value, className = "" }: { label: string, value: str
   </div>
 );
 
+const RegistrySkeleton = () => {
+  return (
+    <table className="w-full text-left table-fixed">
+      <thead>
+        <tr className="border-b border-slate-100">
+          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[32%]">Member Identity</th>
+          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Age / Locality</th>
+          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Category</th>
+          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[12%] text-center">Status</th>
+          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Modified</th>
+          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-right">Actions</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-slate-50">
+        {[...Array(10)].map((_, i) => (
+          <tr key={i} className="bg-white">
+            {/* Identity */}
+            <td className="px-6 py-4">
+              <div className="flex items-center gap-3">
+                <Skeleton.Rect className="w-9 h-9 rounded-xl shrink-0" />
+                <div className="min-w-0 flex flex-col gap-1 w-full max-w-[200px]">
+                  <Skeleton.Text className="w-3/4 h-3.5" />
+                  <Skeleton.Text className="w-1/2 h-2.5" />
+                </div>
+              </div>
+            </td>
+            {/* Age / Locality */}
+            <td className="px-5 py-4 text-center">
+              <div className="flex flex-col items-center gap-1">
+                <Skeleton.Text className="w-8 h-3.5" />
+                <Skeleton.Text className="w-16 h-2.5" />
+              </div>
+            </td>
+            {/* Category */}
+            <td className="px-5 py-4">
+              <div className="flex items-center justify-center">
+                <Skeleton.Rect className="w-20 h-5 rounded-lg" />
+              </div>
+            </td>
+            {/* Status */}
+            <td className="px-5 py-4">
+              <div className="flex items-center justify-center">
+                <Skeleton.Rect className="w-16 h-5 rounded-full" />
+              </div>
+            </td>
+            {/* Modified */}
+            <td className="px-5 py-4 text-center flex justify-center">
+              <Skeleton.Text className="w-24 h-3.5 mt-2" />
+            </td>
+            {/* Actions */}
+            <td className="px-6 py-4 text-right">
+              <div className="flex items-center justify-end gap-1">
+                {[...Array(4)].map((_, j) => (
+                   <Skeleton.Rect key={j} className="w-7 h-7 rounded-lg" />
+                ))}
+              </div>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+};
+
 const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView }) => {
   const [seniors, setSeniors] = useState<SeniorCitizen[]>([]);
   const [loading, setLoading] = useState(true);
@@ -246,6 +310,41 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   useEffect(() => {
     fetchSeniors();
   }, [debouncedSearch, filterBarangay, page]);
+
+  // Listen for header search navigation events
+  useEffect(() => {
+    const handleBarangaySearch = (e: Event) => {
+      const barangay = (e as CustomEvent).detail;
+      if (barangay) {
+        setFilterBarangay(barangay);
+        setSearchTerm('');
+        setDebouncedSearch('');
+        setPage(1);
+      }
+    };
+
+    const handleSeniorSearch = (e: Event) => {
+      const senior = (e as CustomEvent).detail;
+      if (senior) {
+        // Set search to the person's name so they appear in the list, then open their detail view
+        const name = `${senior.first_name || senior.firstName || ''} ${senior.last_name || senior.lastName || ''}`.trim();
+        setSearchTerm(name);
+        setDebouncedSearch(name);
+        setPage(1);
+        // Open their detail view after a brief delay for data to load
+        setTimeout(() => {
+          handleViewDetails(senior);
+        }, 300);
+      }
+    };
+
+    window.addEventListener('header-search-barangay', handleBarangaySearch);
+    window.addEventListener('header-search-senior', handleSeniorSearch);
+    return () => {
+      window.removeEventListener('header-search-barangay', handleBarangaySearch);
+      window.removeEventListener('header-search-senior', handleSeniorSearch);
+    };
+  }, []);
 
   const [idModalOpen, setIdModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
@@ -870,12 +969,12 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
   const getCategoryStyle = (category: string) => {
     switch(category) {
-      case 'National': return 'bg-blue-100 text-blue-900';
-      case 'Local': return 'bg-purple-100 text-purple-900';
-      case 'Pensioner': return 'bg-amber-100 text-amber-900';
-      case 'None': return 'bg-slate-100 text-slate-600';
-      case 'Indigent': return 'bg-red-100 text-slate-600';
-      default: return 'bg-slate-100 text-slate-600';
+      case 'National': return 'bg-blue-50 text-blue-700 border-blue-100';
+      case 'Local': return 'bg-purple-50 text-purple-700 border-purple-100';
+      case 'Pensioner': return 'bg-amber-50 text-amber-700 border-amber-100';
+      case 'None': return 'bg-slate-50 text-slate-500 border-slate-100';
+      case 'Indigent': return 'bg-rose-50 text-rose-700 border-rose-100';
+      default: return 'bg-slate-50 text-slate-500 border-slate-100';
     }
   };
 
@@ -896,17 +995,19 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   };
   
   return (
-    <div className="space-y-6 md:space-y-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-8">
+    <div className="space-y-8">
+      {/* Page Header */}
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>
-          <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Member Registry</h2>
-          <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px] mt-2 bg-white/50 w-fit px-3 py-1.5 rounded-md border border-slate-200 shadow-sm">Official Records</p>
+          <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">Member Registry</h2>
+          <p className="text-[11px] font-semibold text-slate-400 tracking-wide mt-1.5 bg-white/50 w-fit px-2.5 py-1 rounded-md border border-slate-200/60 shadow-sm uppercase">Official Records</p>
         </div>
 
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 w-full md:w-auto">
-          <div className="w-full sm:w-[380px] relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
-              <Search size={16} />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+          {/* Search Input */}
+          <div className="relative group flex-1 lg:w-[320px]">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-systemBlue transition-colors pointer-events-none">
+              <Search size={16} strokeWidth={2.5} />
             </div>
             <input 
               id="registry-search"
@@ -915,12 +1016,13 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
               placeholder="Search name, ID, or barangay..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-medium shadow-sm"
             />
           </div>
 
-          <div className="relative w-full sm:w-[200px]">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+          {/* Barangay Filter Select */}
+          <div className="relative w-full sm:w-[180px]">
+            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
               <MapPin size={16} />
             </div>
             <select 
@@ -928,29 +1030,33 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
               name="registryBarangayFilter"
               value={filterBarangay}
               onChange={(e) => { setFilterBarangay(e.target.value); setPage(1); }}
-              className="w-full pl-10 pr-4 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none cursor-pointer appearance-none"
+              className="w-full pl-10 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm cursor-pointer appearance-none"
             >
               <option value="All Barangays">All Barangays</option>
               {BARANGAYS.map(b => (
                 <option key={b} value={b}>{b}</option>
               ))}
             </select>
+            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+              <ChevronRight size={14} className="rotate-90" />
+            </div>
           </div>
         </div>
       </div>
 
+      {/* Queue Alert banner */}
       {setView && (
-        <div className="bg-blue-50/50 border border-blue-100 rounded-2xl p-5 mb-8 flex flex-col md:flex-row md:items-center gap-4 shadow-sm">
-          <div className="w-10 h-10 bg-systemBlue text-white rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-blue-200">
-            <FileCheck size={20} />
+        <div className="bg-gradient-to-r from-blue-50/50 to-indigo-50/20 border border-blue-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-blue-500/10">
+            <FileCheck size={18} strokeWidth={2.5} />
           </div>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h4 className="text-[10px] font-bold text-blue-900 uppercase tracking-widest mb-0.5">Queue Management</h4>
-            <p className="text-sm font-semibold text-slate-600">
+            <p className="text-[12px] font-semibold text-slate-600">
               Only validated members appear in this registry. Pending applicants or updates are stored in the{' '}
               <button
                 onClick={() => setView(ViewType.APPROVAL)}
-                className="text-systemBlue font-bold decoration-2 underline underline-offset-4 hover:text-blue-800 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-200 rounded-sm"
+                className="text-systemBlue font-bold decoration-2 underline underline-offset-4 hover:text-blue-800 transition-colors focus:outline-none rounded-sm"
               >
                 Approval Queue
               </button>
@@ -960,75 +1066,94 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
         </div>
       )}
       
-      <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-        <div className="w-full overflow-x-hidden">
-          <TransitionWrapper isLoading={loading} skeleton={<MemberRegistrySkeleton />}>
+      {/* Table Container Card */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <TransitionWrapper isLoading={loading} skeleton={<RegistrySkeleton />}>
             {!loading && (
             <table className="w-full text-left table-fixed">
               <thead>
-                <tr>
-                  <th className="px-4 lg:px-6 py-4 lg:py-5 w-[30%]">Member Identity</th>
-                  <th className="px-4 lg:px-6 py-4 lg:py-5 w-[12%] text-center">Age / Locality</th>
-                  <th className="px-4 lg:px-6 py-4 lg:py-5 w-[14%] text-center">Category</th>
-                  <th className="px-4 lg:px-6 py-4 lg:py-5 w-[12%] text-center">Status</th>
-                  <th className="px-4 lg:px-6 py-4 lg:py-5 w-[14%] text-center">Modified</th>
-                  <th className="px-2 lg:px-3 py-4 lg:py-5 w-[18%] text-center">Actions</th>
+                <tr className="border-b border-slate-100">
+                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[32%]">Member Identity</th>
+                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Age / Locality</th>
+                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Category</th>
+                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[12%] text-center">Status</th>
+                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Modified</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-slate-50">
                 {displayedSeniors.length > 0 ? displayedSeniors.map((senior) => {
                   const category = getDisplayCategory(senior.pensionStatus);
+                  const isDeceased = senior.status === 'Deceased';
                   return (
-                  <tr key={senior.id} className="group hover:bg-slate-50 transition-colors">
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 align-middle">
-                      <div className="flex items-center gap-3 lg:gap-4">
-                        <div className="relative">
+                  <tr 
+                    key={senior.id} 
+                    className="group hover:bg-slate-50/60 transition-colors cursor-pointer"
+                    onClick={() => handleViewDetails(senior)}
+                  >
+                    {/* Identity */}
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="relative shrink-0">
                           {senior.idPhoto ? (
-                            <img src={senior.idPhoto} alt={senior.name} loading="lazy" className="w-11 h-11 lg:w-12 lg:h-12 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0 bg-slate-50" />
+                            <img src={senior.idPhoto} alt={senior.name} loading="lazy" className="w-9 h-9 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0 bg-slate-50" />
                           ) : (
-                            <div className="w-11 h-11 lg:w-12 lg:h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 font-bold border border-slate-200 shadow-sm shrink-0 text-sm">
-                              {senior.name.split(' ').map(n => n[0]).join('')}
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 font-extrabold text-[10px]">
+                              {senior.name.split(' ').map((n) => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()}
                             </div>
                           )}
-                          <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-systemGray-50 ${
+                          <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${
                             senior.status === 'Active' ? 'bg-emerald-500' : 
                             senior.status === 'Pending' ? 'bg-amber-500' : 
-                            'bg-slate-500'
-                          }`}></div>
+                            'bg-slate-400'
+                          }`} />
                         </div>
                         <div className="min-w-0">
-                          <p className="font-bold text-slate-900 text-base truncate tracking-tight">{senior.name}</p>
-                          <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-widest mt-1 font-mono truncate">{getMemberOscaId(senior)}</p>
+                          <p className="text-[13px] font-semibold text-slate-900 leading-tight truncate group-hover:text-systemBlue transition-colors">{senior.name}</p>
+                          <p className="text-[11px] font-medium text-slate-400 tracking-wider mt-0.5 truncate">{getMemberOscaId(senior)}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 align-middle text-center">
+
+                    {/* Age / Locality */}
+                    <td className="px-5 py-4 text-center">
                       <div className="flex flex-col">
-                        <span className="text-base font-bold text-slate-900">{senior.age}</span>
-                        <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5 truncate">{senior.barangay}</span>
+                        <span className="text-[13px] font-bold text-slate-800">{senior.age} yrs</span>
+                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 truncate">Brgy. {senior.barangay}</span>
                       </div>
                     </td>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 align-middle">
+
+                    {/* Category */}
+                    <td className="px-5 py-4">
                       <div className="flex items-center justify-center">
-                        <span className={`text-[10px] font-bold uppercase whitespace-nowrap px-3 py-1.5 rounded-full border ${getCategoryStyle(category)}`}>
+                        <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-lg border whitespace-nowrap ${getCategoryStyle(category)}`}>
                           {category}
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 align-middle">
+
+                    {/* Status */}
+                    <td className="px-5 py-4">
                       <div className="flex items-center justify-center">
-                        <span className={`inline-flex items-center justify-center text-[10px] font-bold uppercase tracking-widest whitespace-nowrap px-3 py-1 rounded-full border ${
-                          senior.status === 'Active' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
-                          senior.status === 'Pending' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' : 
-                          senior.status === 'Deceased' ? 'bg-slate-100 text-slate-600 border-slate-200' :
-                          'bg-slate-100 text-slate-500 border-slate-200'
+                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full border whitespace-nowrap ${
+                          senior.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                          senior.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
+                          isDeceased ? 'bg-slate-50 text-slate-500 border-slate-200' :
+                          'bg-slate-50 text-slate-400 border-slate-100'
                         }`}>
+                          <span className={`w-1 h-1 rounded-full ${
+                            senior.status === 'Active' ? 'bg-emerald-500' : 
+                            senior.status === 'Pending' ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'
+                          }`} />
                           {senior.status}
                         </span>
                       </div>
                     </td>
-                    <td className="px-4 lg:px-6 py-4 lg:py-5 align-middle text-center">
-                       <p className="text-[11px] font-bold text-slate-500 tabular-nums">
+
+                    {/* Modified */}
+                    <td className="px-5 py-4 text-center">
+                       <p className="text-[11px] font-medium text-slate-500 tabular-nums">
                          {senior.updatedAt ? new Date(senior.updatedAt).toLocaleString('en-US', { 
                            month: 'short', 
                            day: '2-digit', 
@@ -1038,38 +1163,40 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                          }) : 'N/A'}
                        </p>
                     </td>
-                    <td className="px-2 lg:px-3 py-4 lg:py-5 align-middle text-center">
-                      <div className="flex flex-nowrap items-center justify-center gap-0.5 lg:gap-1">
+
+                    {/* Actions */}
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                         <button
-                           onClick={() => handleViewDetails(senior)}
-                           className="w-7 h-7 lg:w-8 lg:h-8 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg border border-slate-200 flex items-center justify-center transition-all duration-300 shadow-sm active:scale-95"
-                           title="Inspect"
+                          onClick={(e) => { e.stopPropagation(); handleViewDetails(senior); }}
+                          className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-systemBlue hover:text-white text-slate-400 hover:shadow-md hover:shadow-blue-500/15 flex items-center justify-center transition-all border border-slate-100 hover:border-systemBlue active:scale-95"
+                          title="Inspect Details"
                         >
-                           <Eye size={12} />
+                          <Eye size={13} strokeWidth={2.5} />
                         </button>
 
                         {canGenerateID && (
                           <button
-                            onClick={() => openEditMember(senior)}
-                            className="w-7 h-7 lg:w-8 lg:h-8 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg border border-slate-200 flex items-center justify-center transition-all duration-300 shadow-sm active:scale-95"
-                            title="Edit"
+                            onClick={(e) => { e.stopPropagation(); openEditMember(senior); }}
+                            className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-indigo-500 hover:text-white text-slate-400 hover:shadow-md hover:shadow-indigo-500/15 flex items-center justify-center transition-all border border-slate-100 hover:border-indigo-500 active:scale-95"
+                            title="Edit Record"
                           >
-                            <Edit2 size={12} />
+                            <Edit2 size={13} strokeWidth={2.5} />
                           </button>
                         )}
 
                         {canGenerateID && (
                           <button 
                             disabled={senior.status !== 'Active'}
-                            onClick={() => handleGenerateID(senior)} 
-                            className={`w-7 h-7 lg:w-8 lg:h-8 border rounded-lg flex items-center justify-center transition-all duration-300 shadow-sm active:scale-95 ${
+                            onClick={(e) => { e.stopPropagation(); handleGenerateID(senior); }} 
+                            className={`w-7 h-7 border rounded-lg flex items-center justify-center transition-all shadow-sm active:scale-95 ${
                               senior.status !== 'Active' 
-                                ? 'bg-slate-50 opacity-50 cursor-not-allowed text-slate-300 border-slate-200' 
-                                : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100 hover:text-slate-800'
+                                ? 'bg-slate-50 opacity-40 cursor-not-allowed text-slate-300 border-slate-200' 
+                                : 'bg-white text-emerald-600 border-emerald-100 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-md hover:shadow-emerald-500/15'
                             }`} 
-                            title={senior.status === 'Active' ? "Issue ID" : "Approval Restricted"}
+                            title={senior.status === 'Active' ? "Generate ID" : "Approval Restricted"}
                           >
-                            <IdCard size={12} />
+                            <IdCard size={13} strokeWidth={2.5} />
                           </button>
                         )}
                         
@@ -1077,19 +1204,19 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                           <>
                              {senior.status !== 'Deceased' && (
                                <button
-                                 onClick={() => setConfirmState({ isOpen: true, type: 'Decease', senior })}
-                                 className="w-7 h-7 lg:w-8 lg:h-8 bg-white hover:bg-slate-100 text-slate-500 hover:text-slate-800 rounded-lg border border-slate-200 flex items-center justify-center transition-all duration-300 shadow-sm active:scale-95"
+                                 onClick={(e) => { e.stopPropagation(); setConfirmState({ isOpen: true, type: 'Decease', senior }); }}
+                                 className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-amber-500 hover:text-white text-slate-400 hover:shadow-md hover:shadow-amber-500/15 flex items-center justify-center transition-all border border-slate-100 hover:border-amber-500 active:scale-95"
                                  title="Mark as Deceased"
                                >
-                                 <UserX size={12} />
+                                 <UserX size={13} strokeWidth={2.5} />
                                </button>
                              )}
                              <button 
-                               onClick={() => setConfirmState({ isOpen: true, type: 'Delete', senior })} 
-                               className="w-7 h-7 lg:w-8 lg:h-8 bg-white hover:bg-rose-50 hover:border-rose-200 text-slate-400 hover:text-rose-500 rounded-lg border border-slate-200 flex items-center justify-center transition-all duration-300 shadow-sm active:scale-95" 
-                               title="Delete"
+                               onClick={(e) => { e.stopPropagation(); setConfirmState({ isOpen: true, type: 'Delete', senior }); }} 
+                               className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-rose-500 hover:text-white text-slate-400 hover:shadow-md hover:shadow-rose-500/15 flex items-center justify-center transition-all border border-slate-100 hover:border-rose-500 active:scale-95" 
+                               title="Delete Member"
                              >
-                               <Trash2 size={12} />
+                               <Trash2 size={13} strokeWidth={2.5} />
                              </button>
                           </>
                         )}
@@ -1098,11 +1225,17 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   </tr>
                   );
                 }) : (
+                   /* Empty State */
                    <tr>
-                    <td colSpan={6} className="px-10 py-40 text-center">
-                      <div className="flex flex-col items-center gap-6">
-                        <div className="w-20 h-20 bg-slate-100 rounded-full border border-slate-200 flex items-center justify-center text-slate-400 animate-pulse"><Search size={40} /></div>
-                        <p className="text-slate-500 font-bold uppercase tracking-[0.2em] text-xs">No records identified in current dataset</p>
+                    <td colSpan={6} className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center justify-center py-10">
+                        <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-5">
+                          <Inbox size={28} className="text-slate-300" />
+                        </div>
+                        <h3 className="text-[15px] font-bold text-slate-700 mb-1">No Members Found</h3>
+                        <p className="text-[13px] text-slate-400 font-medium text-center max-w-xs">
+                          Try adjusting your search criteria or barangay filter options.
+                        </p>
                       </div>
                     </td>
                   </tr>
@@ -1113,18 +1246,51 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
           </TransitionWrapper>
         </div>
 
-        <div className="p-6 md:px-10 md:py-8 bg-slate-50/70 flex flex-col sm:flex-row items-center justify-between text-[10px] font-bold text-slate-500 uppercase tracking-widest border-t border-slate-200 gap-6">
-          <p className="px-4 py-2 bg-white rounded-full border border-slate-200">Dataset Range: {displayedSeniors.length} / {totalCount} records</p>
-          <div className="flex items-center gap-3">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 transition-all font-bold active:scale-[0.98]">Previous</button>
-            <div className="flex items-center gap-1.5 px-3">
-              <span className="text-sm font-bold text-slate-900">{page}</span>
-              <span className="text-sm font-medium text-slate-400">of</span>
-              <span className="text-sm font-bold text-slate-600">{totalPages}</span>
+        {/* Pagination */}
+        {!loading && totalPages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/30">
+            <p className="text-[12px] font-medium text-slate-400">
+              Showing <span className="font-bold text-slate-600">{displayedSeniors.length}</span> of <span className="font-bold text-slate-600">{totalCount}</span> records
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-systemBlue hover:text-systemBlue transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                <ChevronLeft size={16} />
+              </button>
+              
+              {/* Page Numbers */}
+              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                const pageNum = i + 1;
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setPage(pageNum)}
+                    className={`w-8 h-8 rounded-lg text-[12px] font-bold transition-all flex items-center justify-center ${
+                      page === pageNum
+                        ? 'bg-systemBlue text-white shadow-sm shadow-blue-500/20'
+                        : 'border border-slate-200 bg-white text-slate-500 hover:border-systemBlue hover:text-systemBlue'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+
+              <button
+                type="button"
+                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-systemBlue hover:text-systemBlue transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center"
+              >
+                <ChevronRight size={16} />
+              </button>
             </div>
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 hover:bg-slate-50 hover:border-slate-300 disabled:opacity-30 transition-all font-bold active:scale-[0.98]">Next</button>
           </div>
-        </div>
+        )}
       </div>
 
       {/* ID Generation Modal */}
