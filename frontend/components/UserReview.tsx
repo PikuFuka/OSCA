@@ -59,7 +59,6 @@ const StaticLabel = ({
       {text}
     </div>
   );
-  );
 };
 
 const UserReviewSkeleton = () => {
