@@ -25,15 +25,15 @@ interface AccountProps {
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
 
-const AccountSkeleton = () => {
+const AccountSkeleton = ({ isAdmin = false }: { isAdmin?: boolean }) => {
   return (
-    <div className="space-y-6 stagger-in">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-           <Skeleton.Text className="w-64 h-10 mb-2" />
-           <Skeleton.Text className="w-80 h-4 mt-1" />
+           <Skeleton.Text className="w-64 h-9 mb-1.5" />
+           <Skeleton.Text className="w-80 h-3.5" />
         </div>
-        <Skeleton.Button className="w-40" />
+        {isAdmin && <Skeleton.Button className="w-44 h-11 rounded-2xl" />}
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[600px] flex flex-col">
@@ -46,19 +46,19 @@ const AccountSkeleton = () => {
         
         {/* Search Bar Skeleton */}
         <div className="p-8 border-b border-slate-50 bg-slate-50/30">
-          <Skeleton.Rect className="w-full md:w-96 h-12 rounded-xl" />
+          <Skeleton.Rect className="w-full md:w-96 h-11 rounded-xl" />
         </div>
 
         {/* Table Skeleton */}
         <div className="overflow-x-auto flex-1">
           <table className="w-full text-left">
             <thead className="bg-slate-50 border-b border-slate-200">
-              <tr>
-                <th className="px-8 py-4"><Skeleton.Text className="w-32 h-3" /></th>
-                <th className="px-8 py-4"><Skeleton.Text className="w-24 h-3" /></th>
-                <th className="px-8 py-4"><Skeleton.Text className="w-32 h-3" /></th>
-                <th className="px-8 py-4"><Skeleton.Text className="w-20 h-3" /></th>
-                <th className="px-8 py-4"><Skeleton.Text className="w-16 h-3 ml-auto" /></th>
+              <tr className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+                <th className="px-8 py-4">Account Identity</th>
+                <th className="px-8 py-4">Access Role</th>
+                <th className="px-8 py-4">Assigned Unit/Area</th>
+                <th className="px-8 py-4">Status</th>
+                <th className="px-8 py-4 text-right">Settings</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -68,7 +68,7 @@ const AccountSkeleton = () => {
                     <div className="flex items-center gap-4">
                       <Skeleton.Rect className="w-10 h-10 rounded-xl shrink-0" />
                       <div className="w-full">
-                        <Skeleton.Text className="w-48 h-4 mb-1" />
+                        <Skeleton.Text className="w-44 h-4 mb-1" />
                         <Skeleton.Text className="w-32 h-3" />
                       </div>
                     </div>
@@ -76,7 +76,7 @@ const AccountSkeleton = () => {
                   <td className="px-8 py-5"><Skeleton.Rect className="w-24 h-6 rounded-xl" /></td>
                   <td className="px-8 py-5"><Skeleton.Text className="w-32 h-4" /></td>
                   <td className="px-8 py-5"><Skeleton.Rect className="w-20 h-6 rounded-xl" /></td>
-                  <td className="px-8 py-5"><Skeleton.Rect className="w-10 h-10 rounded-xl ml-auto" /></td>
+                  <td className="px-8 py-5 text-right"><Skeleton.Rect className="w-9 h-9 rounded-xl ml-auto" /></td>
                 </tr>
               ))}
             </tbody>
@@ -365,7 +365,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   };
 
   return (
-    <TransitionWrapper isLoading={isDataLoading} skeleton={<AccountSkeleton />}>
+    <TransitionWrapper isLoading={isDataLoading} skeleton={<AccountSkeleton isAdmin={isAdmin} />}>
       {!isDataLoading && (
         <div className="space-y-6 stagger-in">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">

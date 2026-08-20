@@ -16,13 +16,13 @@ const BatchPrintSkeleton = () => {
       {[...Array(4)].map((_, i) => (
         <div key={i} className="rounded-xl border p-5 bg-white border-slate-200">
           <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 w-full">
-              <Skeleton.Text className="w-16 h-3 mb-1" />
-              <Skeleton.Text className="w-24 h-4 mb-3" />
-              <Skeleton.Text className="w-48 h-5 mb-2" />
-              <Skeleton.Text className="w-32 h-3" />
+            <div className="min-w-0 w-full flex flex-col">
+              <Skeleton.Text className="w-16 h-2.5 mb-1" />
+              <Skeleton.Text className="w-24 h-3.5 mb-2" />
+              <Skeleton.Text className="w-40 h-4 mb-1" />
+              <Skeleton.Text className="w-28 h-3" />
             </div>
-            <Skeleton.Rect className="w-20 h-10 rounded-lg shrink-0" />
+            <Skeleton.Rect className="w-16 h-8 rounded-lg shrink-0" />
           </div>
         </div>
       ))}

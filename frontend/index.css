@@ -119,11 +119,11 @@
   }
 
   .view-enter {
-    animation: viewFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: viewFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .stagger-in > * {
-    animation: staggerChild 0.45s cubic-bezier(0.16, 1, 0.3, 1) both;
+    animation: staggerChild 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .stagger-in > *:nth-child(1) {
@@ -131,51 +131,53 @@
   }
 
   .stagger-in > *:nth-child(2) {
-    animation-delay: 40ms;
+    animation-delay: 30ms;
   }
 
   .stagger-in > *:nth-child(3) {
-    animation-delay: 80ms;
+    animation-delay: 60ms;
   }
 
   .stagger-in > *:nth-child(4) {
-    animation-delay: 120ms;
+    animation-delay: 90ms;
   }
 
   .stagger-in > *:nth-child(5) {
-    animation-delay: 160ms;
+    animation-delay: 120ms;
   }
 
   .stagger-in > *:nth-child(6) {
-    animation-delay: 200ms;
+    animation-delay: 150ms;
   }
 
   .stagger-in > *:nth-child(7) {
-    animation-delay: 240ms;
+    animation-delay: 180ms;
   }
 
   .stagger-in > *:nth-child(8) {
-    animation-delay: 280ms;
+    animation-delay: 210ms;
   }
 
   .content-ready {
-    animation: contentReady 0.2s ease-out both;
+    animation: contentReady 0.18s ease-out both;
   }
 
   .skeleton-wave::after {
     content: '';
     position: absolute;
     inset: 0;
-    transform: translateX(-100%);
+    transform: translate3d(-100%, 0, 0);
     background: linear-gradient(
       90deg,
       rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.4) 30%,
-      rgba(255, 255, 255, 0.7) 50%,
-      rgba(255, 255, 255, 0.4) 70%,
+      rgba(255, 255, 255, 0.35) 30%,
+      rgba(255, 255, 255, 0.65) 50%,
+      rgba(255, 255, 255, 0.35) 70%,
       rgba(255, 255, 255, 0) 100%
     );
-    animation: skeletonWave 1.8s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+    animation: skeletonWave 1.6s cubic-bezier(0.4, 0.0, 0.2, 1) infinite;
+    will-change: transform;
+    pointer-events: none;
   }
 
   .toast-enter {
@@ -243,24 +245,20 @@ main {
 @keyframes viewFadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.99);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
 @keyframes staggerChild {
   from {
     opacity: 0;
-    transform: translateY(10px);
   }
 
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -276,11 +274,11 @@ main {
 
 @keyframes skeletonWave {
   from {
-    transform: translateX(-100%);
+    transform: translate3d(-100%, 0, 0);
   }
 
   to {
-    transform: translateX(100%);
+    transform: translate3d(100%, 0, 0);
   }
 }
 
@@ -334,27 +332,28 @@ main {
 
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0);
+    filter: blur(0);
   }
 }
 
   /* Data Reveal & Transition Utilities */
   .transition-fade-out {
-    animation: smoothFadeOut 0.5s ease-out forwards;
+    animation: smoothFadeOut 0.15s ease-out forwards;
   }
   
   .transition-fade-in {
-    animation: smoothFadeIn 0.5s ease-out forwards;
+    animation: smoothFadeIn 0.18s ease-out forwards;
   }
   
-  .stagger-1 { animation-delay: 40ms; }
-  .stagger-2 { animation-delay: 80ms; }
-  .stagger-3 { animation-delay: 120ms; }
-  .stagger-4 { animation-delay: 160ms; }
-  .stagger-5 { animation-delay: 200ms; }
+  .stagger-1 { animation-delay: 30ms; }
+  .stagger-2 { animation-delay: 60ms; }
+  .stagger-3 { animation-delay: 90ms; }
+  .stagger-4 { animation-delay: 120ms; }
+  .stagger-5 { animation-delay: 150ms; }
   
   .chart-reveal {
-    animation: chartReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: chartReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
 @keyframes smoothFadeOut {
@@ -368,6 +367,55 @@ main {
 }
 
 @keyframes chartReveal {
-  from { opacity: 0; transform: scale(0.98) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
+
+.toast-enter {
+  animation: toastEnter 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.toast-exit {
+  animation: toastExit 0.22s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+@keyframes toastEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toastExit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-12px) scale(0.96);
+  }
+}
+
+.toast-progress-bar {
+  transform-origin: left center;
+  will-change: transform;
+  animation-name: toastProgressBar;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+
+@keyframes toastProgressBar {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+

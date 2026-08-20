@@ -20,23 +20,23 @@ interface ActivityLog {
 
 const HistoryLogSkeleton = () => {
   return (
-    <>
+    <div className="divide-y divide-slate-100">
       {[...Array(6)].map((_, i) => (
         <div key={i} className="p-5 flex items-start justify-between">
           <div className="flex items-start gap-4 w-full">
             <Skeleton.Circle className="w-5 h-5 shrink-0 mt-1" />
-            <div className="w-full">
-              <Skeleton.Text className="w-64 h-4 mb-2" />
-              <Skeleton.Text className="w-32 h-3" />
+            <div className="w-full flex flex-col gap-1">
+              <Skeleton.Text className="w-64 h-4" />
+              <Skeleton.Text className="w-36 h-3" />
             </div>
           </div>
-          <div className="text-right shrink-0 ml-4 flex flex-col items-end gap-2">
-             <Skeleton.Text className="w-24 h-3" />
-             <Skeleton.Rect className="w-20 h-6 rounded-lg" />
+          <div className="text-right shrink-0 ml-4 flex flex-col items-end gap-1">
+             <Skeleton.Text className="w-20 h-3" />
+             <Skeleton.Rect className="w-16 h-5 rounded-lg" />
           </div>
         </div>
       ))}
-    </>
+    </div>
   );
 };
 

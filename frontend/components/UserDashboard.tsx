@@ -26,16 +26,16 @@ interface UserDashboardProps {
 
 const UserDashboardSkeleton = () => {
   return (
-    <div className="space-y-8 pb-12 stagger-in">
+    <div className="space-y-8 pb-12">
       {/* Welcome Section Skeleton */}
-      <div className="bg-gradient-to-r from-systemBlue/10 to-blue-600/10 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-systemBlue/15 to-blue-600/15 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden">
         <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="w-full">
-            <Skeleton.Text className="w-32 h-3 mb-2" />
-            <Skeleton.Text className="w-64 md:w-96 h-10 mb-2" />
+            <Skeleton.Text className="w-32 h-3.5 mb-2" />
+            <Skeleton.Text className="w-64 md:w-80 h-9 mb-2" />
             <Skeleton.Text className="w-48 h-4" />
           </div>
-          <Skeleton.Rect className="min-w-[120px] h-20 rounded-2xl" />
+          <Skeleton.Rect className="min-w-[120px] h-16 rounded-2xl shrink-0" />
         </div>
       </div>
 
@@ -60,7 +60,7 @@ const UserDashboardSkeleton = () => {
             </div>
           </div>
           
-          <Skeleton.Rect className="w-full h-20 rounded-2xl" />
+          <Skeleton.Rect className="w-full h-16 rounded-2xl" />
         </div>
 
         {/* Pension Category Card Skeleton */}
@@ -68,11 +68,11 @@ const UserDashboardSkeleton = () => {
           <div>
             <Skeleton.Text className="w-24 h-3 mb-2" />
             <div className="flex items-center gap-4 mb-4">
-              <Skeleton.Rect className="w-14 h-14 rounded-2xl" />
+              <Skeleton.Rect className="w-14 h-14 rounded-2xl shrink-0" />
               <Skeleton.Text className="w-48 h-8" />
             </div>
           </div>
-          <Skeleton.Rect className="w-full h-16 rounded-2xl" />
+          <Skeleton.Rect className="w-full h-14 rounded-2xl" />
         </div>
       </div>
 
@@ -91,19 +91,19 @@ const UserDashboardSkeleton = () => {
             <div key={i} className="p-6 rounded-[2rem] border-2 bg-slate-50 border-slate-100 flex flex-col gap-4">
                <div className="flex items-center justify-between">
                  <div className="flex items-center gap-3">
-                   <Skeleton.Rect className="w-12 h-12 rounded-2xl" />
-                   <div>
-                     <Skeleton.Text className="w-32 h-5 mb-1" />
+                   <Skeleton.Rect className="w-12 h-12 rounded-2xl shrink-0" />
+                   <div className="flex flex-col gap-1">
+                     <Skeleton.Text className="w-32 h-4" />
                      <Skeleton.Text className="w-16 h-3" />
                    </div>
                  </div>
                </div>
-               <Skeleton.Rect className="w-full h-10 mt-auto rounded-xl" />
+               <Skeleton.Rect className="w-full h-9 mt-auto rounded-xl" />
             </div>
           ))}
         </div>
         
-        <Skeleton.Rect className="w-full h-16 rounded-2xl" />
+        <Skeleton.Rect className="w-full h-14 rounded-2xl" />
       </div>
     </div>
   );

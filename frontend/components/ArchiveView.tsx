@@ -15,29 +15,31 @@ const ArchiveSkeleton = () => {
   return (
     <table className="w-full text-left">
       <thead>
-        <tr>
-          <th className="px-8 py-5"><Skeleton.Text className="w-32 h-3" /></th>
-          <th className="px-8 py-5"><Skeleton.Text className="w-24 h-3" /></th>
-          <th className="px-8 py-5"><Skeleton.Text className="w-24 h-3" /></th>
-          <th className="px-8 py-5"><Skeleton.Text className="w-24 h-3" /></th>
-          <th className="px-8 py-5 text-right"><Skeleton.Text className="w-16 h-3 ml-auto" /></th>
+        <tr className="text-[10px] font-bold tracking-widest text-slate-400 uppercase border-b border-slate-100">
+          <th className="px-8 py-5">Member Profile</th>
+          <th className="px-8 py-5">Age / Gender</th>
+          <th className="px-8 py-5">Barangay</th>
+          <th className="px-8 py-5">Status</th>
+          <th className="px-8 py-5 text-right">Actions</th>
         </tr>
       </thead>
-      <tbody>
+      <tbody className="divide-y divide-slate-50">
         {[...Array(6)].map((_, i) => (
           <tr key={i}>
             <td className="px-8 py-4">
               <div className="flex items-center gap-3">
                 <Skeleton.Rect className="w-10 h-10 rounded-xl shrink-0" />
-                <div>
-                  <Skeleton.Text className="w-40 h-4 mb-1" />
+                <div className="flex flex-col gap-1">
+                  <Skeleton.Text className="w-40 h-4" />
                   <Skeleton.Text className="w-20 h-3" />
                 </div>
               </div>
             </td>
             <td className="px-8 py-4">
-              <Skeleton.Text className="w-16 h-4 mb-1" />
-              <Skeleton.Text className="w-12 h-3" />
+              <div className="flex flex-col gap-1">
+                <Skeleton.Text className="w-16 h-4" />
+                <Skeleton.Text className="w-12 h-3" />
+              </div>
             </td>
             <td className="px-8 py-4"><Skeleton.Text className="w-24 h-4" /></td>
             <td className="px-8 py-4"><Skeleton.Rect className="w-24 h-6 rounded-lg" /></td>

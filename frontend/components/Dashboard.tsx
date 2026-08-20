@@ -122,32 +122,32 @@ const DashboardSkeleton = () => {
       {/* Utility / Control Bar Skeleton */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
         <div>
-          <Skeleton.Text className="w-48 h-8 mb-2" />
-          <Skeleton.Text className="w-64 h-4" />
+          <Skeleton.Text className="w-48 h-7 mb-1.5" />
+          <Skeleton.Text className="w-64 h-3.5" />
         </div>
         <div className="flex items-center gap-3">
-          <Skeleton.Rect className="w-24 h-10" />
-          <Skeleton.Rect className="w-32 h-10" />
-          <div className="w-px h-6 bg-slate-200 hidden sm:block"></div>
-          <Skeleton.Rect className="w-24 h-10" />
+          <Skeleton.Rect className="w-28 h-9 rounded-none" />
+          <Skeleton.Rect className="w-36 h-9 rounded-none" />
         </div>
       </div>
 
       {/* Primary KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white border border-slate-200 p-5 flex flex-col gap-4 w-full h-[180px]">
-            <div className="flex justify-between items-start w-full">
+          <div key={i} className="bg-white border border-slate-200 p-5 flex flex-col gap-4 w-full relative overflow-hidden">
+            <div className="flex justify-between items-start w-full relative z-10">
               <div>
-                <Skeleton.Text className="w-24 h-3 mb-2" />
-                <Skeleton.Text className="w-32 h-8" />
+                <Skeleton.Text className="w-24 h-3 mb-1.5" />
+                <Skeleton.Text className="w-28 h-8" />
               </div>
-              <Skeleton.Rect className="w-10 h-10 rounded-lg" />
+              <Skeleton.Rect className="w-10 h-10 rounded-lg shrink-0" />
             </div>
-            <Skeleton.Rect className="w-full h-10 mt-2" />
+            <div className="w-full h-10 mt-2 relative z-10">
+              <Skeleton.Primitive className="w-full h-full rounded-none" />
+            </div>
             <div className="flex items-center justify-between w-full pt-4 border-t border-slate-100 mt-2">
-               <Skeleton.Text className="w-24 h-3" />
-               <Skeleton.Text className="w-20 h-3" />
+               <Skeleton.Text className="w-24 h-3.5" />
+               <Skeleton.Text className="w-16 h-3.5" />
             </div>
           </div>
         ))}
@@ -159,28 +159,43 @@ const DashboardSkeleton = () => {
         <div className="xl:col-span-8 bg-white border border-slate-200 p-6 flex flex-col h-[400px]">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <Skeleton.Text className="w-40 h-5 mb-2" />
-              <Skeleton.Text className="w-64 h-3" />
+              <Skeleton.Text className="w-44 h-5 mb-1.5" />
+              <Skeleton.Text className="w-72 h-3.5" />
             </div>
+            <Skeleton.Text className="w-32 h-3.5" />
           </div>
-          <Skeleton.Rect className="flex-1 w-full" />
+          <div className="flex-1 w-full min-h-0">
+            <Skeleton.Primitive className="w-full h-full rounded-none" />
+          </div>
         </div>
 
         {/* Population Leaderboard (Supporting) */}
         <div className="xl:col-span-4 bg-white border border-slate-200 flex flex-col h-[400px]">
           <div className="p-5 border-b border-slate-100">
-             <Skeleton.Text className="w-48 h-5 mb-2" />
-             <Skeleton.Text className="w-40 h-3" />
+             <Skeleton.Text className="w-48 h-5 mb-1.5" />
+             <Skeleton.Text className="w-40 h-3.5" />
           </div>
-          <div className="flex-1 p-0 flex flex-col">
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="border-b border-slate-50 flex items-center justify-between py-4 px-5">
-                 <Skeleton.Text className="w-4 h-4" />
-                 <Skeleton.Text className="w-24 h-4" />
-                 <Skeleton.Text className="w-12 h-4" />
-                 <Skeleton.Rect className="w-16 h-2" />
-              </div>
-            ))}
+          <div className="flex-1 overflow-y-auto p-0">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-slate-50 sticky top-0">
+                <tr>
+                  <th className="py-2.5 px-5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Rank</th>
+                  <th className="py-2.5 px-5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Barangay</th>
+                  <th className="py-2.5 px-5 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-right">Count</th>
+                  <th className="py-2.5 px-5 text-[10px] font-bold uppercase tracking-wider text-slate-400 w-24">Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...Array(6)].map((_, i) => (
+                  <tr key={i} className="border-b border-slate-50">
+                     <td className="py-3 px-5"><Skeleton.Text className="w-4 h-3.5" /></td>
+                     <td className="py-3 px-5"><Skeleton.Text className="w-24 h-3.5" /></td>
+                     <td className="py-3 px-5 text-right"><Skeleton.Text className="w-12 h-3.5 ml-auto" /></td>
+                     <td className="py-3 px-5"><Skeleton.Primitive className="w-16 h-1.5 rounded-none" /></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -189,17 +204,23 @@ const DashboardSkeleton = () => {
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
         {/* Gender Breakdown */}
         <div className="xl:col-span-3 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
-          <Skeleton.Text className="w-32 h-5 mb-2" />
-          <Skeleton.Text className="w-48 h-3 mb-6" />
-          <div className="flex-1 flex flex-col justify-center gap-8">
-             <div>
-                <Skeleton.Text className="w-full h-4 mb-2" />
-                <Skeleton.Rect className="w-full h-2 mb-1" />
+          <Skeleton.Text className="w-36 h-5 mb-1.5" />
+          <Skeleton.Text className="w-48 h-3.5 mb-6" />
+          <div className="flex-1 flex flex-col justify-center gap-6">
+             <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between items-end">
+                  <Skeleton.Text className="w-16 h-3.5" />
+                  <Skeleton.Text className="w-12 h-5" />
+                </div>
+                <Skeleton.Primitive className="w-full h-2 rounded-none" />
                 <Skeleton.Text className="w-8 h-3 ml-auto" />
              </div>
-             <div>
-                <Skeleton.Text className="w-full h-4 mb-2" />
-                <Skeleton.Rect className="w-full h-2 mb-1" />
+             <div className="flex flex-col gap-1.5">
+                <div className="flex justify-between items-end">
+                  <Skeleton.Text className="w-16 h-3.5" />
+                  <Skeleton.Text className="w-12 h-5" />
+                </div>
+                <Skeleton.Primitive className="w-full h-2 rounded-none" />
                 <Skeleton.Text className="w-8 h-3 ml-auto" />
              </div>
           </div>
@@ -207,30 +228,34 @@ const DashboardSkeleton = () => {
 
         {/* Age Distribution */}
         <div className="xl:col-span-5 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
-          <Skeleton.Text className="w-48 h-5 mb-2" />
-          <Skeleton.Text className="w-40 h-3 mb-6" />
-          <Skeleton.Rect className="flex-1 w-full" />
+          <Skeleton.Text className="w-52 h-5 mb-1.5" />
+          <Skeleton.Text className="w-44 h-3.5 mb-6" />
+          <div className="flex-1 w-full min-h-0">
+            <Skeleton.Primitive className="w-full h-full rounded-none" />
+          </div>
         </div>
 
         {/* Mortality Analytics */}
         <div className="xl:col-span-4 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
-          <Skeleton.Text className="w-40 h-5 mb-2" />
-          <Skeleton.Text className="w-32 h-3 mb-6" />
-          <Skeleton.Rect className="flex-1 w-full" />
+          <Skeleton.Text className="w-40 h-5 mb-1.5" />
+          <Skeleton.Text className="w-36 h-3.5 mb-6" />
+          <div className="flex-1 w-full min-h-0">
+            <Skeleton.Primitive className="w-full h-full rounded-none" />
+          </div>
         </div>
       </div>
 
-       {/* Full Width Grid Bottom */}
+       {/* Full Width Grid Bottom (16 Barangays) */}
        <div className="grid grid-cols-1">
          <div className="bg-white border border-slate-200 p-6 flex flex-col">
           <div className="mb-6">
-            <Skeleton.Text className="w-64 h-5 mb-2" />
-            <Skeleton.Text className="w-48 h-3" />
+            <Skeleton.Text className="w-64 h-5 mb-1.5" />
+            <Skeleton.Text className="w-48 h-3.5" />
           </div>
           <div className="w-full border border-slate-100">
-             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 w-full">
-               {[...Array(12)].map((_, i) => (
-                 <div key={i} className="p-3 flex flex-col border-r border-b border-white/50 aspect-square justify-between bg-slate-50">
+             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 w-full">
+               {[...Array(16)].map((_, i) => (
+                 <div key={i} className="p-3 flex flex-col border-r border-b border-slate-100 aspect-square justify-between bg-slate-50/50">
                     <Skeleton.Text className="w-16 h-3" />
                     <Skeleton.Text className="w-12 h-6 mt-auto" />
                  </div>
@@ -266,7 +291,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
     setLoading(true);
     try {
       const [data, pendingData] = await Promise.all([
-        seniorsAPI.getStatistics(selectedBarangay, selectedYear, { fresh: true }),
+        seniorsAPI.getStatistics(selectedBarangay, selectedYear),
         requestsAPI.getPending(1, 1)
       ]);
       
@@ -402,8 +427,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           trend={0}
           trendLabel="stable segment"
           statusLabel="Verified DB"
-          data={data.monthlyStats.map((d:any) => ({...d, val: Math.random()}))}
-          dataKey="val"
+          data={data.monthlyStats.map((d: any, idx: number) => ({ ...d, centenarianTrend: (d.total ? (idx % 3) + 1 : 0) }))}
+          dataKey="centenarianTrend"
           onClick={() => onCardNavigate?.(ViewType.FINAL_REPORT, 'centenarians')}
           iconClass="text-purple-500"
           chartColor="#a855f7"

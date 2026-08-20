@@ -66,17 +66,19 @@ const UserReviewSkeleton = () => {
     <div className="space-y-8 pb-12 w-full">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
-          <Skeleton.Text className="w-48 h-8 mb-2" />
-          <Skeleton.Text className="w-64 h-4" />
+          <Skeleton.Text className="w-48 h-8 mb-1.5" />
+          <Skeleton.Text className="w-64 h-3.5" />
         </div>
-        <Skeleton.Rect className="w-32 h-8 rounded-xl" />
+        <Skeleton.Rect className="w-36 h-9 rounded-xl shrink-0" />
       </div>
 
       <div className="flex justify-center mb-8">
-        <div className="flex flex-col items-center">
-            <Skeleton.Text className="w-48 h-4 mb-4" />
-            <Skeleton.Rect className="w-[480px] h-[300px] rounded-xl" />
-            <Skeleton.Text className="w-32 h-4 mt-4" />
+        <div className="flex flex-col items-center w-full max-w-[480px]">
+            <Skeleton.Text className="w-48 h-4 mb-4 mx-auto" />
+            <div className="w-[480px] max-w-full h-[300px] rounded-xl overflow-hidden shadow-sm">
+              <Skeleton.Primitive className="w-full h-full rounded-xl" />
+            </div>
+            <Skeleton.Text className="w-32 h-3.5 mt-4 mx-auto" />
         </div>
       </div>
 

@@ -58,7 +58,7 @@ const FormSkeleton = () => {
             <Skeleton.Text className="w-32 h-3" />
           </div>
         </div>
-        <Skeleton.Rect className="w-80 h-10 rounded-xl" />
+        <Skeleton.Rect className="w-72 h-9 rounded-xl shrink-0" />
       </div>
 
       {/* Form Card Skeleton */}
@@ -71,35 +71,22 @@ const FormSkeleton = () => {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-               <Skeleton.Text className="w-24 h-3 mb-2" />
-               <Skeleton.Rect className="w-full h-8 mb-2" />
-               <Skeleton.Text className="w-48 h-3" />
-            </div>
-            <div className="p-4 bg-slate-50 rounded-xl border border-slate-200">
-               <Skeleton.Text className="w-24 h-3 mb-2" />
-               <Skeleton.Rect className="w-full h-8 mb-2" />
-               <Skeleton.Text className="w-48 h-3" />
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 mt-4">
             <div className="md:col-span-4 space-y-1">
                <Skeleton.Text className="w-20 h-3 mb-1" />
-               <Skeleton.Rect className="w-full h-10" />
+               <Skeleton.Rect className="w-full h-10 rounded-lg" />
             </div>
             <div className="md:col-span-4 space-y-1">
                <Skeleton.Text className="w-20 h-3 mb-1" />
-               <Skeleton.Rect className="w-full h-10" />
+               <Skeleton.Rect className="w-full h-10 rounded-lg" />
             </div>
             <div className="md:col-span-3 space-y-1">
                <Skeleton.Text className="w-20 h-3 mb-1" />
-               <Skeleton.Rect className="w-full h-10" />
+               <Skeleton.Rect className="w-full h-10 rounded-lg" />
             </div>
             <div className="md:col-span-1 space-y-1">
                <Skeleton.Text className="w-10 h-3 mb-1" />
-               <Skeleton.Rect className="w-full h-10" />
+               <Skeleton.Rect className="w-full h-10 rounded-lg" />
             </div>
           </div>
 
@@ -107,7 +94,16 @@ const FormSkeleton = () => {
              {[...Array(4)].map((_, i) => (
                 <div key={i} className="space-y-1">
                    <Skeleton.Text className="w-20 h-3 mb-1" />
-                   <Skeleton.Rect className="w-full h-10" />
+                   <Skeleton.Rect className="w-full h-10 rounded-lg" />
+                </div>
+             ))}
+          </div>
+
+          <div className="pt-5 border-t border-slate-100 mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+             {[...Array(3)].map((_, i) => (
+                <div key={i} className="space-y-1">
+                   <Skeleton.Text className="w-24 h-3 mb-1" />
+                   <Skeleton.Rect className="w-full h-10 rounded-lg" />
                 </div>
              ))}
           </div>

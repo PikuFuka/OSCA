@@ -69,14 +69,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleS
     { id: ViewType.ADD_MEMBER, label: 'Update Info', icon: Edit, roles: ['Senior'], group: 'PORTAL' },
   ];
 
-  // Filter based on role and approval status
+  // Filter based on role
   const navItems = oscaNavItems.filter(item => {
-    if (!item.roles.includes(currentUser.role)) return false;
-    // Hide "My Record" for pending seniors
-    if (item.requiresApproval && currentUser.role === 'Senior' && seniorStatus !== 'Active') {
-      return false;
-    }
-    return true;
+    return item.roles.includes(currentUser.role);
   });
 
   // Group items logically

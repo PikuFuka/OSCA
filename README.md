@@ -1,196 +1,138 @@
-# OSCA Senior Citizen ID System
+# OSCA Senior Citizen ID & Management System
 
 <p align="center">
-  <strong>Operational records, approval workflows, and ID management for OSCA Pagsanjan, Laguna.</strong>
+  <strong>Operational records, approval workflows, digital ID design, batch printing, and demographic reporting for OSCA Pagsanjan, Laguna.</strong>
 </p>
 
 <p align="center">
-  Built with Laravel 12 + React 19 + TypeScript + Vite + Tailwind CSS
+  Built with Laravel 12 &bull; React 19 &bull; TypeScript &bull; Vite 6 &bull; Tailwind CSS &bull; MySQL / SQLite
 </p>
 
 ---
 
-## 1. Product Design Intent
+## Table of Contents
 
-The OSCA platform is designed around three goals:
-
-- Reliability: keep citizen records accurate, durable, and auditable.
-- Workflow clarity: separate registration, review, approval, and archive lifecycles.
-- Operational speed: give staff a fast UI for searches, updates, and reporting.
-
-This repository is a split architecture:
-
-- Backend API and production web entrypoint in `backend/`
-- Frontend SPA in `frontend/`
-- Root scripts for integrated local startup and Apache deployment build
+1. [Product Overview & Key Features](#1-product-overview--key-features)
+2. [Architecture & Runtime Model](#2-architecture--runtime-model)
+3. [System Requirements & Prerequisites](#3-system-requirements--prerequisites)
+4. [Fresh Local Development Setup](#4-fresh-local-development-setup)
+5. [Transferring the System to Other Devices](#5-transferring-the-system-to-other-devices)
+   - [Method A: Transfer via USB Flash Drive / ZIP (Offline / Air-Gapped)](#method-a-transfer-via-usb-flash-drive--zip-offline--air-gapped)
+   - [Method B: Transfer via Git Repository](#method-b-transfer-via-git-repository)
+   - [Migrating Existing Database & Uploaded Citizen Files](#migrating-existing-database--uploaded-citizen-files)
+6. [Production Deployment via Apache / XAMPP (Office LAN)](#6-production-deployment-via-apache--xampp-office-lan)
+7. [100% Offline Operation Architecture](#7-100-offline-operation-architecture)
+8. [Seeded Accounts & Roles](#8-seeded-accounts--roles)
+9. [Available CLI Commands](#9-available-cli-commands)
+10. [Troubleshooting & FAQ](#10-troubleshooting--faq)
 
 ---
 
-## 2. System Architecture
+## 1. Product Overview & Key Features
+
+* **Member Registry**: Real-time searchable database of senior citizens with instant filters by 16 barangays, pension status, age brackets, and verification state.
+* **Dual-Sided Digital ID Studio**: Interactive card builder with customizable drag-and-drop labels, QR code generation, front/back preview, and multi-card batch printing.
+* **Smart Camera with AI Background Removal**: Live camera capture with client-side AI selfie segmentation (`@mediapipe`), 100% self-hosted with zero internet connection required.
+* **Application Approval Workflow**: Review and manage pending registrations, document submissions, and profile change requests before committing to the official registry.
+* **Audited Reporting & Excel Exports**: One-click generation of audited masterlists, centenarians roster, deceased records, and newly registered seniors.
+* **Account Management & RBAC**: Role-based access control for Admins, Staff, and Senior Citizen self-service portal accounts.
+* **Automated Audit Logs & Backups**: Complete audit trails for every record change, ID print, or deletion, with one-click database export and import tools.
+
+---
+
+## 2. Architecture & Runtime Model
 
 ```mermaid
 flowchart LR
-  U[OSCA Staff Admin Senior User] --> FE[React SPA frontend]
-  FE -->|REST API| BE[Laravel API backend]
-  BE --> DB[(MySQL or SQLite)]
-  BE --> FS[Storage profile photos and documents]
+  U[OSCA Admin / Staff / Senior User] --> FE[React 19 SPA Frontend]
+  FE -->|Local REST API| BE[Laravel 12 API Backend]
+  BE --> DB[(Local MySQL / MariaDB / SQLite)]
+  BE --> FS[Local Storage Photos & Documents]
 
-  subgraph Production via Apache
-    AP[Apache DocumentRoot backend public]
-    AP --> SPA[App route serves backend public app index html]
-    AP --> API[API routes handled by Laravel]
+  subgraph Production LAN Deployment
+    AP[Apache Web Server :80 / XAMPP]
+    AP --> SPA[Serves Built SPA from backend/public/app]
+    AP --> API[Handles API routes via Laravel backend/public]
   end
 ```
 
-### Runtime Model
-
-- Development:
-  - Vite serves frontend at `http://localhost:3000`
-  - Laravel serves API at `http://127.0.0.1:8000`
-  - Vite proxy forwards `/api` to Laravel
-- Apache/XAMPP deployment:
-  - Apache serves Laravel from `backend/public`
-  - Built frontend is served from `backend/public/app`
-  - `/` redirects to `/app`
-
----
-
-## 3. Application Architecture
-
-### Backend (Laravel 12)
-
-- Routing:
-  - API routes in `backend/routes/api.php`
-  - Web routes in `backend/routes/web.php`
-- Layers:
-  - Controllers in `backend/app/Http/Controllers`
-  - Models in `backend/app/Models`
-  - Exports/reporting in `backend/app/Exports`
-- Cross-cutting concerns:
-  - Auth and session/security via Laravel + Sanctum
-  - Logging via Laravel logging stack
-  - File and public asset handling via `storage` + symlink
-
-### Frontend (React 19 + TS)
-
-- Entry and shell:
-  - App root in `frontend/index.tsx` and `frontend/App.tsx`
-- Major UI domains in `frontend/components/`:
-  - Registry, review, archive, reports, backup, account, dashboard
-- Shared state and service boundaries:
-  - Auth and app state in `frontend/context/`
-  - API interaction in `frontend/services/`
-  - Utility logic in `frontend/utils/`
-
-### Data & Identity Model (High-Level)
-
-- Primary actors:
-  - Admin
-  - Staff
-  - Senior user
-- Primary business objects:
-  - Senior profile
-  - Supporting documents and photo assets
-  - Approval state/history log entries
-  - Generated reports / exports
+### Runtime Modes:
+* **Development Mode**:
+  * Frontend Vite Dev Server runs at `http://localhost:3000` (or `3001` if busy).
+  * Backend Laravel API runs at `http://127.0.0.1:8000`.
+  * Vite proxy automatically routes `/api` calls to Laravel.
+* **Production / Apache Mode**:
+  * Apache serves the compiled single-page application from `backend/public/app`.
+  * Root URL (`/`) automatically redirects to `/app`.
+  * Accessible by other computers across the local office network via LAN IP (e.g. `http://192.168.1.50/app`).
 
 ---
 
-## 4. Repository Map
+## 3. System Requirements & Prerequisites
 
-```text
-OSCA/
-|-- APP/                      # Windows launcher
-|-- backend/                  # Laravel app + API + Apache entrypoint
-|   |-- app/
-|   |-- config/
-|   |-- database/
-|   |-- public/
-|   `-- routes/
-|-- frontend/                 # React application
-|   |-- components/
-|   |-- context/
-|   |-- services/
-|   `-- utils/
-|-- package.json              # Root task orchestrator
-|-- REQUIREMENTS.txt          # Installation checklist
-`-- README.md
+### Minimum Hardware:
+* **Processor**: Intel Core i3 / AMD Ryzen 3 or higher
+* **RAM**: 4 GB minimum (8 GB recommended)
+* **Storage**: 2 GB free disk space
+
+### Software:
+1. **Operating System**: Windows 10 / 11, macOS, or Linux
+2. **XAMPP**: Version 8.2 or higher (includes Apache, MySQL/MariaDB, PHP 8.2+)
+   * [Download XAMPP](https://www.apachefriends.org/download.html)
+3. **Node.js**: Version 18 LTS, 20 LTS, or 22+ (includes npm)
+   * [Download Node.js](https://nodejs.org/)
+4. **Composer**: Version 2.x (PHP Dependency Manager)
+   * [Download Composer](https://getcomposer.org/download/)
+5. **Git** (Optional for Git-based deployment):
+   * [Download Git](https://git-scm.com/downloads)
+
+### Required PHP Extensions in `php.ini`:
+Ensure these are enabled in your XAMPP `php.ini` (remove the leading `;` if commented):
+```ini
+extension=pdo_mysql
+extension=pdo_sqlite
+extension=mbstring
+extension=openssl
+extension=fileinfo
+extension=gd
+extension=zip
+extension=xml
+extension=curl
 ```
 
 ---
 
-## 5. Technology Stack
+## 4. Fresh Local Development Setup
 
-### Backend
+Follow these steps when setting up the project for the first time from Git:
 
-- PHP 8.2+
-- Laravel 12
-- Laravel Sanctum
-- maatwebsite/excel
-
-### Frontend
-
-- React 19
-- TypeScript
-- Vite 6
-- Tailwind CSS
-- Axios
-- Recharts
-
-### Infrastructure
-
-- XAMPP Apache
-- XAMPP MySQL (or SQLite for local lightweight setups)
-
----
-
-## 6. Local Development Setup
-
-### Prerequisites
-
-- XAMPP (Apache, MySQL, PHP 8.2+)
-- Node.js 22 LTS+
-- Composer 2.x
-
-Expected PHP extensions:
-
-- `pdo_mysql` or `pdo_sqlite`
-- `mbstring`
-- `openssl`
-- `fileinfo`
-- `gd` or `imagick`
-- `zip`
-- `xml`
-- `tokenizer`
-
-### Step 1: Clone project
-
+### Step 1: Clone Repository
 ```bash
 git clone https://github.com/PikuFuka/OSCA.git
 cd OSCA
 ```
 
-### Step 2: Install root tools
-
+### Step 2: Install Root Dependencies
 ```bash
 npm install
 ```
 
-### Step 3: Backend install + env
-
+### Step 3: Setup Backend Environment
 ```bash
 cd backend
 composer install
 copy .env.example .env
 php artisan key:generate
 ```
+*(On macOS / Linux, use `cp .env.example .env`)*
 
-On macOS/Linux: `cp .env.example .env`
+### Step 4: Configure Database in `backend/.env`
+Open `backend/.env` in any text editor and configure your database settings:
 
-### Step 4: Configure database in `backend/.env`
-
-MySQL option:
-
+**Option A — MySQL (Default with XAMPP):**
+1. Start **Apache** and **MySQL** in the XAMPP Control Panel.
+2. Open `http://localhost/phpmyadmin` and create a database named `osca_db`.
+3. In `backend/.env`:
 ```dotenv
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
@@ -200,215 +142,281 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-SQLite option:
-
+**Option B — SQLite (Zero setup database file):**
+1. In `backend/.env`:
 ```dotenv
 DB_CONNECTION=sqlite
 ```
+2. Create an empty file at `backend/database/database.sqlite`.
 
-For SQLite, create an empty file at `backend/database/database.sqlite`.
-
-### Step 5: Migrate and link storage
-
+### Step 5: Run Migrations, Seeds & Link Storage
 ```bash
-php artisan migrate
+php artisan migrate --seed
 php artisan storage:link
-php artisan db:seed
 ```
 
-`db:seed` is optional.
-
-### Step 6: Frontend install
-
+### Step 6: Setup Frontend
 ```bash
-cd ..\frontend
+cd ../frontend
 npm install
 ```
 
-### Step 7: Run in development mode
-
+### Step 7: Launch System
+From the root `OSCA` directory:
 ```bash
 cd ..
 npm run dev
 ```
 
-This starts:
-
-- MySQL via hardcoded path `C:\xampp\mysql\bin\mysqld.exe`
-- Laravel at `http://127.0.0.1:8000`
-- Vite at `http://localhost:3000`
-
-Development URLs:
-
-- Frontend: `http://localhost:3000`
-- API: `http://127.0.0.1:8000/api`
-- phpMyAdmin: `http://localhost/phpmyadmin`
+Open your browser at: **`http://localhost:3000`**
 
 ---
 
-## 7. Deployment Architecture (Apache/XAMPP)
+## 5. Transferring the System to Other Devices
 
-This is the recommended deployment path for LAN office usage.
+When transferring the system to another office PC, laptop, or server, follow one of the two methods below.
 
-### Deployment Topology
+---
 
-```mermaid
-flowchart TD
-  Build[npm run build:frontend] --> Out[backend/public/app]
-  Apache[Apache DocumentRoot backend/public] --> Laravel[Laravel Runtime]
-  Laravel --> AppRoute[App route serves SPA index]
-  Laravel --> ApiRoute[API route serves JSON]
-  Laravel --> DB[(MySQL)]
-  Laravel --> Storage[storage/app + public/storage]
+### Method A: Transfer via USB Flash Drive / ZIP (Offline / Air-Gapped)
+
+Use this method when moving the system to a computer that has limited or no internet connection.
+
+#### Step 1: Clean Up Source Project on the Old Device
+Before copying the project to a USB flash drive, remove transient build folders to save gigabytes of space and prevent symlink corruption:
+
+Run in PowerShell or Command Prompt from the project root:
+```bash
+# Remove node_modules and vendor (they will be reinstalled or transferred cleanly)
+rd /s /q node_modules
+rd /s /q frontend\node_modules
+rd /s /q backend\vendor
+
+# Remove compiled dist and storage symlink
+rd /s /q frontend\dist
+rd /s /q backend\public\storage
 ```
 
-### Step-by-Step Deployment
+#### Step 2: Export Database & Copy Uploaded Citizen Files
+1. **Export Database**:
+   * Open `http://localhost/phpmyadmin` &rarr; click `osca_db` &rarr; click **Export** &rarr; click **Export** (saves `osca_db.sql`).
+   * *Or use the in-app backup view at `http://localhost:3000` &rarr; System Logs &rarr; Backup &rarr; Export Database.*
+   * Place `osca_db.sql` into the project root folder.
+2. **Citizen Photos & Files**:
+   * Ensure `backend/storage/app/public/` is copied intact (this folder holds uploaded ID photos and verification documents).
 
-1. Configure environment in `backend/.env`:
+#### Step 3: Copy Folder to New Device
+Copy the entire `OSCA/` folder to the target computer (e.g. `C:\Users\<YourUsername>\Desktop\OSCA` or `C:\xampp\htdocs\OSCA`).
 
+#### Step 4: Install & Initialize on the New Device
+On the new computer (make sure XAMPP, Node.js, and Composer are installed):
+
+1. **Start XAMPP MySQL & Apache** in XAMPP Control Panel.
+2. **Create Database & Import SQL**:
+   * Open `http://localhost/phpmyadmin` &rarr; Create database `osca_db`.
+   * Click **Import** &rarr; choose `osca_db.sql` &rarr; click **Import**.
+3. **Open Terminal in `OSCA/backend`**:
+   ```bash
+   cd backend
+   composer install
+   copy .env.example .env
+   php artisan key:generate
+   php artisan migrate
+   php artisan storage:link
+   ```
+4. **Open Terminal in `OSCA/frontend`**:
+   ```bash
+   cd ../frontend
+   npm install
+   npm run build
+   ```
+5. **Start System**:
+   ```bash
+   cd ..
+   npm run dev
+   ```
+
+---
+
+### Method B: Transfer via Git Repository
+
+Use this method if both machines have internet access or are on the same local Git server.
+
+#### On the Source Device:
+1. Commit and push any recent code changes:
+   ```bash
+   git add .
+   git commit -m "Update OSCA system"
+   git push origin main
+   ```
+2. Export your latest database from `http://localhost/phpmyadmin` or via MySQL CLI:
+   ```bash
+   mysqldump -u root osca_db > osca_backup.sql
+   ```
+3. Copy `osca_backup.sql` and the contents of `backend/storage/app/public` to a USB drive or cloud drive.
+
+#### On the Target Device:
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/PikuFuka/OSCA.git
+   cd OSCA
+   ```
+2. Install dependencies:
+   ```bash
+   npm install
+   cd backend && composer install
+   cd ../frontend && npm install
+   ```
+3. Setup `.env` and generate key:
+   ```bash
+   cd ../backend
+   copy .env.example .env
+   php artisan key:generate
+   ```
+4. Import database:
+   * Create `osca_db` in phpMyAdmin.
+   * Import `osca_backup.sql`.
+5. Restore citizen uploaded files:
+   * Paste the copied files into `backend/storage/app/public/`.
+   * Run `php artisan storage:link`.
+6. Run the application:
+   ```bash
+   cd ..
+   npm run dev
+   ```
+
+---
+
+### Migrating Existing Database & Uploaded Citizen Files
+
+Whenever moving live senior records between machines:
+
+| Item | Source Location | Destination Location | How to Migrate |
+| :--- | :--- | :--- | :--- |
+| **Database Data** | MySQL `osca_db` | MySQL `osca_db` | Export `.sql` from phpMyAdmin on old PC, Import into phpMyAdmin on new PC. |
+| **Profile Photos & Documents** | `backend/storage/app/public/` | `backend/storage/app/public/` | Copy folder contents, then run `php artisan storage:link` in `backend/`. |
+| **System Environment** | `backend/.env` | `backend/.env` | Copy DB credentials, verify `APP_KEY` matches if encrypted tokens are used. |
+
+---
+
+## 6. Production Deployment via Apache / XAMPP (Office LAN)
+
+To run the system as a permanent office service accessible by multiple computers over LAN:
+
+### Step 1: Build the Production Frontend
+From the root directory:
+```bash
+npm run build:frontend
+```
+This compiles the React app directly into `backend/public/app`.
+
+### Step 2: Configure `backend/.env` for Production
 ```dotenv
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=http://YOUR_HOST_OR_IP
+APP_URL=http://YOUR_SERVER_LAN_IP
+```
+*(Example: `APP_URL=http://192.168.1.100`)*
+
+### Step 3: Configure Apache DocumentRoot in XAMPP
+Open `C:\xampp\apache\conf\extra\httpd-vhosts.conf` and add:
+```apache
+<VirtualHost *:80>
+    ServerName osca.local
+    DocumentRoot "C:/xampp/htdocs/OSCA/backend/public"
+    <Directory "C:/xampp/htdocs/OSCA/backend/public">
+        Options Indexes FollowSymLinks
+        AllowOverride All
+        Require all granted
+    </Directory>
+</VirtualHost>
 ```
 
-2. Install root and backend dependencies:
+### Step 4: Restart Apache & Open Firewall
+1. Restart Apache in the XAMPP Control Panel.
+2. In Windows Firewall &rarr; Allow an app &rarr; Allow Apache HTTP Server on Private Network.
+3. Access the system from any device on the network:
+   * From server: `http://localhost/app`
+   * From other PCs: `http://192.168.1.100/app`
 
+---
+
+## 7. 100% Offline Operation Architecture
+
+The OSCA system is specifically architected to work in **100% air-gapped environments with zero active internet connection**:
+
+* **Self-Hosted AI Camera**: MediaPipe selfie segmentation models (`.tflite`), SIMD binaries, and WASM files are bundled locally under `/frontend/public/mediapipe/selfie_segmentation/`. No CDN downloads are required.
+* **Self-Hosted Typography**: Inter font files are bundled into the app distribution (`.woff2`). No Google Fonts network requests are made.
+* **Local Compute & Storage**: All PDF printing, canvas rendering, Excel document generation, and database queries run entirely on the host machine.
+
+---
+
+## 8. Seeded Accounts & Roles
+
+When running `php artisan db:seed`, the following accounts are initialized:
+
+| Role | Email / Identifier | Password | Permissions |
+| :--- | :--- | :--- | :--- |
+| **Administrator** | `admin@osca.gov.ph` | `admin123` | Full access (Registry, Approvals, Accounts, System Logs, Database Backup) |
+| **Staff Member** | `staff@osca.gov.ph` | `staff123` | Operations (Registry, Approvals, Registration, Batch Print, Reports) |
+| **Senior Citizen** | OSCA ID (e.g. `24-0001`) | Set upon registration | Personal Portal (View Status, Digital ID Review, Update Request) |
+
+> **Important**: Change default administrator and staff passwords immediately after deployment in production.
+
+---
+
+## 9. Available CLI Commands
+
+### Root Workspace Commands
 ```bash
-npm install
-cd backend
-composer install --no-dev --optimize-autoloader
-php artisan migrate --force
-php artisan storage:link
+npm run dev              # Starts MySQL + Laravel API + Vite Dev Server concurrently
+npm run build:frontend   # Compiles frontend SPA into backend/public/app for Apache
+npm run deploy:apache    # Full production build and setup for Apache
 ```
 
-3. Build frontend for production:
-
+### Backend Commands (`cd backend`)
 ```bash
-cd ..
-npm run build:frontend
+php artisan serve        # Runs local Laravel dev server at 127.0.0.1:8000
+php artisan migrate      # Runs database migrations
+php artisan db:seed      # Seeds default admin and staff accounts
+php artisan storage:link # Creates public symlink for uploaded citizen documents
+php artisan test         # Runs automated PHPUnit backend tests
 ```
 
-4. Set Apache `DocumentRoot` to:
-
-```text
-.../OSCA/backend/public
-```
-
-5. Optionally start from sample config:
-
-- `backend/deploy/xampp-vhost.conf.example`
-
-6. Restart Apache and verify:
-
-- `/` redirects to `/app`
-- `/app` serves the built SPA
-- `/api/*` serves Laravel API routes
-
-7. For LAN access:
-
-- Allow Apache in Windows Firewall
-- Access with machine IP, e.g. `http://192.168.x.x/app`
-- Keep `APP_URL` aligned with actual access host/IP
-
-### Frontend Update Rule
-
-Every frontend code change requires rebuilding:
-
+### Frontend Commands (`cd frontend`)
 ```bash
-npm run build:frontend
+npm run dev              # Starts Vite dev server at http://localhost:3000
+npm run build            # Builds production assets to ../backend/public/app
+npm run test             # Runs Vitest unit tests
 ```
 
 ---
 
-## 8. Security & Operations Notes
+## 10. Troubleshooting & FAQ
 
-- Change seeded/default credentials immediately in non-dev environments.
-- Keep `APP_DEBUG=false` in deployed environments.
-- Do not regenerate `APP_KEY` on a live environment unless planned.
-- Run regular database backups and validate restore procedures.
-- Restrict server access to trusted network segments where possible.
+### 1. `php` or `composer` is not recognized
+* Ensure `C:\xampp\php` is added to your Windows Environment `PATH` variable.
+* Ensure Composer bin directory (usually `C:\ProgramData\ComposerSetup\bin`) is in `PATH`.
 
----
+### 2. Uploaded photos or documents return 404 / broken image
+* The storage symlink is missing. Open terminal in `backend/` and run:
+  ```bash
+  php artisan storage:link
+  ```
 
-## 9. Commands Reference
+### 3. Database connection refused (`SQLSTATE[HY000] [2002]`)
+* Make sure MySQL is running in the XAMPP Control Panel.
+* Verify port `3306` and credentials in `backend/.env`.
 
-### Root
+### 4. Port 3000 is already in use
+* Vite will automatically assign port `3001` or `3002`. You can also close the competing application or specify a custom port in `frontend/vite.config.ts`.
 
-```bash
-npm run dev
-npm run build:frontend
-npm run deploy:apache
-```
-
-### Backend
-
-```bash
-cd backend
-php artisan serve
-php artisan migrate
-php artisan db:seed
-php artisan test
-```
-
-### Frontend
-
-```bash
-cd frontend
-npm run dev
-npm run build
-npm run preview
-```
+### 5. Apache returns 503 / 404 on `/app`
+* The frontend production bundle has not been built yet. Run from project root:
+  ```bash
+  npm run build:frontend
+  ```
 
 ---
 
-## 10. Seeded Accounts (If `db:seed` is used)
-
-- Admin email: `admin@osca.gov.ph`
-- Admin password: `admin123`
-- Staff email: `staff@osca.gov.ph`
-- Staff password: `staff123`
-
-Change these immediately after deployment.
-
----
-
-## 11. Troubleshooting
-
-### `composer` not recognized
-
-Install Composer and ensure Composer bin directory is in `PATH`.
-
-### `php` not recognized
-
-Add XAMPP PHP path (usually `C:\xampp\php`) to system `PATH`.
-
-### `/app` returns 503
-
-Frontend production assets are missing. Rebuild:
-
-```bash
-npm run build:frontend
-```
-
-### Uploaded files not visible
-
-Ensure storage symlink exists:
-
-```bash
-cd backend
-php artisan storage:link
-```
-
-### CORS issues in dev mode
-
-Use frontend at port 3000 and backend at 8000 to match configured proxy/CORS.
-
----
-
-## 12. Maintainer Notes
-
-- This root README is the canonical setup + architecture + deployment document.
-- `backend/README.md` and `frontend/README.md` are framework boilerplate defaults.
-
-Last updated: March 22, 2026
+*OSCA Senior Citizen ID System &bull; Municipal Government of Pagsanjan, Laguna &bull; Developed for reliable offline governance.*

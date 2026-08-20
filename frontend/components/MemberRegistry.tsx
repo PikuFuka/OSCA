@@ -76,7 +76,7 @@ const getSelfieSegmentationInstance = async () => {
   if (!selfieSegmentationLoader) {
     selfieSegmentationLoader = import('@mediapipe/selfie_segmentation').then(async mod => {
       const selfieSegmentation = new mod.SelfieSegmentation({
-        locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/selfie_segmentation/${file}`
+        locateFile: (file) => `/mediapipe/selfie_segmentation/${file}`
       });
 
       selfieSegmentation.setOptions({
@@ -242,14 +242,14 @@ const RegistrySkeleton = () => {
               </div>
             </td>
             {/* Modified */}
-            <td className="px-5 py-4 text-center flex justify-center">
-              <Skeleton.Text className="w-24 h-3.5 mt-2" />
+            <td className="px-5 py-4 text-center">
+              <Skeleton.Text className="w-24 h-3.5 mx-auto" />
             </td>
             {/* Actions */}
             <td className="px-6 py-4 text-right">
               <div className="flex items-center justify-end gap-1">
                 {[...Array(4)].map((_, j) => (
-                   <Skeleton.Rect key={j} className="w-7 h-7 rounded-lg" />
+                   <Skeleton.Rect key={j} className="w-7 h-7 rounded-lg shrink-0" />
                 ))}
               </div>
             </td>
@@ -1097,7 +1097,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                       <div className="flex items-center gap-3">
                         <div className="relative shrink-0">
                           {senior.idPhoto ? (
-                            <img src={senior.idPhoto} alt={senior.name} loading="lazy" className="w-9 h-9 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0 bg-slate-50" />
+                            <img src={senior.idPhoto} alt={senior.name} loading="lazy" width={36} height={36} className="w-9 h-9 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0 bg-slate-50" />
                           ) : (
                             <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 font-extrabold text-[10px]">
                               {senior.name.split(' ').map((n) => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()}

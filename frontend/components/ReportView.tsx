@@ -18,17 +18,32 @@ interface ReportViewProps {
     initialSection?: 'masterlist' | 'centenarians' | 'deceased' | 'newly-registered';
 }
 
-const ReportSkeleton = () => {
+const ReportSkeleton = ({ activeSection = 'masterlist' }: { activeSection?: 'masterlist' | 'centenarians' | 'deceased' | 'newly-registered' }) => {
+  const getColumns = () => {
+    switch (activeSection) {
+      case 'centenarians':
+        return ['OSCA ID', 'FULL NAME', 'BARANGAY', 'EXACT AGE', 'STATUS'];
+      case 'deceased':
+        return ['OSCA ID', 'FULL NAME', 'BARANGAY', 'RECORDED DATE'];
+      case 'newly-registered':
+        return ['OSCA ID', 'FULL NAME', 'BARANGAY', 'AGE', 'SEX', 'REGISTRATION DATE'];
+      default:
+        return ['OSCA ID', 'FULL NAME', 'BARANGAY', 'AGE', 'SEX', 'STATUS'];
+    }
+  };
+
+  const columns = getColumns();
+
   return (
     <div className="space-y-8 pb-12 relative">
       {/* Header Skeleton */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <Skeleton.Text className="w-80 h-10 mb-2" />
-          <Skeleton.Text className="w-64 h-4" />
+          <Skeleton.Text className="w-80 h-9 mb-1.5" />
+          <Skeleton.Text className="w-64 h-3.5" />
         </div>
         <div className="flex items-center gap-3">
-          <Skeleton.Button className="w-full sm:w-48" />
+          <Skeleton.Button className="w-full sm:w-52 h-11 rounded-xl" />
         </div>
       </div>
 
@@ -46,8 +61,8 @@ const ReportSkeleton = () => {
             <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
               <div className="flex items-center gap-3">
                 <Skeleton.Rect className="w-9 h-9 rounded-xl" />
-                <div>
-                  <Skeleton.Text className="w-32 h-4 mb-1" />
+                <div className="flex flex-col gap-1">
+                  <Skeleton.Text className="w-32 h-4" />
                   <Skeleton.Text className="w-20 h-3" />
                 </div>
               </div>
@@ -59,20 +74,20 @@ const ReportSkeleton = () => {
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="px-8 py-4"><Skeleton.Text className="w-24 h-3" /></th>
-                    <th className="px-8 py-4"><Skeleton.Text className="w-24 h-3" /></th>
-                    <th className="px-8 py-4"><Skeleton.Text className="w-24 h-3" /></th>
-                    <th className="px-8 py-4"><Skeleton.Text className="w-24 h-3" /></th>
+                  <tr className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
+                    {columns.map((col, idx) => (
+                      <th key={idx} className="px-8 py-4">{col}</th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {[...Array(8)].map((_, i) => (
                     <tr key={i}>
-                      <td className="px-8 py-5"><Skeleton.Text className="w-32 h-4" /></td>
-                      <td className="px-8 py-5"><Skeleton.Text className="w-48 h-4" /></td>
-                      <td className="px-8 py-5"><Skeleton.Text className="w-24 h-4" /></td>
-                      <td className="px-8 py-5"><Skeleton.Text className="w-24 h-4" /></td>
+                      {columns.map((_, cIdx) => (
+                        <td key={cIdx} className="px-8 py-5">
+                          <Skeleton.Text className={cIdx === 1 ? 'w-48 h-4' : 'w-24 h-4'} />
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
@@ -210,7 +225,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
   const isDataLoading = loading;
 
   return (
-    <TransitionWrapper isLoading={loading} skeleton={<ReportSkeleton />}>
+    <TransitionWrapper isLoading={loading} skeleton={<ReportSkeleton activeSection={activeSection} />}>
       {!loading && (
         <div className="space-y-8 pb-12 relative">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 no-print">

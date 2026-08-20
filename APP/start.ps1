@@ -28,7 +28,7 @@ Write-Host ""
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Resolve-Path "$ScriptDir\.."
 $IconPath = Join-Path $ScriptDir "osca_logo.ico"
-$ShortcutPath = Join-Path $env:USERPROFILE "Desktop\OSCA.lnk"
+$ShortcutPath = Join-Path $env:USERPROFILE "Desktop\PROJECTS\OSCA.lnk"
 
 # 1. Desktop Shortcut Check
 Write-Host -NoNewline "  [$gear] Verifying desktop environment shortcut ... " -ForegroundColor Gray
