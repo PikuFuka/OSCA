@@ -13,6 +13,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class SeniorController extends Controller
 {
@@ -389,16 +391,25 @@ class SeniorController extends Controller
                 }
             }
 
-            // Handle file uploads
+            // Handle file uploads — write binary to filesystem (storage/app/private/documents), keep DB row light
             $documentTypes = ['birthCert', 'cedula', 'brgyCert', 'idPicture'];
             foreach ($documentTypes as $type) {
                 if ($request->hasFile($type)) {
                     $file = $request->file($type);
+                    $binary = file_get_contents($file->getRealPath());
+                    $fileName = $file->getClientOriginalName();
+                    $safeName = Str::slug(pathinfo($fileName, PATHINFO_FILENAME)) ?: 'document';
+                    $ext = pathinfo($fileName, PATHINFO_EXTENSION) ?: 'bin';
+                    $docFileName = $safeName . '.' . $ext;
+                    $filePath = "documents/{$senior->id}/" . time() . "_{$type}_{$docFileName}";
+                    Storage::disk('local')->put($filePath, $binary);
+
                     SeniorDocument::create([
                         'senior_id' => $senior->id,
                         'document_type' => $type,
-                        'file_content' => file_get_contents($file->getRealPath()),
-                        'file_name' => $file->getClientOriginalName(),
+                        'file_content' => null,
+                        'file_path' => $filePath,
+                        'file_name' => $fileName,
                         'mime_type' => $file->getMimeType(),
                         'file_size' => $file->getSize(),
                     ]);
@@ -646,13 +657,27 @@ class SeniorController extends Controller
 
         try {
             $file = $request->file('document');
+            $binary = file_get_contents($file->getRealPath());
+            $fileName = $file->getClientOriginalName();
+            $safeName = Str::slug(pathinfo($fileName, PATHINFO_FILENAME)) ?: 'document';
+            $ext = pathinfo($fileName, PATHINFO_EXTENSION) ?: 'bin';
+            $docFileName = $safeName . '.' . $ext;
+            $filePath = "documents/{$senior->id}/" . time() . "_{$request->documentType}_{$docFileName}";
 
-            // Update existing document of this type or create new one to save space
+            // Clean up previous document's filesystem file if replacing
+            $existing = SeniorDocument::where('senior_id', $senior->id)->where('document_type', $request->documentType)->first();
+            if ($existing && $existing->file_path) {
+                Storage::disk('local')->delete($existing->file_path);
+            }
+
+            Storage::disk('local')->put($filePath, $binary);
+
             SeniorDocument::updateOrCreate(
                 ['senior_id' => $senior->id, 'document_type' => $request->documentType],
                 [
-                    'file_content' => file_get_contents($file->getRealPath()),
-                    'file_name' => $file->getClientOriginalName(),
+                    'file_content' => null,
+                    'file_path' => $filePath,
+                    'file_name' => $fileName,
                     'mime_type' => $file->getMimeType(),
                     'file_size' => $file->getSize(),
                 ]
@@ -662,7 +687,7 @@ class SeniorController extends Controller
             if ($request->documentType === 'idPicture') {
                 // Delete old photo if it exists
                 if ($senior->profile_photo_path) {
-                    \Illuminate\Support\Facades\Storage::disk('public')->delete($senior->profile_photo_path);
+                    Storage::disk('public')->delete($senior->profile_photo_path);
                 }
 
                 $path = $file->store('profile_photos', 'public');
@@ -727,11 +752,20 @@ class SeniorController extends Controller
 
             $senior->update(['profile_photo_path' => $path]);
 
-            // Also save to documents as idPicture
+            // Also save to documents as idPicture — filesystem first
+            $docFilePath = "documents/{$senior->id}/" . time() . "_idPicture_{$filename}";
+            // Remove previous file if replacing
+            $prev = SeniorDocument::where('senior_id', $senior->id)->where('document_type', 'idPicture')->first();
+            if ($prev && $prev->file_path) {
+                Storage::disk('local')->delete($prev->file_path);
+            }
+            Storage::disk('local')->put($docFilePath, $binaryImage);
+
             SeniorDocument::updateOrCreate(
                 ['senior_id' => $senior->id, 'document_type' => 'idPicture'],
                 [
-                    'file_content' => $binaryImage,
+                    'file_content' => null,
+                    'file_path' => $docFilePath,
                     'file_name' => $filename,
                     'mime_type' => 'image/png',
                     'file_size' => strlen($binaryImage),
@@ -785,7 +819,12 @@ class SeniorController extends Controller
                                   ->where('senior_id', $senior->id)
                                   ->firstOrFail();
 
-        return response($document->file_content)
+        $binary = $document->getFileBinary();
+        if ($binary === null) {
+            abort(404, 'Document file not found.');
+        }
+
+        return response($binary)
             ->header('Content-Type', $document->mime_type)
             ->header('Content-Disposition', 'inline; filename="' . $document->file_name . '"');
     }
@@ -804,9 +843,13 @@ class SeniorController extends Controller
         // If it's an idPicture, we might want to also clear the profile_photo_path
         if ($document->document_type === 'idPicture') {
             if ($senior && $senior->profile_photo_path) {
-                \Illuminate\Support\Facades\Storage::disk('public')->delete($senior->profile_photo_path);
+                Storage::disk('public')->delete($senior->profile_photo_path);
                 $senior->update(['profile_photo_path' => null]);
             }
+        }
+
+        if ($document->file_path) {
+            Storage::disk('local')->delete($document->file_path);
         }
 
         $document->delete();

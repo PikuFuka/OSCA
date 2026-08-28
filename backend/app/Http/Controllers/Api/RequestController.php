@@ -11,6 +11,8 @@ use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class RequestController extends Controller
 {
@@ -147,16 +149,25 @@ class RequestController extends Controller
         // Create an update request with the proposed changes stored as pending_data
         $pendingData = $validated;
 
-        // Handle file uploads attached to the update request
+        // Handle file uploads attached to the update request — filesystem first
         $documentTypes = ['birthCert', 'cedula', 'brgyCert', 'idPicture'];
         foreach ($documentTypes as $type) {
             if ($request->hasFile($type)) {
                 $file = $request->file($type);
+                $binary = file_get_contents($file->getRealPath());
+                $fileName = $file->getClientOriginalName();
+                $safeName = Str::slug(pathinfo($fileName, PATHINFO_FILENAME)) ?: 'document';
+                $ext = pathinfo($fileName, PATHINFO_EXTENSION) ?: 'bin';
+                $docFileName = $safeName . '.' . $ext;
+                $filePath = "documents/{$senior->id}/" . time() . "_{$type}_{$docFileName}";
+                Storage::disk('local')->put($filePath, $binary);
+
                 SeniorDocument::create([
                     'senior_id'     => $senior->id,
                     'document_type' => $type,
-                    'file_content'  => file_get_contents($file->getRealPath()),
-                    'file_name'     => $file->getClientOriginalName(),
+                    'file_content'  => null,
+                    'file_path'     => $filePath,
+                    'file_name'     => $fileName,
                     'mime_type'     => $file->getMimeType(),
                     'file_size'     => $file->getSize(),
                 ]);
