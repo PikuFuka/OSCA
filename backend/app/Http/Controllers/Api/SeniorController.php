@@ -20,7 +20,32 @@ class SeniorController extends Controller
 {
     private function applyValidOscaIdScope($query)
     {
+        static $hasTrim = null;
+        if ($hasTrim === null) {
+            try {
+                $hasTrim = \Illuminate\Support\Facades\Schema::hasColumn('seniors', 'osca_id_trim');
+            } catch (\Throwable $e) {
+                $hasTrim = false;
+            }
+        }
+        if ($hasTrim) {
+            return $query->whereNotNull('osca_id_trim')->where('osca_id_trim', '<>', '');
+        }
         return $query->whereNotNull('osca_id')->whereRaw("TRIM(osca_id) <> ''");
+    }
+
+    private function hasFulltextIndex(): bool
+    {
+        static $hasFt = null;
+        if ($hasFt !== null) return $hasFt;
+        try {
+            $hasFt = (bool) \Illuminate\Support\Facades\DB::selectOne(
+                "SELECT 1 FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = 'seniors' AND index_name = 'seniors_ft_name' LIMIT 1"
+            );
+        } catch (\Throwable $e) {
+            $hasFt = false;
+        }
+        return $hasFt;
     }
 
     private function applySeniorSearch($query, string $search): void
@@ -31,19 +56,38 @@ class SeniorController extends Controller
         }
 
         $terms = preg_split('/\s+/', $search) ?: [];
+        $terms = array_values(array_filter($terms, fn($t) => $t !== ''));
 
         $query->where(function ($q) use ($search, $terms) {
-            $q->where('osca_id', 'like', "%{$search}%")
-                ->orWhere(function ($nameQuery) use ($terms) {
-                    foreach ($terms as $term) {
-                        $nameQuery->where(function ($termQuery) use ($term) {
-                            $termQuery->where('first_name', 'like', "%{$term}%")
-                                ->orWhere('middle_name', 'like', "%{$term}%")
-                                ->orWhere('last_name', 'like', "%{$term}%")
-                                ->orWhere('extension_name', 'like', "%{$term}%");
-                        });
-                    }
-                });
+            $q->where('osca_id', 'like', "%{$search}%");
+
+            if ($terms === []) return;
+
+            // Prefer FULLTEXT boolean mode for name search (uses seniors_ft_name index)
+            if ($this->hasFulltextIndex() && count($terms) <= 5) {
+                $boolean = implode(' ', array_map(function ($t) {
+                    $clean = preg_replace('/[^\p{L}\p{N}]/u', '', $t);
+                    if ($clean === '' || mb_strlen($clean) < 2) return '';
+                    return '+' . $clean . '*';
+                }, $terms));
+                $boolean = trim($boolean);
+                if ($boolean !== '' && $boolean !== '+' && $boolean !== '+*') {
+                    $q->orWhereRaw("MATCH(first_name, middle_name, last_name) AGAINST(? IN BOOLEAN MODE)", [$boolean]);
+                    return;
+                }
+            }
+
+            // Fallback: LIKE per-term (original behavior) — kept for when FT not yet migrated or boolean empty
+            $q->orWhere(function ($nameQuery) use ($terms) {
+                foreach ($terms as $term) {
+                    $nameQuery->where(function ($termQuery) use ($term) {
+                        $termQuery->where('first_name', 'like', "%{$term}%")
+                            ->orWhere('middle_name', 'like', "%{$term}%")
+                            ->orWhere('last_name', 'like', "%{$term}%")
+                            ->orWhere('extension_name', 'like', "%{$term}%");
+                    });
+                }
+            });
         });
     }
 
@@ -227,7 +271,7 @@ class SeniorController extends Controller
     public function show($id)
     {
         $senior = Senior::with(['familyMembers', 'documents' => function($query) {
-                            $query->select(['id', 'senior_id', 'document_type', 'file_name', 'mime_type', 'file_size']);
+                            $query->select(['id', 'senior_id', 'document_type', 'file_path', 'file_name', 'mime_type', 'file_size']);
                         }])
                         ->whereNotNull('osca_id')
                         ->whereRaw("TRIM(osca_id) <> ''")
@@ -333,12 +377,10 @@ class SeniorController extends Controller
             DB::beginTransaction();
 
             // ---- Duplicate detection: same name + date of birth ----
-            $duplicate = Senior::where('first_name', $validated['firstName'])
+            $duplicateQuery = Senior::where('first_name', $validated['firstName'])
                 ->where('last_name', $validated['lastName'])
-                ->where('date_of_birth', $validated['dateOfBirth'])
-                ->whereNotNull('osca_id')
-                ->whereRaw("TRIM(osca_id) <> ''")
-                ->first();
+                ->where('date_of_birth', $validated['dateOfBirth']);
+            $duplicate = $this->applyValidOscaIdScope($duplicateQuery)->first();
 
             if ($duplicate) {
                 return response()->json([
@@ -904,15 +946,9 @@ class SeniorController extends Controller
 
                 $monthlyStats[] = [
                     'name' => $monthName,
-                    'male' => (clone $baseForMonth)->where(function($q) {
-                        $q->where('sex', 'like', 'M%')->orWhere('sex', 'like', 'm%');
-                    })->count(),
-                    'female' => (clone $baseForMonth)->where(function($q) {
-                        $q->where('sex', 'like', 'F%')->orWhere('sex', 'like', 'f%');
-                    })->count(),
-                    'deceased' => (clone $baseForMonth)->where(function($q) {
-                        $q->where('status', 'like', 'D%')->orWhere('status', 'like', 'd%');
-                    })->count(),
+                    'male' => (clone $baseForMonth)->where('sex', 'Male')->count(),
+                    'female' => (clone $baseForMonth)->where('sex', 'Female')->count(),
+                    'deceased' => (clone $baseForMonth)->where('status', 'Deceased')->count(),
                 ];
             }
 
@@ -930,10 +966,10 @@ class SeniorController extends Controller
 
             return [
                 'total' => (clone $populationQuery)->count(),
-                'active' => (clone $populationQuery)->whereIn('status', ['Active', 'active', 'approved'])->count(),
-                'pending' => (clone $populationQuery)->whereIn('status', ['Pending', 'pending'])->count(),
-                'deceased' => (clone $populationQuery)->whereIn('status', ['Deceased', 'deceased'])->count(),
-                'centenarians' => (clone $populationQuery)->where('age', '>=', 100)->whereNotIn('status', ['Deceased', 'deceased'])->count(),
+                'active' => (clone $populationQuery)->where('status', 'Active')->count(),
+                'pending' => (clone $populationQuery)->where('status', 'Pending')->count(),
+                'deceased' => (clone $populationQuery)->where('status', 'Deceased')->count(),
+                'centenarians' => (clone $populationQuery)->where('age', '>=', 100)->where('status', '!=', 'Deceased')->count(),
                 'monthlyStats' => $monthlyStats,
                 'ageRanges' => [
                     ['range' => '60-65', 'count' => (clone $populationQuery)->whereBetween('age', [60, 65])->count()],
@@ -945,12 +981,8 @@ class SeniorController extends Controller
                     ['range' => '91+', 'count' => (clone $populationQuery)->where('age', '>', 90)->count()],
                 ],
                 'genders' => [
-                    ['name' => 'Male', 'value' => (clone $populationQuery)->where(function($q) {
-                        $q->where('sex', 'like', 'M%')->orWhere('sex', 'like', 'm%');
-                    })->count()],
-                    ['name' => 'Female', 'value' => (clone $populationQuery)->where(function($q) {
-                        $q->where('sex', 'like', 'F%')->orWhere('sex', 'like', 'f%');
-                    })->count()],
+                    ['name' => 'Male', 'value' => (clone $populationQuery)->where('sex', 'Male')->count()],
+                    ['name' => 'Female', 'value' => (clone $populationQuery)->where('sex', 'Female')->count()],
                 ],
                 'topBarangays' => $allBarangayStats->take(5),
                 'allBarangayStats' => $allBarangayStats,
