@@ -36,47 +36,48 @@ const AccountSkeleton = ({ isAdmin = false }: { isAdmin?: boolean }) => {
         {isAdmin && <Skeleton.Button className="w-44 h-11 rounded-2xl" />}
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[600px] flex flex-col">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
         {/* Tab Navigation Skeleton */}
-        <div className="px-6 py-4 border-b border-slate-100 flex gap-3 bg-slate-50/50">
+        <div className="px-4 sm:px-6 py-3 border-b border-slate-100 flex gap-2 bg-slate-50/50">
           {[...Array(4)].map((_, i) => (
-             <Skeleton.Rect key={i} className="w-32 h-10 rounded-lg" />
+             <Skeleton.Rect key={i} className="w-28 h-8 rounded-full" />
           ))}
         </div>
         
         {/* Search Bar Skeleton */}
-        <div className="p-8 border-b border-slate-50 bg-slate-50/30">
-          <Skeleton.Rect className="w-full md:w-96 h-11 rounded-xl" />
+        <div className="px-6 py-4 border-b border-slate-100 bg-white flex items-center gap-3">
+          <Skeleton.Rect className="w-full max-w-[360px] h-[42px] rounded-xl" />
+          <Skeleton.Text className="w-16 h-3 ml-auto hidden sm:block" />
         </div>
 
         {/* Table Skeleton */}
         <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                <th className="px-8 py-4">Account Identity</th>
-                <th className="px-8 py-4">Access Role</th>
-                <th className="px-8 py-4">Assigned Unit/Area</th>
-                <th className="px-8 py-4">Status</th>
-                <th className="px-8 py-4 text-right">Settings</th>
+          <table className="w-full text-left table-fixed">
+            <thead>
+              <tr className="border-b border-slate-100 text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase">
+                <th className="px-6 py-4 w-[34%]">Account Identity</th>
+                <th className="px-5 py-4 w-[14%] text-center">Access Role</th>
+                <th className="px-5 py-4 w-[22%] text-center">Assigned Unit/Area</th>
+                <th className="px-5 py-4 w-[14%] text-center">Status</th>
+                <th className="px-6 py-4 w-[16%] text-right">Settings</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-50">
               {[...Array(8)].map((_, i) => (
                 <tr key={i}>
-                  <td className="px-8 py-5">
-                    <div className="flex items-center gap-4">
-                      <Skeleton.Rect className="w-10 h-10 rounded-xl shrink-0" />
-                      <div className="w-full">
-                        <Skeleton.Text className="w-44 h-4 mb-1" />
-                        <Skeleton.Text className="w-32 h-3" />
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <Skeleton.Rect className="w-9 h-9 rounded-xl shrink-0" />
+                      <div className="w-full max-w-[180px]">
+                        <Skeleton.Text className="w-3/4 h-3.5 mb-1" />
+                        <Skeleton.Text className="w-1/2 h-2.5" />
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-5"><Skeleton.Rect className="w-24 h-6 rounded-xl" /></td>
-                  <td className="px-8 py-5"><Skeleton.Text className="w-32 h-4" /></td>
-                  <td className="px-8 py-5"><Skeleton.Rect className="w-20 h-6 rounded-xl" /></td>
-                  <td className="px-8 py-5 text-right"><Skeleton.Rect className="w-9 h-9 rounded-xl ml-auto" /></td>
+                  <td className="px-5 py-4"><div className="flex justify-center"><Skeleton.Rect className="w-16 h-5 rounded-lg" /></div></td>
+                  <td className="px-5 py-4"><Skeleton.Text className="w-20 h-3 mx-auto" /></td>
+                  <td className="px-5 py-4"><div className="flex justify-center"><Skeleton.Rect className="w-16 h-5 rounded-full" /></div></td>
+                  <td className="px-6 py-4"><div className="flex justify-end"><Skeleton.Rect className="w-7 h-7 rounded-lg" /></div></td>
                 </tr>
               ))}
             </tbody>
@@ -84,8 +85,13 @@ const AccountSkeleton = ({ isAdmin = false }: { isAdmin?: boolean }) => {
         </div>
         
         {/* Pagination Skeleton */}
-        <div className="p-6 border-t border-slate-50 flex items-center justify-between">
-           <Skeleton.Rect className="w-48 h-8 rounded-lg" />
+        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
+           <Skeleton.Text className="w-32 h-3" />
+           <div className="flex items-center gap-1.5">
+             <Skeleton.Rect className="w-8 h-8 rounded-lg" />
+             <Skeleton.Text className="w-16 h-3" />
+             <Skeleton.Rect className="w-8 h-8 rounded-lg" />
+           </div>
         </div>
       </div>
     </div>
@@ -246,10 +252,10 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
 
   const getRoleBadgeColor = (role: string) => {
     switch(role) {
-      case 'Admin': return 'bg-blue-100 text-blue-900';
-      case 'Staff': return 'bg-purple-100 text-purple-900';
-      case 'Senior Citizen': return 'bg-emerald-50 text-emerald-800';
-      default: return 'bg-slate-100 text-slate-600';
+      case 'Admin': return 'bg-blue-50 text-blue-700 border-blue-100';
+      case 'Staff': return 'bg-purple-50 text-purple-700 border-purple-100';
+      case 'Senior Citizen': return 'bg-emerald-50 text-emerald-700 border-emerald-100';
+      default: return 'bg-slate-50 text-slate-600 border-slate-200';
     }
   };
 
@@ -367,134 +373,153 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   return (
     <TransitionWrapper isLoading={isDataLoading} skeleton={<AccountSkeleton isAdmin={isAdmin} />}>
       {!isDataLoading && (
-        <div className="space-y-6 stagger-in">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="space-y-8">
+      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
         <div>
-            <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-none mb-2">Accounts Management</h2>
-            <p className="text-sm font-bold text-slate-500 max-w-2xl mt-1">Manage system users and senior citizen portal accounts.</p>
+            <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">Accounts Management</h2>
+            <p className="text-[11px] font-semibold text-slate-400 tracking-wide mt-1.5 bg-white/50 w-fit px-2.5 py-1 rounded-md border border-slate-200/60 shadow-sm uppercase">System Users • {accounts.length} accounts</p>
         </div>
         {isAdmin && (
           <button 
             onClick={() => setIsCreateOpen(true)}
-            className="bg-systemBlue text-white hover:bg-blue-800 transition-all active:scale-[0.98] outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 shadow-md hover:shadow-lg rounded-xl px-6 py-3 rounded-2xl text-sm font-black flex items-center gap-3"
+            className="bg-[#0F172A] hover:bg-black text-white px-5 py-2.5 rounded-xl font-bold text-[13px] flex items-center gap-2 shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all"
           >
-            <Plus size={20} />
+            <Plus size={16} strokeWidth={2.5} />
             Create New Staff
           </button>
         )}
       </div>
 
       {/* ... Rest of the component (Tables, Modals) is largely identical structure, just wrapped in the same render ... */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden min-h-[600px] flex flex-col">
-        {/* Tab Navigation */}
-        <div className="px-6 py-4 border-b border-slate-100 flex flex-nowrap overflow-x-auto gap-3 no-scrollbar bg-slate-50/50">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => { setActiveTab(tab.id as any); setPage(1); }}
-                className={`px-4 py-2.5 rounded-lg flex items-center gap-2 transition-all text-[11px] font-black uppercase tracking-widest ${
-                  isActive 
-                    ? 'bg-white border border-slate-200 text-systemBlue shadow-sm' 
-                    : 'border border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-800'
-                }`}
-              >
-                <Icon size={18} className={isActive ? 'text-blue-900' : 'text-slate-400'} />
-                <span className={`text-sm font-bold whitespace-nowrap ${isActive ? 'text-blue-900' : 'text-slate-500'}`}>
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
+        {/* Filters + Search — single compact bar */}
+        <div className="px-4 sm:px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex flex-col lg:flex-row lg:items-center gap-3">
+          <div className="flex flex-nowrap overflow-x-auto gap-2 no-scrollbar shrink-0">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => { setActiveTab(tab.id as any); setPage(1); }}
+                  className={`px-3 py-1.5 rounded-full flex items-center gap-1.5 transition-all text-[11px] font-bold uppercase tracking-widest whitespace-nowrap border shrink-0 ${
+                    isActive 
+                      ? 'bg-[#0F172A] border-[#0F172A] text-white shadow-sm' 
+                      : 'bg-white border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700'
+                  }`}
+                >
+                  <Icon size={13} strokeWidth={2.5} className={isActive ? 'text-white' : 'text-slate-400'} />
                   {tab.label}
-                </span>
-                {isActive && (
-                  <span className="ml-1 px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 text-[10px] font-black">
+                  <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black ${isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'}`}>
                     {tab.count}
                   </span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-        
-        {/* ... Search Bar & Table ... */}
-        <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row items-center justify-between gap-4 bg-slate-50/30">
-          <div className="relative w-full md:w-96">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                </button>
+              );
+            })}
+          </div>
+          <div className="relative group w-full lg:w-[300px] lg:ml-auto shrink-0">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-[#0F172A] transition-colors pointer-events-none">
+              <Search size={14} strokeWidth={2.5} />
+            </div>
             <input 
               type="text" 
-              placeholder="Search by name, ID or email..."
-              className="w-full pl-11 pr-4 py-3 rounded-xl bg-slate-50 border border-slate-200 hover:bg-slate-100 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100 focus:border-blue-500 transition-all text-sm font-semibold text-slate-900 placeholder:text-slate-400"
+              placeholder="Search name, ID, email…"
+              className="w-full pl-9 pr-8 py-2 bg-white border border-slate-200 rounded-full text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-slate-300 focus:ring-3 focus:ring-slate-100 transition-all font-medium shadow-sm"
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
             />
+            {searchTerm ? (
+              <button onClick={() => { setSearchTerm(''); setPage(1); }} className="absolute right-2 top-1/2 -translate-y-1/2 grid h-6 w-6 place-items-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors">
+                <span className="text-[11px] leading-none">✕</span>
+              </button>
+            ) : (
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline text-[10px] font-medium text-slate-400 pointer-events-none">{filteredAccounts.length}</span>
+            )}
           </div>
         </div>
 
         <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left">
-            <thead className="bg-slate-50 border-b border-slate-200">
-              <tr className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
-                <th className="px-8 py-4">Account Identity</th>
-                <th className="px-8 py-4">Access Role</th>
-                <th className="px-8 py-4">Assigned Unit/Area</th>
-                <th className="px-8 py-4">Status</th>
-                <th className="px-8 py-4 text-right">Settings</th>
+          <table className="w-full text-left table-fixed">
+            <thead>
+              <tr className="border-b border-slate-100">
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[34%]">Account Identity</th>
+                <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Access Role</th>
+                <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[22%] text-center">Assigned Unit/Area</th>
+                <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Status</th>
+                <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[16%] text-right">Settings</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-50">
               {displayedAccounts.length > 0 ? displayedAccounts.map(acc => (
-                <tr key={acc.id} className="hover:bg-slate-50 transition-colors">
-                  <td className="px-8 py-5">
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-black text-sm border-2 border-white shadow-sm shrink-0 overflow-hidden">
-                        {acc.type === 'Senior' && acc.originalData.idPhoto ? (
-                           <img src={acc.originalData.idPhoto} alt={acc.name} className="w-full h-full object-cover" />
-                        ) : (
-                           (acc.name || 'U').charAt(0)
-                        )}
+                <tr key={acc.id} className="group hover:bg-slate-50/60 transition-colors">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-3">
+                      <div className="relative shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-50 text-slate-500 flex items-center justify-center font-extrabold text-[10px] border border-slate-200 shadow-sm shrink-0 overflow-hidden">
+                          {acc.type === 'Senior' && acc.originalData.idPhoto ? (
+                             <img src={acc.originalData.idPhoto} alt={acc.name} className="w-full h-full object-cover" />
+                          ) : (
+                             (acc.name || 'U').charAt(0).toUpperCase()
+                          )}
+                        </div>
+                        <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${acc.status === 'Active' ? 'bg-emerald-500' : acc.status === 'Pending' ? 'bg-amber-500' : 'bg-slate-400'}`} />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-bold text-slate-900 truncate max-w-[200px]">{acc.name || 'Unknown'}</p>
-                        <p className="text-xs text-slate-400 font-medium">{acc.email || 'No email'}</p>
+                        <p className="text-[13px] font-semibold text-slate-900 leading-tight truncate group-hover:text-[#0F172A] transition-colors">{acc.name || 'Unknown'}</p>
+                        <p className="text-[11px] font-medium text-slate-400 tracking-wide truncate">{acc.email || 'No email'}</p>
                       </div>
                     </div>
                   </td>
-                  <td className="px-8 py-5">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wide whitespace-nowrap ${getRoleBadgeColor(acc.role)}`}>
-                      {acc.role === 'Admin' && <Shield size={12} />}
-                      {acc.role}
-                    </span>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center justify-center">
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-lg border whitespace-nowrap ${getRoleBadgeColor(acc.role)}`}>
+                        {acc.role === 'Admin' && <Shield size={11} strokeWidth={2.5} />}
+                        {acc.role === 'Senior Citizen' ? 'Senior' : acc.role}
+                      </span>
+                    </div>
                   </td>
-                  <td className="px-8 py-5 text-sm font-semibold text-slate-600">
-                    {acc.barangay}
+                  <td className="px-5 py-4 text-center">
+                    <span className="text-[12px] font-medium text-slate-600 truncate">{acc.barangay}</span>
                   </td>
-                  <td className="px-8 py-5">
-                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wide ${
-                        acc.status === 'Active' ? 'bg-emerald-100 text-emerald-900' : 
-                        acc.status === 'Pending' ? 'bg-amber-100 text-amber-900' : 
-                        acc.status === 'Deceased' ? 'bg-slate-900 text-white' :
-                        'bg-slate-200 text-slate-600'
-                    }`}>
-                      {acc.status}
-                    </span>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center justify-center">
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full border whitespace-nowrap ${
+                          acc.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 
+                          acc.status === 'Pending' ? 'bg-amber-50 text-amber-700 border-amber-100' : 
+                          acc.status === 'Deceased' ? 'bg-slate-900 text-white border-slate-900' :
+                          'bg-slate-100 text-slate-600 border-slate-200'
+                      }`}>
+                        <span className={`w-1 h-1 rounded-full ${acc.status === 'Active' ? 'bg-emerald-500' : acc.status === 'Pending' ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'}`} />
+                        {acc.status}
+                      </span>
+                    </div>
                   </td>
-                  <td className="px-8 py-5 text-right">
-                    {isAdmin ? (
-                      <button 
-                        onClick={() => handleEditClick(acc)}
-                        className="w-10 h-10 bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 rounded-xl border border-slate-200 flex items-center justify-center transition-all shadow-sm"
-                        title="Manage Access"
-                      >
-                        <Lock size={18} />
-                      </button>
-                    ) : (
-                      <span className="text-xs text-slate-400 font-bold italic">View Only</span>
-                    )}
+                  <td className="px-6 py-4">
+                    <div className="flex items-center justify-end">
+                      {isAdmin ? (
+                        <button 
+                          onClick={() => handleEditClick(acc)}
+                          className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-[#0F172A] hover:text-white text-slate-400 hover:shadow-md hover:shadow-slate-900/10 flex items-center justify-center transition-all border border-slate-100 hover:border-[#0F172A] active:scale-95"
+                          title="Manage Access"
+                        >
+                          <Lock size={13} strokeWidth={2.5} />
+                        </button>
+                      ) : (
+                        <span className="text-[11px] text-slate-400 font-medium italic">View Only</span>
+                      )}
+                    </div>
                   </td>
                 </tr>
               )) : (
                 <tr>
-                  <td colSpan={5} className="px-10 py-20 text-center">
-                    <p className="text-slate-400 font-bold text-sm">No accounts found.</p>
+                  <td colSpan={5} className="px-6 py-20 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-3">
+                        <Users size={20} className="text-slate-300" />
+                      </div>
+                      <p className="text-[13px] font-semibold text-slate-600">No accounts found.</p>
+                      <p className="text-[11px] text-slate-400 mt-1">Try adjusting search or tab filter.</p>
+                    </div>
                   </td>
                 </tr>
               )}
@@ -502,12 +527,19 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
           </table>
         </div>
         
-         {/* Pagination */}
-        <div className="p-6 border-t border-slate-50 flex items-center justify-between">
-           <div className="flex items-center gap-2">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-500 hover:bg-slate-50 disabled:opacity-50">Previous</button>
-            <span className="text-sm font-bold text-slate-600">Page {page} of {totalPages}</span>
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm text-slate-500 hover:bg-slate-50 disabled:opacity-50">Next</button>
+          {/* Pagination — matches MemberRegistry */}
+        <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/30">
+           <p className="text-[12px] font-medium text-slate-400">
+             Showing <span className="font-bold text-slate-600">{displayedAccounts.length}</span> of <span className="font-bold text-slate-600">{filteredAccounts.length}</span> results
+           </p>
+           <div className="flex items-center gap-1.5">
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m15 18-6-6 6-6"/></svg>
+            </button>
+            <span className="text-[12px] font-semibold text-slate-500 px-2">Page {page} of {totalPages}</span>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-700 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center transition-colors">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="m9 18 6-6-6-6"/></svg>
+            </button>
            </div>
         </div>
       </div>

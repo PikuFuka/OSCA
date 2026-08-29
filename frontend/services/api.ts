@@ -46,6 +46,17 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    // Silently ignore aborted/canceled requests — they are intentional (search debounce)
+    const rawMessage: string = error?.message || '';
+    const isCanceled = error?.code === 'ERR_CANCELED' || error?.name === 'CanceledError' || rawMessage === 'canceled' || error?.__CANCEL__ === true;
+    if (isCanceled) {
+      const cancelError: any = new Error('canceled');
+      cancelError.name = 'CanceledError';
+      cancelError.code = 'ERR_CANCELED';
+      cancelError.config = error.config;
+      return Promise.reject(cancelError);
+    }
+
     const status = error.response?.status;
     const serverMessage = error.response?.data?.message;
     const isServerMessageSafe = typeof serverMessage === 'string' && !TECHNICAL_MESSAGE_PATTERN.test(serverMessage);
@@ -200,11 +211,14 @@ export const seniorsAPI = {
   getAll: async (params?: any) => {
     const requestParams = { ...(params || {}) };
     const forceRefresh = Boolean(requestParams.fresh);
+    const signal = requestParams.signal as AbortSignal | undefined;
     delete requestParams.fresh;
+    delete requestParams.signal;
 
+    // Short cache for search: 30s stale-while-revalidate (backend also caches 45s)
     const key = `seniors-all-${JSON.stringify(requestParams)}`;
     return withCache(key, async () => {
-      const response = await api.get('/seniors', { params: requestParams } as any);
+      const response = await api.get('/seniors', { params: requestParams, signal } as any);
       return response.data;
     }, { forceRefresh });
   },

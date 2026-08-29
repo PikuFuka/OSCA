@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use App\Http\Requests\ActivityLogStoreRequest;
+use App\Http\Resources\ActivityLogResource;
 
 class ActivityLogController extends Controller
 {
@@ -56,47 +58,16 @@ class ActivityLogController extends Controller
             $query->whereDate('created_at', '<=', $request->to);
         }
 
-        $logs = $query->orderBy('created_at', 'desc')
-                      ->paginate($request->get('per_page', 50));
-
-        $logs->getCollection()->transform(function($log) {
-            // Determine the "User" to display. 
-            // If user_id is null, it's likely a senior action (registration/request)
-            $userName = 'System';
-            if ($log->user) {
-                $userName = $log->user->name;
-            } else if (isset($log->details['name'])) {
-                $userName = $log->details['name'];
-            } else if (isset($log->details['senior_name'])) {
-                $userName = $log->details['senior_name'];
-            }
-
-            // Append ID for seniors to be more specific
-            if (!$log->user && isset($log->details['osca_id'])) {
-                $userName .= " (#" . $log->details['osca_id'] . ")";
-            }
-
-            return [
-                'id' => $log->id,
-                'action' => $log->action,
-                'timestamp' => $log->created_at->toIso8601String(),
-                'user' => $userName,
-                'details' => $log->details,
-                'ip' => $log->ip_address,
-            ];
-        });
-
-        return response()->json($logs);
+        $logs = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 50));
+        // Modular: Resource handles transform (was 20 lines inline)
+        return ActivityLogResource::collection($logs);
     }
 
     /**
-     * Store a new activity log
+     * Store a new activity log — thin via FormRequest + Resource
      */
-    public function store(Request $request)
+    public function store(ActivityLogStoreRequest $request)
     {
-        $request->validate([
-            'action' => 'required|string',
-        ]);
 
         $user = $request->user();
         $isUser = $user instanceof \App\Models\User;
@@ -110,10 +81,7 @@ class ActivityLogController extends Controller
             'ip_address'  => $request->ip(),
         ]);
 
-        return response()->json([
-            'success' => true,
-            'log' => $log
-        ], 201);
+        return (new ActivityLogResource($log))->additional(['success'=>true])->response()->setStatusCode(201);
     }
 
     /**

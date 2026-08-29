@@ -3,6 +3,10 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scrollbar-gutter: stable;
+  }
+
   body {
     font-family: 'Noto Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
@@ -11,6 +15,7 @@
     background-color: #F2F2F7; /* iOS background light */
     color: #000;
     letter-spacing: -0.012em;
+    scrollbar-gutter: stable;
   }
 
   img,
@@ -337,13 +342,19 @@ main {
   }
 }
 
-  /* Data Reveal & Transition Utilities */
+  /* Data Reveal & Transition Utilities — GPU-only, no blur for 60fps */
+  .transition-wrapper-skeleton {
+    animation: smoothFadeIn 0.18s ease-out both;
+  }
   .transition-fade-out {
-    animation: smoothFadeOut 0.15s ease-out forwards;
+    animation: smoothFadeOut 0.18s ease-in forwards;
   }
   
   .transition-fade-in {
-    animation: smoothFadeIn 0.18s ease-out forwards;
+    animation: smoothFadeInScale 0.48s cubic-bezier(0.22, 1, 0.36, 1) both;
+    will-change: opacity, transform;
+    transform: translateZ(0);
+    backface-visibility: hidden;
   }
   
   .stagger-1 { animation-delay: 30ms; }
@@ -357,13 +368,18 @@ main {
   }
 
 @keyframes smoothFadeOut {
-  from { opacity: 1; }
-  to { opacity: 0; }
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(-4px); }
 }
 
 @keyframes smoothFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes smoothFadeInScale {
+  from { opacity: 0; transform: translate3d(0, 12px, 0) scale(0.985); }
+  to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
 }
 
 @keyframes chartReveal {

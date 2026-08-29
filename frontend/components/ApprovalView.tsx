@@ -296,8 +296,8 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
         </div>
       </div>
 
-      {/* Main Table Card */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+      {/* Main Table Card — auto height to content */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden transition-all duration-300 ease-out">
         <div className="overflow-x-auto">
           <TransitionWrapper isLoading={loading} skeleton={<ApprovalSkeleton />}>
             {!loading && filteredRequests.length > 0 ? (

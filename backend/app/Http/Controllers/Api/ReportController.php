@@ -24,6 +24,14 @@ class ReportController extends Controller
         $year = $request->query('year');
         $barangay = $request->query('barangay');
 
+        // Queueable path — Excel with 10k rows blocks PHP-FPM; dispatch to file queue (database driver)
+        if ($request->boolean('async') || $request->boolean('queue')) {
+            $yearInt = ($year && $year !== 'All Years') ? (int) $year : null;
+            $barangayStr = ($barangay && $barangay !== 'All Barangays') ? $barangay : null;
+            \App\Jobs\GenerateReportJob::dispatch($yearInt, $barangayStr, $request->user()->id);
+            return response()->json(['queued'=>true,'message'=>'Report queued via file queue. Check storage/app/private/reports/ after queue:work.'], 202);
+        }
+
         // Normalise inputs
         $yearInt = ($year && $year !== 'All Years') ? (int) $year : null;
         $barangayStr = ($barangay && $barangay !== 'All Barangays') ? $barangay : null;

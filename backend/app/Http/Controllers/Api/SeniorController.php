@@ -15,6 +15,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use App\Http\Requests\SeniorStoreRequest;
+use App\Http\Requests\SeniorUpdateRequest;
+use App\Http\Resources\SeniorResource;
+use App\Services\Senior\SeniorService;
+use App\Services\Senior\DocumentService;
 
 class SeniorController extends Controller
 {
@@ -109,56 +114,72 @@ class SeniorController extends Controller
     }
 
     /**
-     * Get all seniors with optional filtering
+     * Get all seniors with optional filtering — optimized for fast search
      */
     public function index(Request $request)
     {
-        $query = Senior::withCount('familyMembers');
-
-        if (!$request->has('status')) {
-            $query->whereIn('status', ['Active', 'approved', 'active']);
-        }
-
-        // Search by name or OSCA ID
-        if ($request->has('search')) {
-            $this->applySeniorSearch($query, (string) $request->search);
-        }
-
-        // Filter by barangay
-        if ($request->has('barangay') && $request->barangay !== 'All Barangays') {
-            $query->where('barangay', $request->barangay);
-        }
-
-        // Filter by status
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $perPage = $request->get('per_page', 15);
+        $search = trim((string) $request->get('search', ''));
+        $hasSearch = $search !== '';
+        $barangay = $request->get('barangay');
+        $status = $request->get('status');
+        $page = (int) $request->get('page', 1);
+        $perPageRaw = $request->get('per_page', 15);
         $sortBy = $request->get('sort', 'last_name');
         $sortOrder = $request->get('order', 'asc');
         $allowedSortColumns = ['last_name', 'first_name', 'created_at', 'updated_at', 'barangay', 'status', 'age'];
-        if (!in_array($sortBy, $allowedSortColumns)) {
-            $sortBy = 'last_name';
-        }
+        if (!in_array($sortBy, $allowedSortColumns)) $sortBy = 'last_name';
         $sortOrder = strtolower($sortOrder) === 'desc' ? 'desc' : 'asc';
-        
-        if ($perPage == -1) {
-            $seniors = $query->orderBy($sortBy, $sortOrder)->get();
-            $transformed = $seniors->map(function($senior) {
-                return $this->transformSenior($senior);
-            });
-            return response()->json(['data' => $transformed]);
+
+        // Fast-path: cache paginated search results for 45s (file cache, offline-friendly)
+        $cacheKey = sprintf(
+            'seniors:index:%s:%s:%s:%s:%s:%s:%s',
+            $hasSearch ? md5($search) : 'nosearch',
+            $barangay ?? 'all',
+            $status ?? ($request->has('status') ? $status : 'default-active'),
+            $perPageRaw,
+            $sortBy,
+            $sortOrder,
+            $page
+        );
+        $shouldCache = $hasSearch || $request->has('barangay') || $request->has('page');
+
+        $exec = function () use ($request, $search, $hasSearch, $barangay, $status, $perPageRaw, $sortBy, $sortOrder) {
+            $query = Senior::withCount('familyMembers')
+                ->select(['id','osca_id','first_name','middle_name','last_name','extension_name','date_of_birth','age','place_of_birth','sex','mothers_maiden_name','pension_status','barangay','street_address','contact_number','emergency_name','emergency_contact','rrn','national_id','profile_photo_path','id_config','status','created_at','updated_at']);
+
+            if (!$request->has('status')) {
+                $query->where('status', 'Active');
+            } elseif ($status && $status !== 'All') {
+                $query->where('status', $status);
+            }
+
+            if ($hasSearch) {
+                $this->applySeniorSearch($query, $search);
+            }
+
+            if ($barangay && $barangay !== 'All Barangays') {
+                $query->where('barangay', $barangay);
+            }
+
+            if ((int) $perPageRaw == -1) {
+                // Allow full export for Accounts/BatchPrint — select is limited to 23 columns so 5k+ rows is ~2MB
+                $seniors = $query->orderBy($sortBy, $sortOrder)->get();
+                $transformed = $seniors->map(fn($s) => $this->transformSenior($s));
+                return response()->json(['data' => $transformed, 'total' => $transformed->count()]);
+            }
+
+            $perPage = min((int) $perPageRaw, 100);
+            $seniors = $query->orderBy($sortBy, $sortOrder)->paginate($perPage);
+            // Modular: use Resource instead of inline transformSenior (legacy kept for reference)
+            return \App\Http\Resources\SeniorResource::collection($seniors);
+        };
+
+        if ($shouldCache) {
+            $cached = Cache::remember($cacheKey, now()->addSeconds(45), $exec);
+            return $cached;
         }
 
-        $perPage = min((int) $perPage, 100);
-        $seniors = $query->orderBy($sortBy, $sortOrder)->paginate($perPage);
-
-        $seniors->getCollection()->transform(function($senior) {
-            return $this->transformSenior($senior);
-        });
-
-        return response()->json($seniors);
+        return $exec();
     }
 
     /**
@@ -347,155 +368,20 @@ class SeniorController extends Controller
     }
 
     /**
-     * Create a new senior (registration)
+     * Create a new senior (registration) — thin controller, logic in SeniorService
      */
-    public function store(Request $request)
+    public function store(SeniorStoreRequest $request, SeniorService $service)
     {
-        $validated = $request->validate([
-            'firstName' => 'required|string|max:255',
-            'middleName' => 'nullable|string|max:255',
-            'lastName' => 'required|string|max:255',
-            'extensionName' => 'nullable|string|max:10',
-            'dateOfBirth' => 'required|date',
-            'age' => 'required|integer|min:60',
-            'placeOfBirth' => 'nullable|string|max:255',
-            'sex' => 'required|in:Male,Female',
-            'mothersMaidenName' => 'nullable|string|max:255',
-            'pensionStatus' => 'required|string',
-            'barangay' => 'required|string|max:255',
-            'streetAddress' => 'required|string',
-            'contactNumber' => 'nullable|string|max:20',
-            'emergencyName' => 'nullable|string|max:255',
-            'emergencyContact' => 'nullable|string|max:20',
-            'rrn' => 'nullable|string|max:50',
-            'nationalId' => 'nullable|string|max:50',
-            'password' => 'nullable|string|min:6',
-            'familyMembers' => 'nullable',
-        ]);
-
         try {
-            DB::beginTransaction();
-
-            // ---- Duplicate detection: same name + date of birth ----
-            $duplicateQuery = Senior::where('first_name', $validated['firstName'])
-                ->where('last_name', $validated['lastName'])
-                ->where('date_of_birth', $validated['dateOfBirth']);
-            $duplicate = $this->applyValidOscaIdScope($duplicateQuery)->first();
-
-            if ($duplicate) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'A senior with the same name and date of birth already exists (OSCA ID: ' . $duplicate->osca_id . '). Please use the "Existing Member" option to update their record instead.',
-                ], 409);
-            }
-
-            // OSCA ID is assigned by admin during approval — not auto-generated
-            $senior = Senior::create([
-                'osca_id' => null,
-                'first_name' => $validated['firstName'],
-                'middle_name' => $validated['middleName'] ?? null,
-                'last_name' => $validated['lastName'],
-                'extension_name' => $validated['extensionName'] ?? null,
-                'date_of_birth' => $validated['dateOfBirth'],
-                'age' => $validated['age'],
-                'place_of_birth' => $validated['placeOfBirth'] ?? null,
-                'sex' => $validated['sex'] ?? 'Male',
-                'mothers_maiden_name' => $validated['mothersMaidenName'] ?? null,
-                'pension_status' => $validated['pensionStatus'],
-                'barangay' => $validated['barangay'],
-                'street_address' => $validated['streetAddress'],
-                'contact_number' => $validated['contactNumber'] ?? null,
-                'emergency_name' => $validated['emergencyName'] ?? null,
-                'emergency_contact' => $validated['emergencyContact'] ?? null,
-                'rrn' => $validated['rrn'] ?? null,
-                'national_id' => $validated['nationalId'] ?? null,
-                'password' => isset($validated['password']) ? Hash::make($validated['password']) : null,
-                'status' => 'Pending',
-            ]);
-
-            // Handle family members (could be JSON string from FormData)
-            $familyMembers = $validated['familyMembers'] ?? [];
-            if (is_string($familyMembers)) {
-                $familyMembers = json_decode($familyMembers, true);
-            }
-
-            if (!empty($familyMembers)) {
-                foreach ($familyMembers as $member) {
-                    FamilyMember::create([
-                        'senior_id' => $senior->id,
-                        'name' => $member['name'],
-                        'relationship' => $member['relationship'],
-                        'age' => $member['age'] ?? null,
-                        'civil_status' => $member['civilStatus'] ?? null,
-                        'occupation' => $member['occupation'] ?? null,
-                        'income' => $member['income'] ?? null,
-                    ]);
-                }
-            }
-
-            // Handle file uploads — write binary to filesystem (storage/app/private/documents), keep DB row light
-            $documentTypes = ['birthCert', 'cedula', 'brgyCert', 'idPicture'];
-            foreach ($documentTypes as $type) {
-                if ($request->hasFile($type)) {
-                    $file = $request->file($type);
-                    $binary = file_get_contents($file->getRealPath());
-                    $fileName = $file->getClientOriginalName();
-                    $safeName = Str::slug(pathinfo($fileName, PATHINFO_FILENAME)) ?: 'document';
-                    $ext = pathinfo($fileName, PATHINFO_EXTENSION) ?: 'bin';
-                    $docFileName = $safeName . '.' . $ext;
-                    $filePath = "documents/{$senior->id}/" . time() . "_{$type}_{$docFileName}";
-                    Storage::disk('local')->put($filePath, $binary);
-
-                    SeniorDocument::create([
-                        'senior_id' => $senior->id,
-                        'document_type' => $type,
-                        'file_content' => null,
-                        'file_path' => $filePath,
-                        'file_name' => $fileName,
-                        'mime_type' => $file->getMimeType(),
-                        'file_size' => $file->getSize(),
-                    ]);
-
-                    if ($type === 'idPicture') {
-                        $path = $file->store('profile_photos', 'public');
-                        $senior->update(['profile_photo_path' => $path]);
-                    }
-                }
-            }
-
-            // Create approval request
-            SeniorRequest::create([
-                'senior_id' => $senior->id,
-                'type' => 'New Application',
-                'status' => 'Pending',
-            ]);
-
-            // Log activity
-            $user = $request->user();
-            $isUser = $user instanceof \App\Models\User;
-
-            ActivityLog::create([
-                'user_id' => $isUser ? $user->id : null,
-                'action' => 'REGISTERED_SENIOR',
-                'target_type' => 'Senior',
-                'target_id' => $senior->id,
-                'details' => ['name' => $senior->full_name],
-                'ip_address' => $request->ip(),
-            ]);
-
-            DB::commit();
-
+            $senior = $service->register($request->validated(), $request, $request->user());
             return response()->json([
                 'success' => true,
                 'message' => 'Senior registered successfully. OSCA ID will be assigned upon approval.',
-                'senior' => [
-                    'id' => $senior->id,
-                    'name' => $senior->full_name,
-                ],
+                'senior' => new SeniorResource($senior),
             ], 201);
-
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
-            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Registration failed: ' . $e->getMessage(),
@@ -504,87 +390,22 @@ class SeniorController extends Controller
     }
 
     /**
-     * Update a senior
+     * Update a senior — thin controller via FormRequest + Service + Resource
      */
-    public function update(Request $request, $id)
+    public function update(SeniorUpdateRequest $request, $id, SeniorService $service)
     {
-        // Resolve by OSCA ID first to avoid accidental matches against numeric database IDs.
         $senior = $this->findSeniorByIdentifier($id);
-
-        $validated = $request->validate([
-            'oscaId' => 'sometimes|nullable|string|max:255',
-            'firstName' => 'sometimes|string|max:255',
-            'middleName' => 'nullable|string|max:255',
-            'lastName' => 'sometimes|string|max:255',
-            'extensionName' => 'sometimes|nullable|string|max:10',
-            'dateOfBirth' => 'sometimes|date',
-            'status' => 'sometimes|in:Active,Pending,Deceased,Inactive',
-            'pensionStatus' => 'sometimes|in:Indigent,Pensioner,National Social Pensioner,Local Social Pensioner,None',
-            'barangay' => 'sometimes|string|max:255',
-            'streetAddress' => 'sometimes|string',
-            'contactNumber' => 'nullable|string|max:20',
-            'idConfig' => 'nullable|array',
-        ]);
-
-        $normalizedExtensionName = $senior->extension_name;
-        if (array_key_exists('extensionName', $validated)) {
-            $rawExtension = trim((string) ($validated['extensionName'] ?? ''));
-            $normalizedExtensionName = in_array(strtolower($rawExtension), ['', 'none', 'n/a', 'na'], true)
-                ? null
-                : $rawExtension;
-        }
-
-        $updatedDateOfBirth = $senior->date_of_birth;
-        if (array_key_exists('dateOfBirth', $validated)) {
-            $updatedDateOfBirth = Carbon::parse($validated['dateOfBirth']);
-        }
-
-        $normalizedOscaId = $senior->osca_id;
-        if (array_key_exists('oscaId', $validated)) {
-            $trimmedOscaId = trim((string) ($validated['oscaId'] ?? ''));
-            $normalizedOscaId = $trimmedOscaId === '' ? null : $trimmedOscaId;
-        }
-
-        // Check if oscaId is being updated and already exists for another senior
-        if ($normalizedOscaId !== $senior->osca_id) {
-            $exists = $this->applyValidOscaIdScope(Senior::query())
-                ->where('osca_id', $normalizedOscaId)
-                ->where('id', '!=', $senior->id)
-                ->exists();
-            if ($exists) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'The provided OSCA ID is already in use by another member.'
-                ], 422);
-            }
-        }
-
-        $senior->update([
-            'osca_id' => $normalizedOscaId,
-            'first_name' => $validated['firstName'] ?? $senior->first_name,
-            'middle_name' => $validated['middleName'] ?? $senior->middle_name,
-            'last_name' => $validated['lastName'] ?? $senior->last_name,
-            'extension_name' => $normalizedExtensionName,
-            'date_of_birth' => $updatedDateOfBirth,
-            'age' => $updatedDateOfBirth ? Carbon::parse($updatedDateOfBirth)->age : $senior->age,
-            'status' => $validated['status'] ?? $senior->status,
-            'pension_status' => $validated['pensionStatus'] ?? $senior->pension_status,
-            'barangay' => $validated['barangay'] ?? $senior->barangay,
-            'street_address' => $validated['streetAddress'] ?? $senior->street_address,
-            'contact_number' => $validated['contactNumber'] ?? $senior->contact_number,
-            'id_config' => $validated['idConfig'] ?? $senior->id_config,
-        ]);
+        $updated = $service->updateSenior($senior, $request->validated(), $request->user());
 
         if ($request->user()) {
             $user = $request->user();
             $isUser = $user instanceof \App\Models\User;
-            
             ActivityLog::create([
                 'user_id' => $isUser ? $user->id : null,
                 'action' => 'UPDATED_SENIOR',
                 'target_type' => 'Senior',
-                'target_id' => $senior->id,
-                'details' => $validated,
+                'target_id' => $updated->id,
+                'details' => $request->validated(),
                 'ip_address' => $request->ip(),
             ]);
         }
@@ -592,6 +413,7 @@ class SeniorController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Senior updated successfully',
+            'senior' => new SeniorResource($updated),
         ]);
     }
 
@@ -905,7 +727,17 @@ class SeniorController extends Controller
     /**
      * Get dashboard statistics
      */
-    public function statistics(Request $request)
+    public function statistics(Request $request, \App\Services\Senior\StatisticsService $statsService)
+    {
+        $barangay = $request->query('barangay');
+        $year = $request->query('year');
+        // Delegated to modular service — controller is now thin (see app/Services/Senior/StatisticsService.php)
+        $stats = $statsService->get($barangay, $year);
+        return response()->json($stats);
+    }
+
+    // Legacy inline implementation kept for reference — now in StatisticsService
+    private function legacyStatistics(Request $request)
     {
         $barangay = $request->query('barangay');
         $year = $request->query('year');

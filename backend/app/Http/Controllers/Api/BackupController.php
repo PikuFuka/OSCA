@@ -26,6 +26,13 @@ class BackupController extends Controller
             return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
         }
 
+        // Modular async path — queueable job (see app/Jobs/BackupExportJob.php ShouldQueue)
+        if ($request->boolean('async') || $request->boolean('queue')) {
+            $filename = 'osca_backup_' . date('Y-m-d_His') . '.sql';
+            \App\Jobs\BackupExportJob::dispatch($user->id, $filename);
+            return response()->json(['queued'=>true,'message'=>'Backup queued via file queue (database driver). Run php artisan queue:work to process.','filename'=>$filename], 202);
+        }
+
         $database = config('database.connections.mysql.database');
         $username = config('database.connections.mysql.username');
         $password = config('database.connections.mysql.password');
@@ -83,6 +90,16 @@ class BackupController extends Controller
         $request->validate([
             'file' => 'required|file|max:512000', // 500 MB
         ]);
+
+        // Async path for large imports — queueable (see app/Jobs/BackupImportJob.php ShouldQueue)
+        if ($request->boolean('async') || $request->boolean('queue')) {
+            $file = $request->file('file');
+            $tempPath = storage_path('app/private/imports/' . time() . '_' . $file->getClientOriginalName());
+            if (!is_dir(dirname($tempPath))) mkdir(dirname($tempPath), 0755, true);
+            $file->move(dirname($tempPath), basename($tempPath));
+            \App\Jobs\BackupImportJob::dispatch($tempPath, $request->user()->id);
+            return response()->json(['queued'=>true,'message'=>'Import queued via file queue. Run php artisan queue:work.'], 202);
+        }
 
         $file = $request->file('file');
         $ext  = strtolower($file->getClientOriginalExtension());

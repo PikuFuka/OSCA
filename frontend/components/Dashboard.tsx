@@ -623,30 +623,90 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
 
       {/* Full Width Grid Bottom */}
       <div className="grid grid-cols-1">
-         {/* Geographic Density Grid */}
-         <div className="bg-white border border-slate-200 p-6 flex flex-col">
-          <div className="mb-6">
-            <h3 className="text-base font-bold text-slate-900">Geographic Heatmap Matrix</h3>
-            <p className="text-xs text-slate-500 mt-1">Density distribution across municipal barangays.</p>
+        <div className="bg-white rounded-[24px] border border-slate-200/70 shadow-sm overflow-hidden">
+          <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded-xl bg-blue-600 text-white grid place-items-center shadow-sm">
+                  <MapPin size={16} strokeWidth={2.5} />
+                </div>
+                <h3 className="text-[15px] font-extrabold tracking-tight text-slate-900">Geographic Heatmap</h3>
+                <span className="hidden sm:inline-flex items-center rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-[10px] font-bold tracking-widest text-slate-600 uppercase">
+                  {data.allBarangayStats?.length || 0} Barangays
+                </span>
+              </div>
+              <p className="text-[12px] leading-4 text-slate-500 mt-1">Density distribution — darker means denser, lightest is sparsest.</p>
+            </div>
+            <div className="flex items-center gap-3 shrink-0 bg-slate-50 border border-slate-200 rounded-full px-3 py-1.5">
+              <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Low</span>
+              <div className="h-2 w-28 rounded-full bg-gradient-to-r from-slate-100 via-blue-200 to-blue-600 border border-white shadow-inner" />
+              <span className="text-[10px] font-bold tracking-widest text-slate-900 uppercase">High</span>
+            </div>
           </div>
-          
-          <div className="w-full border border-slate-100">
-             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 w-full">
-               {(data.allBarangayStats || []).map((brgy: any) => (
-                 <div 
-                   key={brgy.name} 
-                   className="p-3 flex flex-col border-r border-b border-white/50 aspect-square justify-between"
-                   style={{ backgroundColor: `rgba(0, 122, 255, ${0.05 + (brgy.intensity || 0) * 0.95})` }}
-                 >
-                   <span className={`text-xs font-bold leading-tight line-clamp-2 uppercase tracking-wide ${(brgy.intensity || 0) > 0.4 ? 'text-white/90' : 'text-slate-600'}`}>
-                     {brgy.name}
-                   </span>
-                   <span className={`text-lg font-black tracking-tight leading-none ${(brgy.intensity || 0) > 0.4 ? 'text-white' : 'text-slate-900'}`}>
-                     {formatNumber(brgy.count || 0)}
-                   </span>
-                 </div>
-               ))}
-             </div>
+
+          <div className="p-4 sm:p-6 bg-slate-50/40">
+            {(data.allBarangayStats || []).length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
+                <p className="text-sm font-semibold text-slate-500">No barangay data yet.</p>
+                <p className="text-xs text-slate-400 mt-1">Records will appear here once registrations are approved.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+                {(data.allBarangayStats || []).map((brgy: any, idx: number) => {
+                  const intensity = Math.max(0, Math.min(1, brgy.intensity || 0));
+                  const tier = intensity > 0.66 ? 'high' : intensity > 0.32 ? 'mid' : 'low';
+                  return (
+                    <div
+                      key={brgy.name}
+                      className={`group relative rounded-2xl border p-4 flex flex-col justify-between min-h-[116px] overflow-hidden transition-all hover:shadow-md hover:-translate-y-0.5 hover:border-slate-300 ${
+                        tier === 'high'
+                          ? 'bg-blue-600 border-blue-600 text-white shadow-sm'
+                          : tier === 'mid'
+                          ? 'bg-[#3B82F6] border-[#3B82F6] text-white'
+                          : 'bg-white border-slate-200 text-slate-900'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <span className={`inline-flex items-center rounded-md border px-1.5 py-1 text-[10px] font-black tracking-widest leading-none ${
+                          tier === 'low' ? 'bg-slate-100 border-slate-200 text-slate-500' : 'bg-white/15 border-white/20 text-white'
+                        }`}>
+                          #{idx + 1}
+                        </span>
+                        <span className={`text-[10px] font-bold px-1.5 py-1 rounded-md ${tier === 'low' ? 'bg-slate-50 text-slate-400 border border-slate-200' : 'bg-white/10 text-white/80 border border-white/15'}`}>
+                          {brgy.count > 500 ? 'Dense' : brgy.count > 200 ? 'Mid' : 'Sparse'}
+                        </span>
+                      </div>
+
+                      <div className="mt-3">
+                        <p className={`text-[11px] font-extrabold leading-tight line-clamp-2 uppercase tracking-wide ${tier === 'low' ? 'text-slate-600' : 'text-white/90'}`}>
+                          {brgy.name}
+                        </p>
+                        <p className={`mt-2 text-[22px] font-black tracking-tight leading-none tabular-nums ${tier === 'low' ? 'text-slate-900' : 'text-white'}`}>
+                          {formatNumber(brgy.count || 0)}
+                        </p>
+                        <p className={`text-[10px] font-semibold mt-0.5 ${tier === 'low' ? 'text-slate-400' : 'text-white/65'}`}>
+                          {(intensity * 100).toFixed(0)}% density
+                        </p>
+                      </div>
+
+                      <div className={`absolute bottom-0 left-0 right-0 h-1 ${tier === 'low' ? 'bg-slate-100' : 'bg-white/15'}`}>
+                        <div
+                          className={`h-full transition-all duration-700 ${tier === 'high' ? 'bg-white' : tier === 'mid' ? 'bg-white/85' : 'bg-blue-500'}`}
+                          style={{ width: `${Math.max(8, intensity * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="px-6 sm:px-8 py-3 bg-white border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-500">
+            <span className="font-medium">16 barangays • Sorted by population • Tap a tile for barangay filter (coming soon)</span>
+            <span className="inline-flex items-center gap-1.5 font-semibold text-slate-600">
+              <span className="h-2 w-2 rounded-full bg-blue-600" /> Most dense: {(data.allBarangayStats?.[0]?.name || '—')} ({formatNumber(data.allBarangayStats?.[0]?.count || 0)})
+            </span>
           </div>
         </div>
       </div>

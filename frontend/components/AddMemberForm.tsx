@@ -241,30 +241,33 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   const CARD_WIDTH = 'min(980px, 94vw)';
   const CARD_GAP = '24px';
 
+  // Auto-height + animation: inactive cards are absolute (no layout height) but still animate
   const getCardStyle = (index: number): React.CSSProperties => {
     const isCurrent = step === index;
     return {
       width: `calc(${CARD_WIDTH})`,
-      flexShrink: 0,
-      opacity: isCurrent ? 1 : 0.25,
-      transform: isCurrent ? 'translate3d(0,0,0) scale(1)' : 'translate3d(0,0,0) scale(0.96)',
-      filter: isCurrent ? 'none' : 'blur(6px) saturate(0.4)',
-      boxShadow: isCurrent
-        ? '0 12px 40px -12px rgba(0,0,0,0.1)'
-        : 'none',
+      maxWidth: '100%',
+      margin: '0 auto',
+      position: isCurrent ? 'relative' : 'absolute',
+      top: isCurrent ? undefined : 0,
+      left: isCurrent ? undefined : 0,
+      right: isCurrent ? undefined : 0,
+      opacity: isCurrent ? 1 : 0,
+      visibility: isCurrent ? 'visible' : 'hidden',
+      transform: isCurrent ? 'translate3d(0,0,0) scale(1)' : 'translate3d(0,0,0) scale(0.98)',
+      filter: isCurrent ? 'none' : 'blur(4px) saturate(0.6)',
+      boxShadow: isCurrent ? '0 12px 40px -12px rgba(0,0,0,0.08)' : 'none',
       pointerEvents: isCurrent ? 'auto' : 'none',
       willChange: 'transform, opacity, filter',
-      transition: 'all 360ms cubic-bezier(0.25, 1, 0.5, 1)', // Calm, decisive easeOutQuart
+      transition: 'all 360ms cubic-bezier(0.25, 1, 0.5, 1)',
     };
   };
 
   const getTrackStyle = (): React.CSSProperties => ({
-    display: 'flex',
-    gap: CARD_GAP,
-    alignItems: 'flex-start',
-    transform: `translate3d(calc(50% - (${CARD_WIDTH} / 2) - ${(step - 1)} * (${CARD_WIDTH} + ${CARD_GAP})), 0, 0)`,
-    willChange: 'transform',
-    transition: 'transform 360ms cubic-bezier(0.25, 1, 0.5, 1)',
+    position: 'relative',
+    display: 'block',
+    width: '100%',
+    minHeight: 0,
   });
 
 
@@ -864,7 +867,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="w-full overflow-hidden" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove}>
+      <form onSubmit={handleSubmit} className="w-full" onTouchStart={handleTouchStart} onTouchMove={handleTouchMove}>
         <div style={getTrackStyle()}>
           
           {/* STEP 1: IDENTITY */}
@@ -1317,8 +1320,8 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
               </div>
             </div></div>
         </div>
-        {/* NAVIGATION BUTTONS */}
-        <div className="flex flex-col sm:flex-row items-center justify-between mt-5 pt-4 border-t border-slate-100 gap-3 px-1">
+        {/* NAVIGATION — tight to card, same width as card */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-200" style={{ width: 'calc(min(980px, 94vw))', maxWidth: '100%', margin: '12px auto 0' }}>
             {step > 1 ? (
               <button type="button" onClick={handleBack} className="order-2 sm:order-1 w-full sm:w-auto px-5 py-2 rounded-xl font-bold text-sm uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-slate-50 hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 transition-all">
                 <ArrowLeft size={16} /> Back

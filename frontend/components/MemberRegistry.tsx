@@ -273,17 +273,30 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   const [selectedSenior, setSelectedSenior] = useState<SeniorCitizen | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<SeniorCitizen>>({});
 
-  // Fetch seniors from API
+  const abortRef = React.useRef<AbortController | null>(null);
+  const [isSearching, setIsSearching] = useState(false);
+  const [hasInitialLoaded, setHasInitialLoaded] = useState(false);
+
+  // Fetch seniors from API — stale-while-revalidate + abort for fast search
+  // Skeleton is shown only on first load; fast search (abort/cache) activates after
   const fetchSeniors = async (background = false) => {
-    if (!background) {
-      setLoading(true);
-    }
+    // Cancel previous in-flight search only after initial load (fast path)
+    if (hasInitialLoaded && abortRef.current) abortRef.current.abort();
+    const controller = new AbortController();
+    if (hasInitialLoaded) abortRef.current = controller;
+
+    const isInitial = !hasInitialLoaded && seniors.length === 0 && !background;
+    if (isInitial) setLoading(true);
+    else if (!background && hasInitialLoaded) setIsSearching(true);
+
     try {
       const response = await seniorsAPI.getAll({
-        search: debouncedSearch,
+        search: debouncedSearch || undefined,
         barangay: filterBarangay === 'All Barangays' ? undefined : filterBarangay,
         page: page,
-        fresh: true,
+        // Use frontend cache for same search (instant), background refresh via backend file cache (45s)
+        // No fresh:true — allows withCache to return stale instantly
+        signal: controller.signal as any,
       });
       
       if (response && response.data) {
@@ -296,20 +309,29 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
         setTotalPages(1);
         setTotalCount(Array.isArray(response) ? response.length : 0);
       }
+      if (isInitial) setHasInitialLoaded(true);
     } catch (error: any) {
+      if (error?.name === 'CanceledError' || error?.name === 'AbortError' || error?.code === 'ERR_CANCELED') {
+        return;
+      }
       if (!background) {
         notify('Failed to load member records from the server.', 'error');
       }
+      if (isInitial) setHasInitialLoaded(true);
     } finally {
-      if (!background) {
-        setLoading(false);
-      }
+      if (isInitial) setLoading(false);
+      else if (!background) setIsSearching(false);
     }
   };
 
   useEffect(() => {
     fetchSeniors();
   }, [debouncedSearch, filterBarangay, page]);
+
+  // Cleanup abort on unmount
+  useEffect(() => {
+    return () => { if (abortRef.current) abortRef.current.abort(); };
+  }, []);
 
   // Listen for header search navigation events
   useEffect(() => {
@@ -549,17 +571,17 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   const isStaff = currentUser.role === 'Staff';
   const canGenerateID = isAdmin || isStaff;
 
-  // Debounce search term to improve performance on large lists
+  // Debounce search term: 260ms balances instant feel vs fewer requests, abort keeps last keystroke fast
+  // Only activate fast search after initial skeleton has loaded
   useEffect(() => {
-    // If the search term is changed by the user, we wait for a brief moment
-    // before triggering the actually filtering/fetching.
+    if (!hasInitialLoaded) return;
     const timer = setTimeout(() => {
-      setDebouncedSearch(searchTerm);
-      setPage(1); // Reset to first page on new search
-    }, 150); // Reduced delay to 150ms for snappier feedback
+      setDebouncedSearch(searchTerm.trim());
+      setPage(1);
+    }, 260);
 
     return () => clearTimeout(timer);
-  }, [searchTerm]);
+  }, [searchTerm, hasInitialLoaded]);
 
   // No need for client-side filtering and pagination as we use server-side
   const displayedSeniors = seniors;
@@ -1013,11 +1035,22 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
               id="registry-search"
               name="registrySearch"
               type="text" 
-              placeholder="Search name, ID, or barangay..." 
+              placeholder={hasInitialLoaded ? "Search name, ID, or barangay..." : "Loading records..."}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-medium shadow-sm"
+              disabled={!hasInitialLoaded && loading}
+              className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-medium shadow-sm disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-wait"
             />
+            {isSearching && hasInitialLoaded && (
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-systemBlue">
+                <Loader2 size={14} className="animate-spin" />
+              </span>
+            )}
+            {!hasInitialLoaded && loading && (
+              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400">
+                <Loader2 size={14} className="animate-spin" />
+              </span>
+            )}
           </div>
 
           {/* Barangay Filter Select */}
@@ -1067,10 +1100,12 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
       )}
       
       {/* Table Container Card */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden relative">
+        {isSearching && <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-orange-400 via-amber-400 to-blue-500 animate-pulse z-10" aria-hidden />}
         <div className="overflow-x-auto">
-          <TransitionWrapper isLoading={loading} skeleton={<RegistrySkeleton />}>
-            {!loading && (
+          <TransitionWrapper isLoading={loading && seniors.length === 0} skeleton={<RegistrySkeleton />}>
+            {!(loading && seniors.length === 0) && (
+            <div className={isSearching ? "opacity-60 transition-opacity duration-200" : "transition-opacity duration-200"}>
             <table className="w-full text-left table-fixed">
               <thead>
                 <tr className="border-b border-slate-100">
@@ -1242,6 +1277,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                 )}
               </tbody>
             </table>
+            </div>
             )}
           </TransitionWrapper>
         </div>
