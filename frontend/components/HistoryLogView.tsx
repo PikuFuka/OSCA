@@ -4,6 +4,7 @@ import { Clock, CheckCircle2, AlertCircle, RefreshCcw, User, Loader2, Search, Tr
 import { activityLogsAPI } from '../services/api';
 import ConfirmModal from './ConfirmModal';
 import Skeleton from './Skeleton';
+import { HistoryLogSkeleton } from './skeletons';
 import TransitionWrapper from './TransitionWrapper';
 
 interface HistoryLogViewProps {
@@ -17,28 +18,6 @@ interface ActivityLog {
   type: string;
   user: string;
 }
-
-const HistoryLogSkeleton = () => {
-  return (
-    <div className="divide-y divide-slate-100">
-      {[...Array(6)].map((_, i) => (
-        <div key={i} className="p-5 flex items-start justify-between">
-          <div className="flex items-start gap-4 w-full">
-            <Skeleton.Circle className="w-5 h-5 shrink-0 mt-1" />
-            <div className="w-full flex flex-col gap-1">
-              <Skeleton.Text className="w-64 h-4" />
-              <Skeleton.Text className="w-36 h-3" />
-            </div>
-          </div>
-          <div className="text-right shrink-0 ml-4 flex flex-col items-end gap-1">
-             <Skeleton.Text className="w-20 h-3" />
-             <Skeleton.Rect className="w-16 h-5 rounded-lg" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-};
 
 const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
   const [logs, setLogs] = useState<ActivityLog[]>([]);

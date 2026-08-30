@@ -12,93 +12,12 @@ import {
 import { BARANGAYS } from '../types';
 import { seniorsAPI, reportsAPI } from '../services/api';
 import Skeleton from './Skeleton';
+import { ReportSkeleton } from './skeletons';
 interface ReportViewProps {
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
     setGlobalLoading?: (loading: boolean) => void;
     initialSection?: 'masterlist' | 'centenarians' | 'deceased' | 'newly-registered';
 }
-
-const ReportSkeleton = ({ activeSection = 'masterlist' }: { activeSection?: 'masterlist' | 'centenarians' | 'deceased' | 'newly-registered' }) => {
-  const getColumns = () => {
-    switch (activeSection) {
-      case 'centenarians':
-        return ['OSCA ID', 'FULL NAME', 'BARANGAY', 'EXACT AGE', 'STATUS'];
-      case 'deceased':
-        return ['OSCA ID', 'FULL NAME', 'BARANGAY', 'RECORDED DATE'];
-      case 'newly-registered':
-        return ['OSCA ID', 'FULL NAME', 'BARANGAY', 'AGE', 'SEX', 'REGISTRATION DATE'];
-      default:
-        return ['OSCA ID', 'FULL NAME', 'BARANGAY', 'AGE', 'SEX', 'STATUS'];
-    }
-  };
-
-  const columns = getColumns();
-
-  return (
-    <div className="space-y-8 pb-12 relative">
-      {/* Header Skeleton */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <Skeleton.Text className="w-80 h-9 mb-1.5" />
-          <Skeleton.Text className="w-64 h-3.5" />
-        </div>
-        <div className="flex items-center gap-3">
-          <Skeleton.Button className="w-full sm:w-52 h-11 rounded-xl" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-8">
-        <div className="w-full space-y-6">
-          {/* Tabs Skeleton */}
-          <div className="w-fit bg-white/90 rounded-xl border border-slate-200 p-2 flex gap-2">
-            {[...Array(4)].map((_, i) => (
-              <Skeleton.Rect key={i} className="w-32 h-8 rounded-lg" />
-            ))}
-          </div>
-
-          {/* Table Card Skeleton */}
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-            <div className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/40">
-              <div className="flex items-center gap-3">
-                <Skeleton.Rect className="w-9 h-9 rounded-xl" />
-                <div className="flex flex-col gap-1">
-                  <Skeleton.Text className="w-32 h-4" />
-                  <Skeleton.Text className="w-20 h-3" />
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <Skeleton.Rect className="w-40 h-10 rounded-xl" />
-              </div>
-            </div>
-            
-            <div className="overflow-x-auto">
-              <table className="w-full text-left">
-                <thead className="bg-slate-50 border-b border-slate-200">
-                  <tr className="text-[10px] font-bold tracking-widest text-slate-400 uppercase">
-                    {columns.map((col, idx) => (
-                      <th key={idx} className="px-8 py-4">{col}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
-                  {[...Array(8)].map((_, i) => (
-                    <tr key={i}>
-                      {columns.map((_, cIdx) => (
-                        <td key={cIdx} className="px-8 py-5">
-                          <Skeleton.Text className={cIdx === 1 ? 'w-48 h-4' : 'w-24 h-4'} />
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initialSection = 'masterlist' }) => {
   const [isExporting, setIsExporting] = useState(false);

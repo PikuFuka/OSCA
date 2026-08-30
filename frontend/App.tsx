@@ -2,6 +2,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import LoginView from './components/LoginView';
+import ConfirmModal from './components/ConfirmModal';
+import Toast, { ToastType } from './components/Toast';
+
+import { ViewType } from './types';
+
 import Dashboard from './components/Dashboard';
 import AddMemberForm from './components/AddMemberForm';
 import MemberRegistry from './components/MemberRegistry';
@@ -11,12 +17,9 @@ import ReportView from './components/ReportView';
 import BackupView from './components/BackupView';
 import ApprovalView from './components/ApprovalView';
 import BatchPrint from './components/BatchPrint';
-import LoginView from './components/LoginView';
-import ConfirmModal from './components/ConfirmModal';
 import UserDashboard from './components/UserDashboard';
 import UserReview from './components/UserReview';
-import Toast, { ToastType } from './components/Toast';
-import { ViewType } from './types';
+
 import { 
   ArrowLeft, 
   Loader2,
@@ -46,6 +49,10 @@ const toUserFriendlyMessage = (message: string, type: ToastType) => {
 const App: React.FC = () => {
   const { user: currentUser, loading, logout, isAuthenticated, checkAuth } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.DASHBOARD);
+
+  const changeView = useCallback((view: ViewType) => {
+    setCurrentView(view);
+  }, []);
   const [reportSection, setReportSection] = useState<ReportSection | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -75,6 +82,8 @@ const App: React.FC = () => {
   useEffect(() => {
     (window as any).isAuthenticated = isAuthenticated;
   }, [isAuthenticated]);
+
+
 
   // State for public registration flow
   const [isRegistering, setIsRegistering] = useState(false);
@@ -119,18 +128,20 @@ const App: React.FC = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+
+
   // Determine initial view based on role
   useEffect(() => {
     if (currentUser) {
       if (currentUser.role === 'Senior') {
-        setCurrentView(ViewType.USER_DASHBOARD);
+        changeView(ViewType.USER_DASHBOARD);
       } else if (currentUser.email === 'print@osca.gov.ph') {
-        setCurrentView(ViewType.BATCH_PRINT);
+        changeView(ViewType.BATCH_PRINT);
       } else {
-        setCurrentView(ViewType.DASHBOARD);
+        changeView(ViewType.DASHBOARD);
       }
     }
-  }, [currentUser]);
+  }, [currentUser, changeView]);
 
   const requestLogout = () => {
     setIsLogoutConfirmOpen(true);
@@ -189,12 +200,12 @@ const App: React.FC = () => {
       case ViewType.DASHBOARD:
         return (
           <Dashboard
-            setView={setCurrentView}
+            setView={changeView}
             onCardNavigate={(view, targetSection) => {
               if (view === ViewType.FINAL_REPORT && targetSection) {
                 setReportSection(targetSection);
               }
-              setCurrentView(view);
+              changeView(view);
             }}
           />
         );
@@ -206,15 +217,15 @@ const App: React.FC = () => {
           notify={notify}
           onSuccess={() => {
              if (currentUser.role !== 'Senior') {
-               setCurrentView(ViewType.MEMBER_REGISTRY);
+               changeView(ViewType.MEMBER_REGISTRY);
              } else {
                notify("Update request submitted successfully.", "success");
-               setCurrentView(ViewType.USER_DASHBOARD);
+               changeView(ViewType.USER_DASHBOARD);
              }
           }} 
         />;
       case ViewType.MEMBER_REGISTRY:
-        return <MemberRegistry currentUser={currentUser} notify={notify} setView={setCurrentView} />;
+        return <MemberRegistry currentUser={currentUser} notify={notify} setView={changeView} />;
       case ViewType.ACCOUNT:
         return <Account currentUser={currentUser} notify={notify} />;
       case ViewType.HISTORY:
@@ -230,7 +241,7 @@ const App: React.FC = () => {
       case ViewType.BACKUP:
         return <BackupView notify={notify} />;
       case ViewType.APPROVAL:
-        return <ApprovalView notify={notify} setView={setCurrentView} />;
+        return <ApprovalView notify={notify} setView={changeView} />;
       case ViewType.ARCHIVE:
         return <BackupView notify={notify} initialSection="archive" />;
       case ViewType.BATCH_PRINT:
@@ -247,11 +258,13 @@ const App: React.FC = () => {
     }
   };
 
+
+
   const navigateToView = (view: ViewType) => {
     if (view !== ViewType.FINAL_REPORT) {
       setReportSection(null);
     }
-    setCurrentView(view);
+    changeView(view);
   };
 
   // If not logged in and registering, show Public Registration View
@@ -302,7 +315,6 @@ const App: React.FC = () => {
             <AddMemberForm 
               notify={notify}
               onSuccess={() => {
-                // Not changing view state here immediately to allow user to see success message or decide next step
                 setIsRegistering(false);
               }} 
               onCancel={() => setIsRegistering(false)}
@@ -580,9 +592,9 @@ const App: React.FC = () => {
         />
         
         <main className="flex-1 overflow-y-auto print:overflow-visible p-4 md:p-6 lg:p-8 [scrollbar-gutter:stable]" style={{ scrollbarGutter: 'stable' as any }}>
-          <div className="max-w-7xl mx-auto view-enter" key={currentView}>
-            {renderView()}
-          </div>
+            <div className="max-w-7xl mx-auto view-enter" key={currentView}>
+              {renderView()}
+            </div>
         </main>
       </div>
 

@@ -12,55 +12,11 @@ import ConfirmModal, { ConfirmVariant } from './ConfirmModal';
 import { PendingRequest, ViewType } from '../types';
 import { requestsAPI, seniorsAPI } from '../services/api';
 import Skeleton from './Skeleton';
+import { ApprovalSkeleton } from './skeletons';
 interface ApprovalViewProps {
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
     setView?: (view: ViewType) => void;
 }
-
-const ApprovalSkeleton = () => {
-  return (
-    <table className="w-full text-left">
-      <thead>
-        <tr className="border-b border-slate-100">
-          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Applicant</th>
-          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">OSCA ID</th>
-          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Request Type</th>
-          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Reason</th>
-          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Submitted</th>
-          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Status</th>
-          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] text-right">Actions</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-slate-50">
-        {[...Array(8)].map((_, i) => (
-          <tr key={i}>
-            <td className="px-6 py-4">
-              <div className="flex items-center gap-3">
-                <Skeleton.Rect className="w-9 h-9 rounded-xl shrink-0" />
-                <div className="min-w-0 flex flex-col gap-1">
-                  <Skeleton.Text className="w-32 h-3.5" />
-                  <Skeleton.Text className="w-16 h-2.5" />
-                </div>
-              </div>
-            </td>
-            <td className="px-5 py-4"><Skeleton.Text className="w-16 h-3.5" /></td>
-            <td className="px-5 py-4"><Skeleton.Rect className="w-24 h-6 rounded-lg" /></td>
-            <td className="px-5 py-4"><Skeleton.Rect className="w-20 h-6 rounded-lg" /></td>
-            <td className="px-5 py-4"><Skeleton.Text className="w-20 h-3.5" /></td>
-            <td className="px-5 py-4"><Skeleton.Rect className="w-20 h-6 rounded-full" /></td>
-            <td className="px-6 py-4 text-right">
-              <div className="flex items-center justify-end gap-1.5">
-                 {[...Array(2)].map((_, j) => (
-                    <Skeleton.Rect key={j} className="w-8 h-8 rounded-lg shrink-0" />
-                 ))}
-              </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-};
 
 const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
   const [requests, setRequests] = useState<PendingRequest[]>([]);

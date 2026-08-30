@@ -2,6 +2,7 @@
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import TransitionWrapper from './TransitionWrapper';
 import Skeleton from './Skeleton';
+import { RegistrySkeleton } from './skeletons';
 import { createPortal } from 'react-dom';
 import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock, Edit2Icon, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
 import { BARANGAYS, SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } from '../types';
@@ -195,70 +196,6 @@ const InfoField = ({ label, value, className = "" }: { label: string, value: str
     <p className="font-bold text-slate-800 text-sm md:text-base">{value || 'N/A'}</p>
   </div>
 );
-
-const RegistrySkeleton = () => {
-  return (
-    <table className="w-full text-left table-fixed">
-      <thead>
-        <tr className="border-b border-slate-100">
-          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[32%]">Member Identity</th>
-          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Age / Locality</th>
-          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Category</th>
-          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[12%] text-center">Status</th>
-          <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Modified</th>
-          <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-right">Actions</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-slate-50">
-        {[...Array(10)].map((_, i) => (
-          <tr key={i} className="bg-white">
-            {/* Identity */}
-            <td className="px-6 py-4">
-              <div className="flex items-center gap-3">
-                <Skeleton.Rect className="w-9 h-9 rounded-xl shrink-0" />
-                <div className="min-w-0 flex flex-col gap-1 w-full max-w-[200px]">
-                  <Skeleton.Text className="w-3/4 h-3.5" />
-                  <Skeleton.Text className="w-1/2 h-2.5" />
-                </div>
-              </div>
-            </td>
-            {/* Age / Locality */}
-            <td className="px-5 py-4 text-center">
-              <div className="flex flex-col items-center gap-1">
-                <Skeleton.Text className="w-8 h-3.5" />
-                <Skeleton.Text className="w-16 h-2.5" />
-              </div>
-            </td>
-            {/* Category */}
-            <td className="px-5 py-4">
-              <div className="flex items-center justify-center">
-                <Skeleton.Rect className="w-20 h-5 rounded-lg" />
-              </div>
-            </td>
-            {/* Status */}
-            <td className="px-5 py-4">
-              <div className="flex items-center justify-center">
-                <Skeleton.Rect className="w-16 h-5 rounded-full" />
-              </div>
-            </td>
-            {/* Modified */}
-            <td className="px-5 py-4 text-center">
-              <Skeleton.Text className="w-24 h-3.5 mx-auto" />
-            </td>
-            {/* Actions */}
-            <td className="px-6 py-4 text-right">
-              <div className="flex items-center justify-end gap-1">
-                {[...Array(4)].map((_, j) => (
-                   <Skeleton.Rect key={j} className="w-7 h-7 rounded-lg shrink-0" />
-                ))}
-              </div>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-};
 
 const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView }) => {
   const [seniors, setSeniors] = useState<SeniorCitizen[]>([]);

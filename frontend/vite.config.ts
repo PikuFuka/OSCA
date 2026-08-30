@@ -23,6 +23,20 @@ export default defineConfig(({ mode }) => {
       build: {
         outDir: '../backend/public/app',
         emptyOutDir: true,
+        chunkSizeWarningLimit: 600,
+        rollupOptions: {
+          output: {
+            manualChunks: {
+              // Note: react/react-dom stay in the index chunk (shared by all views) —
+              // explicit chunking here produces an empty chunk warning.
+              charts: ['recharts'],
+              icons: ['lucide-react'],
+              // Heavy ML libs — loaded only when ID photo editor opens
+              mediapipe: ['@mediapipe/selfie_segmentation', '@mediapipe/tasks-vision'],
+              imaging: ['@imgly/background-removal', 'onnxruntime-web'],
+            },
+          },
+        },
       },
       plugins: [react()],
       define: {

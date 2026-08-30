@@ -32,11 +32,6 @@ class StatisticsService
             }
 
             // Single query for all 12 months split by sex/status
-            $monthlyRaw = (clone $growthQuery)
-                ->selectRaw("MONTH(created_at) as m, SUM(sex='Male') as male, SUM(sex='Female') as female, SUM(status='Deceased') as deceased")
-                ->whereNotNull('created_at')
-                ->groupByRaw("MONTH(created_at)")
-                ->pluck('male', 'm'); // we need to fetch all cols; do get() then map
             $monthlyRows = (clone $growthQuery)
                 ->selectRaw("MONTH(created_at) as m, SUM(sex='Male') as male, SUM(sex='Female') as female, SUM(status='Deceased') as deceased")
                 ->whereNotNull('created_at')

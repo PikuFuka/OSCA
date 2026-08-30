@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import TransitionWrapper from './TransitionWrapper';
 import Skeleton from './Skeleton';
+import { DashboardSkeleton } from './skeletons';
 import { useCountUp } from '../utils/useCountUp';
 import { 
   BarChart, 
@@ -68,7 +69,8 @@ const KPICard = ({
     <button
       type="button"
       onClick={onClick}
-      className="bg-white border border-slate-200 p-5 flex flex-col gap-4 text-left hover:border-systemBlue/50 hover:bg-slate-50/50 transition-colors w-full cursor-pointer relative overflow-hidden"
+      className="bg-white border border-slate-200 p-5 flex flex-col gap-4 text-left hover:border-systemBlue/50 hover:bg-slate-50/50 transition-colors w-full cursor-pointer relative overflow-hidden min-w-0"
+      style={{ minWidth: 0 }}
     >
       <div className="flex justify-between items-start w-full relative z-10">
         <div>
@@ -80,17 +82,18 @@ const KPICard = ({
         </div>
       </div>
       
-      <div className="w-full h-10 mt-2 relative z-10">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="w-full h-10 mt-2 relative z-10 min-w-0" style={{ minWidth: 0 }}>
+        <ResponsiveContainer width="100%" height="100%" style={{ width: '100%', height: '100%' }} minWidth={0} minHeight={0}>
           <LineChart data={data}>
-            <Line 
-              type="monotone" 
-              dataKey={dataKey} 
-              stroke={chartColor} 
-              strokeWidth={2} 
-              dot={false} 
+            <Line
+              type="monotone"
+              dataKey={dataKey}
+              stroke={chartColor}
+              strokeWidth={2}
+              dot={false}
               isAnimationActive={true}
-              animationDuration={1200}
+              animationDuration={900}
+              animationEasing="ease-out"
             />
           </LineChart>
         </ResponsiveContainer>
@@ -116,157 +119,6 @@ const KPICard = ({
   );
 };
 
-const DashboardSkeleton = () => {
-  return (
-    <div className="space-y-5 pb-16 bg-[#f8fafc] min-h-screen w-full">
-      {/* Utility / Control Bar Skeleton */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div>
-          <Skeleton.Text className="w-48 h-7 mb-1.5" />
-          <Skeleton.Text className="w-64 h-3.5" />
-        </div>
-        <div className="flex items-center gap-3">
-          <Skeleton.Rect className="w-28 h-9 rounded-none" />
-          <Skeleton.Rect className="w-36 h-9 rounded-none" />
-        </div>
-      </div>
-
-      {/* Primary KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white border border-slate-200 p-5 flex flex-col gap-4 w-full relative overflow-hidden">
-            <div className="flex justify-between items-start w-full relative z-10">
-              <div>
-                <Skeleton.Text className="w-24 h-3 mb-1.5" />
-                <Skeleton.Text className="w-28 h-8" />
-              </div>
-              <Skeleton.Rect className="w-10 h-10 rounded-lg shrink-0" />
-            </div>
-            <div className="w-full h-10 mt-2 relative z-10">
-              <Skeleton.Primitive className="w-full h-full rounded-none" />
-            </div>
-            <div className="flex items-center justify-between w-full pt-4 border-t border-slate-100 mt-2">
-               <Skeleton.Text className="w-24 h-3.5" />
-               <Skeleton.Text className="w-16 h-3.5" />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Asymmetrical Layout - Tier 1 */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        {/* Registration Trends (Dominant) */}
-        <div className="xl:col-span-8 bg-white border border-slate-200 p-6 flex flex-col h-[400px]">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <Skeleton.Text className="w-44 h-5 mb-1.5" />
-              <Skeleton.Text className="w-72 h-3.5" />
-            </div>
-            <Skeleton.Text className="w-32 h-3.5" />
-          </div>
-          <div className="flex-1 w-full min-h-0">
-            <Skeleton.Primitive className="w-full h-full rounded-none" />
-          </div>
-        </div>
-
-        {/* Population Leaderboard (Supporting) */}
-        <div className="xl:col-span-4 bg-white border border-slate-200 flex flex-col h-[400px]">
-          <div className="p-5 border-b border-slate-100">
-             <Skeleton.Text className="w-48 h-5 mb-1.5" />
-             <Skeleton.Text className="w-40 h-3.5" />
-          </div>
-          <div className="flex-1 overflow-y-auto p-0">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50 sticky top-0">
-                <tr>
-                  <th className="py-2.5 px-5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Rank</th>
-                  <th className="py-2.5 px-5 text-[10px] font-bold uppercase tracking-wider text-slate-400">Barangay</th>
-                  <th className="py-2.5 px-5 text-[10px] font-bold uppercase tracking-wider text-slate-400 text-right">Count</th>
-                  <th className="py-2.5 px-5 text-[10px] font-bold uppercase tracking-wider text-slate-400 w-24">Share</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...Array(6)].map((_, i) => (
-                  <tr key={i} className="border-b border-slate-50">
-                     <td className="py-3 px-5"><Skeleton.Text className="w-4 h-3.5" /></td>
-                     <td className="py-3 px-5"><Skeleton.Text className="w-24 h-3.5" /></td>
-                     <td className="py-3 px-5 text-right"><Skeleton.Text className="w-12 h-3.5 ml-auto" /></td>
-                     <td className="py-3 px-5"><Skeleton.Primitive className="w-16 h-1.5 rounded-none" /></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      {/* Asymmetrical Layout - Tier 2 */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        {/* Gender Breakdown */}
-        <div className="xl:col-span-3 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
-          <Skeleton.Text className="w-36 h-5 mb-1.5" />
-          <Skeleton.Text className="w-48 h-3.5 mb-6" />
-          <div className="flex-1 flex flex-col justify-center gap-6">
-             <div className="flex flex-col gap-1.5">
-                <div className="flex justify-between items-end">
-                  <Skeleton.Text className="w-16 h-3.5" />
-                  <Skeleton.Text className="w-12 h-5" />
-                </div>
-                <Skeleton.Primitive className="w-full h-2 rounded-none" />
-                <Skeleton.Text className="w-8 h-3 ml-auto" />
-             </div>
-             <div className="flex flex-col gap-1.5">
-                <div className="flex justify-between items-end">
-                  <Skeleton.Text className="w-16 h-3.5" />
-                  <Skeleton.Text className="w-12 h-5" />
-                </div>
-                <Skeleton.Primitive className="w-full h-2 rounded-none" />
-                <Skeleton.Text className="w-8 h-3 ml-auto" />
-             </div>
-          </div>
-        </div>
-
-        {/* Age Distribution */}
-        <div className="xl:col-span-5 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
-          <Skeleton.Text className="w-52 h-5 mb-1.5" />
-          <Skeleton.Text className="w-44 h-3.5 mb-6" />
-          <div className="flex-1 w-full min-h-0">
-            <Skeleton.Primitive className="w-full h-full rounded-none" />
-          </div>
-        </div>
-
-        {/* Mortality Analytics */}
-        <div className="xl:col-span-4 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
-          <Skeleton.Text className="w-40 h-5 mb-1.5" />
-          <Skeleton.Text className="w-36 h-3.5 mb-6" />
-          <div className="flex-1 w-full min-h-0">
-            <Skeleton.Primitive className="w-full h-full rounded-none" />
-          </div>
-        </div>
-      </div>
-
-       {/* Full Width Grid Bottom (16 Barangays) */}
-       <div className="grid grid-cols-1">
-         <div className="bg-white border border-slate-200 p-6 flex flex-col">
-          <div className="mb-6">
-            <Skeleton.Text className="w-64 h-5 mb-1.5" />
-            <Skeleton.Text className="w-48 h-3.5" />
-          </div>
-          <div className="w-full border border-slate-100">
-             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 w-full">
-               {[...Array(16)].map((_, i) => (
-                 <div key={i} className="p-3 flex flex-col border-r border-b border-slate-100 aspect-square justify-between bg-slate-50/50">
-                    <Skeleton.Text className="w-16 h-3" />
-                    <Skeleton.Text className="w-12 h-6 mt-auto" />
-                 </div>
-               ))}
-             </div>
-          </div>
-        </div>
-       </div>
-    </div>
-  );
-};
 
 const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   const [selectedBarangay, setSelectedBarangay] = useState('All Barangays');
@@ -292,10 +144,11 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
     try {
       const [data, pendingData] = await Promise.all([
         seniorsAPI.getStatistics(selectedBarangay, selectedYear),
-        requestsAPI.getPending(1, 1)
+        // Use same perPage as Approvals (15) and bypass cache for accurate count — fixes 1 vs 2 mismatch
+        requestsAPI.getPending(1, 15, { fresh: true })
       ]);
       
-      const accuratePendingCount = pendingData.total || pendingData.data?.length || 0;
+      const accuratePendingCount = pendingData.total ?? pendingData.data?.length ?? 0;
       data.pending = accuratePendingCount;
 
       setStats(data);
@@ -362,7 +215,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   return (
     <TransitionWrapper isLoading={isDataLoading} skeleton={<DashboardSkeleton />}>
       {!isDataLoading && (
-        <div className="space-y-5 pb-16 bg-[#f8fafc] min-h-screen stagger-in">
+        <div className="space-y-5 pb-16 bg-[#f8fafc] min-h-screen stagger-in min-w-0 w-full" style={{ minWidth: 0 }}>
       
       {/* Utility / Control Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
@@ -465,15 +318,15 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
             </div>
           </div>
           
-          <div className="flex-1 w-full min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="flex-1 w-full min-h-0 min-w-0" style={{ minWidth: 0, minHeight: 0, width: '100%', height: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={data.monthlyStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} />
                 <RechartsTooltip content={<SimpleTooltip />} cursor={{ stroke: '#cbd5e1' }} />
                 <ReferenceLine y={insights?.avgReg} stroke="#94a3b8" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: 'AVG', fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} />
-                <Area type="monotone" dataKey="total" name="Registrations" stroke="#007aff" strokeWidth={2} fill="#007aff" fillOpacity={0.05} activeDot={{ r: 4, fill: '#007aff', stroke: '#fff', strokeWidth: 2 }} />
+                <Area type="monotone" dataKey="total" name="Registrations" stroke="#007aff" strokeWidth={2} fill="#007aff" fillOpacity={0.05} activeDot={{ r: 4, fill: '#007aff', stroke: '#fff', strokeWidth: 2 }} isAnimationActive={true} animationDuration={1400} animationEasing="ease-out" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -569,14 +422,14 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           <h3 className="text-base font-bold text-slate-900">Demographic Age Brackets</h3>
           <p className="text-xs text-slate-500 mt-1 mb-6">Population sorted by age groups.</p>
           
-          <div className="flex-1 w-full min-h-0">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="flex-1 w-full min-h-0 min-w-0" style={{ minWidth: 0, minHeight: 0, width: '100%', height: '100%' }}>
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <BarChart data={data.ageRanges} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10, fontWeight: 600}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} />
                 <RechartsTooltip content={<SimpleTooltip />} cursor={{fill: '#f8fafc'}} />
-                <Bar dataKey="count" name="Population" fill="#007aff" barSize={24}>
+                <Bar dataKey="count" name="Population" fill="#007aff" barSize={24} isAnimationActive={true} animationDuration={900} animationEasing="ease-out">
                   {data.ageRanges.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'][index % 5]} />
                   ))}
@@ -587,18 +440,18 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
         </div>
 
         {/* Mortality Analytics */}
-        <div className="xl:col-span-4 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
+        <div className="xl:col-span-4 bg-white border border-slate-200 p-6 flex flex-col h-[320px] min-w-0" style={{ minWidth: 0 }}>
           <h3 className="text-base font-bold text-slate-900">Mortality Variance</h3>
           <p className="text-xs text-slate-500 mt-1 mb-6">Historical mortality tracking.</p>
           
-          <div className="flex-1 w-full min-h-0">
+          <div className="flex-1 w-full min-h-0 min-w-0" style={{ minWidth: 0, minHeight: 0, width: '100%', height: '100%' }}>
             {data.totalDeceased === 0 ? (
                <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50 border border-slate-100 text-slate-400">
                   <CheckCircle2 size={24} className="mb-2" />
                   <span className="text-xs font-semibold">Zero Variance</span>
                </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} style={{ width: '100%', height: '100%' }}>
                 <LineChart data={data.monthlyStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} dy={10} />
@@ -612,6 +465,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                     strokeWidth={2} 
                     dot={{ r: 2, fill: '#f43f5e', strokeWidth: 0 }}
                     activeDot={{ r: 4, fill: '#f43f5e' }}
+                    isAnimationActive={true}
+                    animationDuration={1000}
+                    animationEasing="ease-out"
                   />
                 </LineChart>
               </ResponsiveContainer>

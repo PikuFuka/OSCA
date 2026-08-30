@@ -19,14 +19,14 @@ class SeniorDocumentModelTest extends TestCase
 
     public function test_fillable_contains_all_fields(): void
     {
-        $expected = ['senior_id', 'document_type', 'file_content', 'file_name', 'mime_type', 'file_size'];
+        $expected = ['senior_id', 'document_type', 'file_content', 'file_path', 'file_name', 'mime_type', 'file_size'];
         $this->assertEquals($expected, $this->model->getFillable());
     }
 
     public function test_fillable_does_not_contain_extra_fields(): void
     {
         $fillable = $this->model->getFillable();
-        $this->assertCount(6, $fillable);
+        $this->assertCount(7, $fillable);
     }
 
     public function test_uses_has_factory_trait(): void

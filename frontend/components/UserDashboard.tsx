@@ -18,96 +18,12 @@ import { CurrentUser } from '../types';
 import { seniorsAPI } from '../services/api';
 import ConfirmModal from './ConfirmModal';
 import Skeleton from './Skeleton';
+import { UserDashboardSkeleton } from './skeletons';
 
 interface UserDashboardProps {
   currentUser: CurrentUser;
   notify?: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
-
-const UserDashboardSkeleton = () => {
-  return (
-    <div className="space-y-8 pb-12">
-      {/* Welcome Section Skeleton */}
-      <div className="bg-gradient-to-r from-systemBlue/15 to-blue-600/15 rounded-[2.5rem] p-8 md:p-12 relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="w-full">
-            <Skeleton.Text className="w-32 h-3.5 mb-2" />
-            <Skeleton.Text className="w-64 md:w-80 h-9 mb-2" />
-            <Skeleton.Text className="w-48 h-4" />
-          </div>
-          <Skeleton.Rect className="min-w-[120px] h-16 rounded-2xl shrink-0" />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {/* Application Status Card Skeleton */}
-        <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between min-h-[300px]">
-          <div>
-            <div className="flex items-center gap-2 mb-6">
-               <Skeleton.Circle className="w-6 h-6" />
-               <Skeleton.Text className="w-40 h-6" />
-            </div>
-            
-            {/* Progress Stepper Skeleton */}
-            <div className="relative flex items-center justify-between mb-8 px-4">
-              <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 z-0"></div>
-              {[...Array(3)].map((_, i) => (
-                <div key={i} className="relative z-10 flex flex-col items-center gap-2">
-                  <Skeleton.Circle className="w-8 h-8" />
-                  <Skeleton.Text className="w-12 h-3" />
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <Skeleton.Rect className="w-full h-16 rounded-2xl" />
-        </div>
-
-        {/* Pension Category Card Skeleton */}
-        <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-sm flex flex-col justify-between min-h-[300px]">
-          <div>
-            <Skeleton.Text className="w-24 h-3 mb-2" />
-            <div className="flex items-center gap-4 mb-4">
-              <Skeleton.Rect className="w-14 h-14 rounded-2xl shrink-0" />
-              <Skeleton.Text className="w-48 h-8" />
-            </div>
-          </div>
-          <Skeleton.Rect className="w-full h-14 rounded-2xl" />
-        </div>
-      </div>
-
-      {/* Full Width Requirements Section Skeleton */}
-      <div className="bg-white p-6 md:p-8 rounded-[2rem] border border-slate-100 shadow-sm">
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-2">
-            <Skeleton.Circle className="w-6 h-6" />
-            <Skeleton.Text className="w-40 h-6" />
-          </div>
-          <Skeleton.Rect className="w-24 h-6 rounded-xl" />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {[...Array(4)].map((_, i) => (
-            <div key={i} className="p-6 rounded-[2rem] border-2 bg-slate-50 border-slate-100 flex flex-col gap-4">
-               <div className="flex items-center justify-between">
-                 <div className="flex items-center gap-3">
-                   <Skeleton.Rect className="w-12 h-12 rounded-2xl shrink-0" />
-                   <div className="flex flex-col gap-1">
-                     <Skeleton.Text className="w-32 h-4" />
-                     <Skeleton.Text className="w-16 h-3" />
-                   </div>
-                 </div>
-               </div>
-               <Skeleton.Rect className="w-full h-9 mt-auto rounded-xl" />
-            </div>
-          ))}
-        </div>
-        
-        <Skeleton.Rect className="w-full h-14 rounded-2xl" />
-      </div>
-    </div>
-  );
-};
 
 const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) => {
   const [memberDetails, setMemberDetails] = useState<any>(null);

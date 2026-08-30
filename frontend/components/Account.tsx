@@ -7,6 +7,7 @@ import { usersAPI, seniorsAPI } from '../services/api';
 import { CurrentUser } from '../types';
 import ConfirmModal from './ConfirmModal';
 import Skeleton from './Skeleton';
+import { AccountSkeleton } from './skeletons';
 
 // Unified Account Type for Display
 interface UnifiedAccount {
@@ -24,79 +25,6 @@ interface AccountProps {
     currentUser: CurrentUser;
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
 }
-
-const AccountSkeleton = ({ isAdmin = false }: { isAdmin?: boolean }) => {
-  return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-           <Skeleton.Text className="w-64 h-9 mb-1.5" />
-           <Skeleton.Text className="w-80 h-3.5" />
-        </div>
-        {isAdmin && <Skeleton.Button className="w-44 h-11 rounded-2xl" />}
-      </div>
-
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden flex flex-col">
-        {/* Tab Navigation Skeleton */}
-        <div className="px-4 sm:px-6 py-3 border-b border-slate-100 flex gap-2 bg-slate-50/50">
-          {[...Array(4)].map((_, i) => (
-             <Skeleton.Rect key={i} className="w-28 h-8 rounded-full" />
-          ))}
-        </div>
-        
-        {/* Search Bar Skeleton */}
-        <div className="px-6 py-4 border-b border-slate-100 bg-white flex items-center gap-3">
-          <Skeleton.Rect className="w-full max-w-[360px] h-[42px] rounded-xl" />
-          <Skeleton.Text className="w-16 h-3 ml-auto hidden sm:block" />
-        </div>
-
-        {/* Table Skeleton */}
-        <div className="overflow-x-auto flex-1">
-          <table className="w-full text-left table-fixed">
-            <thead>
-              <tr className="border-b border-slate-100 text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase">
-                <th className="px-6 py-4 w-[34%]">Account Identity</th>
-                <th className="px-5 py-4 w-[14%] text-center">Access Role</th>
-                <th className="px-5 py-4 w-[22%] text-center">Assigned Unit/Area</th>
-                <th className="px-5 py-4 w-[14%] text-center">Status</th>
-                <th className="px-6 py-4 w-[16%] text-right">Settings</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50">
-              {[...Array(8)].map((_, i) => (
-                <tr key={i}>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <Skeleton.Rect className="w-9 h-9 rounded-xl shrink-0" />
-                      <div className="w-full max-w-[180px]">
-                        <Skeleton.Text className="w-3/4 h-3.5 mb-1" />
-                        <Skeleton.Text className="w-1/2 h-2.5" />
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4"><div className="flex justify-center"><Skeleton.Rect className="w-16 h-5 rounded-lg" /></div></td>
-                  <td className="px-5 py-4"><Skeleton.Text className="w-20 h-3 mx-auto" /></td>
-                  <td className="px-5 py-4"><div className="flex justify-center"><Skeleton.Rect className="w-16 h-5 rounded-full" /></div></td>
-                  <td className="px-6 py-4"><div className="flex justify-end"><Skeleton.Rect className="w-7 h-7 rounded-lg" /></div></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        
-        {/* Pagination Skeleton */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/30 flex items-center justify-between">
-           <Skeleton.Text className="w-32 h-3" />
-           <div className="flex items-center gap-1.5">
-             <Skeleton.Rect className="w-8 h-8 rounded-lg" />
-             <Skeleton.Text className="w-16 h-3" />
-             <Skeleton.Rect className="w-8 h-8 rounded-lg" />
-           </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   const [accounts, setAccounts] = useState<UnifiedAccount[]>([]);
