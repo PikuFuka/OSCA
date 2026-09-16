@@ -152,6 +152,11 @@ export const seniorsAPI = {
     const response = await api.get('/seniors/next-id', { skipDelay: true } as any);
     return response.data;
   },
+
+  getBirthdays: async () => {
+    const response = await api.get('/seniors/birthdays');
+    return response.data;
+  },
 };
 
 export default seniorsAPI;

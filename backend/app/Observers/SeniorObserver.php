@@ -26,6 +26,10 @@ class SeniorObserver
     {
         // File driver: forget known stats keys; with redis you would use tags
         Cache::forget('stats:v2:all:all');
-        // Optionally flush seniors index cache pattern — for file driver we rely on TTL (45s) to avoid scan
+        if (Cache::has('seniors:cache_version')) {
+            Cache::increment('seniors:cache_version');
+        } else {
+            Cache::forever('seniors:cache_version', 2);
+        }
     }
 }

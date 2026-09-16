@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Printer, X, Loader2, Plus, CheckCircle2 } from 'lucide-react';
+import { Search, Printer, X, Loader2, Plus, CheckCircle2, Trash2 } from 'lucide-react';
 import { SeniorCitizen, INITIAL_ID_CONFIG, CurrentUser } from '../types';
 import { seniorsAPI } from '../services/api';
 import Skeleton from './Skeleton';
@@ -31,11 +31,20 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
   const [searching, setSearching] = useState(false);
 
   const formatName = (senior: SeniorCitizen) => {
-    const last = senior.lastName?.trim() || '';
-    const first = senior.firstName?.trim() || '';
-    const mid = senior.middleName?.trim() || '';
-    const ext = senior.extensionName?.trim() || '';
-    return [last ? `${last},` : '', first, ext, mid].filter(Boolean).join(' ') || senior.name;
+    if (!senior) return '';
+    const last = (senior.lastName || (senior as any).last_name)?.trim() || '';
+    const first = (senior.firstName || (senior as any).first_name)?.trim() || '';
+    const mid = (senior.middleName || (senior as any).middle_name)?.trim() || '';
+    const ext = (senior.extensionName || (senior as any).extension_name)?.trim() || '';
+    const ordered = [last ? `${last},` : '', first, ext, mid].filter(Boolean).join(' ');
+    if (ordered) return ordered;
+    if (senior.name) {
+      if (ext && !senior.name.toLowerCase().includes(ext.toLowerCase())) {
+        return `${senior.name} ${ext}`.trim();
+      }
+      return senior.name;
+    }
+    return '';
   };
 
   // Debounced search
@@ -72,6 +81,12 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
     setSelectedSeniors(prev => prev.filter(s => s.id !== id));
   };
 
+  const clearAllSelected = () => {
+    if (selectedSeniors.length === 0) return;
+    setSelectedSeniors([]);
+    notify('Cleared all selected seniors.', 'info');
+  };
+
   const handleBatchPrint = () => {
     if (selectedSeniors.length === 0) {
       notify('Select at least one senior to print.', 'warning');
@@ -90,30 +105,40 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
   };
 
   const renderFrontCard = (senior: SeniorCitizen) => {
-    const config = senior.idConfig || INITIAL_ID_CONFIG;
+    const rawConfig = senior.idConfig || INITIAL_ID_CONFIG;
+    // Normalize dateIssued y coordinate if it was set below the underline (> 235)
+    const config = {
+      ...rawConfig,
+      dateIssued: {
+        ...rawConfig.dateIssued,
+        y: (!rawConfig.dateIssued?.y || rawConfig.dateIssued.y > 235) ? 224 : rawConfig.dateIssued.y
+      }
+    };
+
+    const formattedDob = senior.dateOfBirth
+      ? new Date(senior.dateOfBirth).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+      : (senior.age ? new Date(new Date().getFullYear() - senior.age, 0, 1).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'N/A');
+
+    const formattedGender = (senior as any).sex || senior.gender || '';
 
     return (
-      <div className="relative w-full h-full overflow-hidden">
+      <div className="relative w-full h-full overflow-hidden bg-white select-none">
         <img src="img/FRONT.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="Front ID template" />
         <div className="absolute inset-0 z-10">
           <div className="absolute" style={{ left: '12px', top: '139px', width: '125px', height: '127px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {senior.idPhoto && <img src={senior.idPhoto} className="w-full h-full object-cover" alt={senior.name} />}
+            {senior.idPhoto ? (
+              <img src={senior.idPhoto} className="w-full h-full object-cover" alt={senior.name} />
+            ) : null}
           </div>
           <div className="absolute inset-0 z-20">
             <StaticLabel text={formatName(senior)} config={config.name} className="font-black text-slate-900 uppercase" />
             <StaticLabel text={`Brgy. ${senior.barangay}`} config={config.barangay} className="font-black text-slate-900 uppercase" />
             <StaticLabel text="Pagsanjan, Laguna" config={config.city} className="font-black text-slate-900 uppercase" />
             <StaticLabel text={String(senior.age)} config={config.age} className="font-black text-slate-900" />
-            <StaticLabel
-              text={senior.dateOfBirth
-                ? new Date(senior.dateOfBirth).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
-                : 'N/A'}
-              config={config.dob}
-              className="font-black text-slate-900"
-            />
-            <StaticLabel text={senior.gender || ''} config={config.gender} className="font-black text-slate-900 uppercase" />
+            <StaticLabel text={formattedDob} config={config.dob} className="font-black text-slate-900" />
+            <StaticLabel text={formattedGender} config={config.gender} className="font-black text-slate-900 uppercase" />
             <StaticLabel text={new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })} config={config.dateIssued} className="font-black text-slate-900" />
-            <StaticLabel text={senior.id} config={config.id} className="font-black text-rose-600 tracking-tighter" />
+            <StaticLabel text={senior.oscaId || senior.id} config={config.id} className="font-black text-rose-600 tracking-tighter" />
           </div>
         </div>
       </div>
@@ -122,12 +147,6 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-none mb-2">Batch Print IDs</h2>
-        <p className="text-sm font-bold text-slate-500 max-w-2xl">Select up to {MAX_CARDS} seniors and print their ID cards on a single A4 page.</p>
-      </div>
-
       {/* Search + Actions */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 print:hidden">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
@@ -142,14 +161,24 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
             />
           </div>
           
-          <div className="flex flex-col md:flex-row items-center gap-6 w-full md:w-auto">
+          <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 w-full md:w-auto">
             <div className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              <span className="text-blue-600 text-sm">{selectedSeniors.length}</span> / {MAX_CARDS} Selected
+              <span className="text-blue-600 text-sm font-extrabold">{selectedSeniors.length}</span> / {MAX_CARDS} Selected
             </div>
+            {selectedSeniors.length > 0 && (
+              <button
+                type="button"
+                onClick={clearAllSelected}
+                className="w-full sm:w-auto py-3 px-4 rounded-xl bg-rose-50 text-rose-600 font-bold text-xs hover:bg-rose-100 hover:text-rose-700 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5 border border-rose-200/60 shadow-sm"
+              >
+                <Trash2 size={15} />
+                Clear All Selected
+              </button>
+            )}
             <button
               onClick={handleBatchPrint}
               disabled={selectedSeniors.length === 0}
-              className="w-full md:w-auto py-3 px-6 rounded-xl bg-systemBlue text-white font-bold text-sm hover:bg-blue-800 transition-all active:scale-[0.98] outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
+              className="w-full sm:w-auto py-3 px-6 rounded-xl bg-systemBlue text-white font-bold text-sm hover:bg-blue-800 transition-all active:scale-[0.98] outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 shadow-md hover:shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
             >
               <Printer size={16} />
               Print Batch
@@ -159,14 +188,29 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
 
         {/* Selected Chips */}
         {selectedSeniors.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-6 p-4 bg-slate-50/80 rounded-xl border border-slate-200/60">
-            {selectedSeniors.map((s, idx) => (
-              <div key={s.id} className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 shadow-sm rounded-lg px-2.5 py-1.5 break-all group">
-                <span className="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-black shrink-0">{idx + 1}</span>
-                <span className="text-xs font-bold text-slate-700">{s.name}</span>
-                <button onClick={() => removeSenior(s.id)} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-0.5 rounded transition-colors ml-1"><X size={14} /></button>
-              </div>
-            ))}
+          <div className="mb-6 p-4 bg-slate-50/80 rounded-xl border border-slate-200/60 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                Selected for Batch Printing ({selectedSeniors.length} of {MAX_CARDS})
+              </span>
+              <button
+                type="button"
+                onClick={clearAllSelected}
+                className="text-xs font-bold text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1 transition-colors"
+              >
+                <Trash2 size={13} />
+                Clear all selected
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {selectedSeniors.map((s, idx) => (
+                <div key={s.id} className="flex flex-wrap items-center gap-2 bg-white border border-slate-200 shadow-sm rounded-lg px-2.5 py-1.5 break-all group">
+                  <span className="w-5 h-5 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center text-[10px] font-black shrink-0">{idx + 1}</span>
+                  <span className="text-xs font-bold text-slate-700">{s.name}</span>
+                  <button onClick={() => removeSenior(s.id)} className="text-slate-400 hover:text-rose-500 hover:bg-rose-50 p-0.5 rounded transition-colors ml-1" title="Remove"><X size={14} /></button>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -240,16 +284,21 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
                 </div>
 
                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                  {/* Back Card (Left) */}
                   <div className="w-full rounded-lg border border-slate-300 overflow-hidden bg-white">
                     <div className="relative w-full" style={{ aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}` }}>
                       <img src="img/BACK.jpg" className="absolute inset-0 w-full h-full object-cover" alt="Back ID template" />
                     </div>
                   </div>
-                  <div className="w-full rounded-lg border border-slate-300 bg-white overflow-x-auto">
-                    <div className="relative mx-auto" style={{ width: CARD_WIDTH, height: CARD_HEIGHT }}>
-                      <div className="absolute inset-0">
-                        {renderFrontCard(senior)}
-                      </div>
+
+                  {/* Front Card (Right) */}
+                  <div className="w-full rounded-lg border border-slate-300 overflow-hidden bg-white">
+                    <div className="relative w-full" style={{ aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}` }}>
+                      <svg viewBox={`0 0 ${CARD_WIDTH} ${CARD_HEIGHT}`} className="w-full h-full block">
+                        <foreignObject width={CARD_WIDTH} height={CARD_HEIGHT}>
+                          {renderFrontCard(senior)}
+                        </foreignObject>
+                      </svg>
                     </div>
                   </div>
                 </div>

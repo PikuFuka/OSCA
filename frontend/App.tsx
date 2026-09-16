@@ -591,7 +591,7 @@ const App: React.FC = () => {
           }}
         />
         
-        <main className="flex-1 overflow-y-auto print:overflow-visible p-4 md:p-6 lg:p-8 [scrollbar-gutter:stable]" style={{ scrollbarGutter: 'stable' as any }}>
+        <main className="flex-1 overflow-y-auto print:overflow-visible p-4 md:p-6 lg:p-8 no-scrollbar">
             <div className="max-w-7xl mx-auto view-enter" key={currentView}>
               {renderView()}
             </div>

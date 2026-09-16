@@ -13,6 +13,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Noto Sans', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif'],
+        poppins: ['Poppins', 'Noto Sans', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       borderRadius: {
         'ios': '1.25rem', // Standard iOS card radius (20px)

@@ -55,12 +55,21 @@ class StatisticsService
             $max = $heatmap->max('count') ?: 1;
             $heatmap->each(fn($s) => $s->intensity = $s->count / $max);
 
+            $today = \Illuminate\Support\Carbon::today();
+            $birthdaysToday = (clone $populationQuery)
+                ->whereMonth('date_of_birth', $today->month)
+                ->whereDay('date_of_birth', $today->day)
+                ->whereNotNull('date_of_birth')
+                ->where('status', '!=', 'Deceased')
+                ->count();
+
             return [
                 'total' => (clone $populationQuery)->count(),
                 'active' => (clone $populationQuery)->where('status','Active')->count(),
                 'pending' => (clone $populationQuery)->where('status','Pending')->count(),
                 'deceased' => (clone $populationQuery)->where('status','Deceased')->count(),
                 'centenarians' => (clone $populationQuery)->where('age','>=',100)->where('status','!=','Deceased')->count(),
+                'birthdaysToday' => $birthdaysToday,
                 'monthlyStats' => $monthlyStats,
                 'ageRanges' => [
                     ['range'=>'60-65','count'=>(clone $populationQuery)->whereBetween('age',[60,65])->count()],

@@ -124,11 +124,7 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">Activity History</h2>
-          <p className="text-slate-500 font-medium mt-1">System events and user actions are logged here.</p>
-        </div>
+      <div className="flex justify-end">
         <button
           onClick={() => setConfirmClear(true)}
           disabled={clearing || logs.length === 0}
@@ -144,6 +140,17 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
         <p className="text-xs text-blue-700 font-bold">Logs older than 24 hours are automatically deleted to keep the system clean.</p>
       </div>
 
+      <TransitionWrapper isLoading={loading} skeleton={
+        <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-6 border-b border-slate-50 bg-slate-50/30">
+            <Skeleton.Rect className="w-full md:w-96 h-12 rounded-2xl" />
+          </div>
+          <div className="p-4 bg-slate-50 border-b border-slate-100">
+            <Skeleton.Text className="w-48 h-3" />
+          </div>
+          <HistoryLogSkeleton />
+        </div>
+      }>
       <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-50 bg-slate-50/30">
           <div className="relative w-full md:w-96">
@@ -164,7 +171,6 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
         </div>
         
         <div className="divide-y divide-slate-100">
-          <TransitionWrapper isLoading={loading} skeleton={<HistoryLogSkeleton />}>
           {!loading && (
             logs.length === 0 ? (
             <div className="p-12 text-center text-slate-400">
@@ -194,9 +200,9 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
               </div>
             ))
           ))}
-          </TransitionWrapper>
         </div>
       </div>
+      </TransitionWrapper>
 
       <ConfirmModal
         isOpen={confirmClear}

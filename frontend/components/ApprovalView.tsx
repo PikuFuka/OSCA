@@ -8,6 +8,15 @@ import {
   IdCard, ChevronLeft, ChevronRight, Filter, ArrowUpRight, 
   ShieldCheck, AlertTriangle, Inbox
 } from 'lucide-react';
+import {
+  TableHeadCell,
+  TableAvatar,
+  StatusPill,
+  TableActionButton,
+  ShowingText,
+  PageJump,
+  scrollMainToTop,
+} from './Table';
 import ConfirmModal, { ConfirmVariant } from './ConfirmModal';
 import { PendingRequest, ViewType } from '../types';
 import { requestsAPI, seniorsAPI } from '../services/api';
@@ -79,14 +88,15 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
       }));
 
       setRequests(transformedRequests);
-      setCurrentPage(response?.current_page ?? page);
+      const meta = response?.meta ?? response ?? {};
+      setCurrentPage(meta.current_page ?? page);
       setPagination({
-        currentPage: response?.current_page ?? page,
-        lastPage: response?.last_page ?? 1,
-        perPage: Number(response?.per_page ?? pagination.perPage),
-        total: response?.total ?? transformedRequests.length,
-        from: response?.from ?? (transformedRequests.length ? ((page - 1) * pagination.perPage) + 1 : 0),
-        to: response?.to ?? ((page - 1) * pagination.perPage) + transformedRequests.length,
+        currentPage: meta.current_page ?? page,
+        lastPage: meta.last_page ?? 1,
+        perPage: Number(meta.per_page ?? pagination.perPage),
+        total: meta.total ?? transformedRequests.length,
+        from: meta.from ?? (transformedRequests.length ? ((page - 1) * pagination.perPage) + 1 : 0),
+        to: meta.to ?? ((page - 1) * pagination.perPage) + transformedRequests.length,
       });
     } catch (error) {
       const savedRequests = localStorage.getItem('pendingRequests');
@@ -122,6 +132,10 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
   // Real-time data fetching from Laravel API
   useEffect(() => {
     fetchRequests(currentPage);
+  }, [currentPage]);
+
+  useEffect(() => {
+    scrollMainToTop();
   }, [currentPage]);
   
   // Confirmation state
@@ -203,34 +217,23 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
 
   return (
     <div className="space-y-8">
-      {/* Page Header */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-        <div>
-          <div className="mb-2">
-            <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">
-              Approvals
-            </h2>
-            <p className="text-[11px] font-semibold text-slate-400 tracking-wide mt-1">
-              Review & verify pending registrations
-            </p>
+      {/* Page Controls */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+        {/* Search Bar */}
+        <div className="relative group flex-1 sm:max-w-md">
+          <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-systemBlue transition-colors pointer-events-none">
+            <Search size={16} strokeWidth={2.5} />
           </div>
+          <input 
+            type="text" 
+            placeholder="Search by name, ID, or type..."
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-medium shadow-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
-          {/* Search Bar */}
-          <div className="relative group flex-1 lg:w-[320px]">
-            <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-systemBlue transition-colors pointer-events-none">
-              <Search size={16} strokeWidth={2.5} />
-            </div>
-            <input 
-              type="text" 
-              placeholder="Search by name, ID, or type..."
-              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-medium shadow-sm"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
+        <div className="flex items-center gap-3 shrink-0">
           {/* Pending Count Badge */}
           <div className="hidden sm:flex items-center gap-2 px-4 py-2.5 bg-amber-50 border border-amber-100 rounded-xl">
             <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
@@ -253,20 +256,26 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
       </div>
 
       {/* Main Table Card — auto height to content */}
+      <TransitionWrapper isLoading={loading} skeleton={
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <ApprovalSkeleton />
+          </div>
+        </div>
+      }>
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden transition-all duration-300 ease-out">
         <div className="overflow-x-auto">
-          <TransitionWrapper isLoading={loading} skeleton={<ApprovalSkeleton />}>
-            {!loading && filteredRequests.length > 0 ? (
+          {!loading && filteredRequests.length > 0 ? (
             <table className="w-full text-left">
-              <thead>
+              <thead className="bg-slate-50/70">
                 <tr className="border-b border-slate-100">
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Applicant</th>
-                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">OSCA ID</th>
-                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Request Type</th>
-                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Reason</th>
-                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Submitted</th>
-                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em]">Status</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] text-right">Actions</th>
+                  <TableHeadCell className="px-5">Applicant</TableHeadCell>
+                  <TableHeadCell className="px-5" align="center">OSCA ID</TableHeadCell>
+                  <TableHeadCell className="px-5" align="center">Request Type</TableHeadCell>
+                  <TableHeadCell className="px-5" align="center">Reason</TableHeadCell>
+                  <TableHeadCell className="px-5" align="center">Submitted</TableHeadCell>
+                  <TableHeadCell className="px-5" align="center">Status</TableHeadCell>
+                  <TableHeadCell className="px-6" align="right">Actions</TableHeadCell>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -280,20 +289,18 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                       onClick={() => setSelectedRequest(req)}
                     >
                       {/* Applicant */}
-                      <td className="px-6 py-4">
+                      <td className="px-5 py-4">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0">
                             {req.details.profilePicture ? (
                               <img src={req.details.profilePicture} alt={req.name} className="w-full h-full object-cover" />
                             ) : (
-                              <span className="text-[10px] font-extrabold text-slate-500 leading-none">
-                                {getInitials(req.name)}
-                              </span>
+                              <TableAvatar name={req.name} />
                             )}
                           </div>
                           <div className="min-w-0">
-                            <p className="text-[13px] font-semibold text-slate-900 leading-tight truncate group-hover:text-systemBlue transition-colors">{req.name}</p>
-                            <p className="text-[11px] text-slate-400 font-medium mt-0.5">#{req.id}</p>
+                            <p className="text-[13px] font-bold text-slate-900 leading-tight truncate uppercase group-hover:text-systemBlue transition-colors">{req.name}</p>
+                            <p className="text-[11px] text-slate-400 font-medium mt-0.5 tabular-nums">#{req.id}</p>
                           </div>
                         </div>
                       </td>
@@ -332,43 +339,35 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
 
                       {/* Status */}
                       <td className="px-5 py-4">
-                        <span className={`inline-flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-full ${
-                          req.status === 'Pending' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 
-                          req.status === 'Approved' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' : 
-                          'bg-rose-50 text-rose-600 border border-rose-100'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${
-                            req.status === 'Pending' ? 'bg-amber-500 animate-pulse' : 
-                            req.status === 'Approved' ? 'bg-emerald-500' : 'bg-rose-500'
-                          }`} />
-                          {req.status}
-                        </span>
+                        <div className="flex items-center justify-center">
+                          <StatusPill status={req.status} />
+                        </div>
                       </td>
 
                       {/* Actions */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); setSelectedRequest(req); }}
-                            className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-systemBlue hover:text-white text-slate-400 hover:shadow-md hover:shadow-blue-500/15 flex items-center justify-center transition-all duration-200 border border-slate-100 hover:border-systemBlue"
+                          <TableActionButton
                             title="View Details"
+                            tone="view"
+                            onClick={(e) => { e.stopPropagation(); setSelectedRequest(req); }}
                           >
                             <Eye size={14} strokeWidth={2.5} />
-                          </button>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); triggerConfirm(req.id, 'Reject'); }}
-                            className="w-8 h-8 rounded-lg bg-slate-50 hover:bg-rose-500 hover:text-white text-slate-400 hover:shadow-md hover:shadow-rose-500/15 flex items-center justify-center transition-all duration-200 border border-slate-100 hover:border-rose-500" 
+                          </TableActionButton>
+                          <TableActionButton
                             title="Reject"
+                            tone="danger"
+                            onClick={(e) => { e.stopPropagation(); triggerConfirm(req.id, 'Reject'); }}
                           >
                             <XCircle size={14} strokeWidth={2.5} />
-                          </button>
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); triggerConfirm(req.id, 'Approve'); }}
-                            className="w-8 h-8 rounded-lg bg-emerald-50 hover:bg-emerald-500 hover:text-white text-emerald-600 hover:shadow-md hover:shadow-emerald-500/15 flex items-center justify-center transition-all duration-200 border border-emerald-100 hover:border-emerald-500" 
+                          </TableActionButton>
+                          <TableActionButton
                             title="Approve"
+                            tone="success"
+                            onClick={(e) => { e.stopPropagation(); triggerConfirm(req.id, 'Approve'); }}
                           >
                             <CheckCircle size={14} strokeWidth={2.5} />
-                          </button>
+                          </TableActionButton>
                         </div>
                       </td>
                     </tr>
@@ -388,15 +387,12 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
               </p>
             </div>
           )}
-          </TransitionWrapper>
         </div>
 
         {/* Pagination */}
-        {!loading && pagination.lastPage > 1 && (
+        {!loading && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/30">
-            <p className="text-[12px] font-medium text-slate-400">
-              Showing <span className="font-bold text-slate-600">{pagination.from}</span>–<span className="font-bold text-slate-600">{pagination.to}</span> of <span className="font-bold text-slate-600">{pagination.total}</span>
-            </p>
+            <ShowingText from={pagination.from} to={pagination.to} total={pagination.total} noun="requests" />
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -408,9 +404,11 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
               </button>
               
               {/* Page Numbers */}
-              {Array.from({ length: Math.min(pagination.lastPage, 5) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
+              {(() => {
+                const windowStart = Math.max(1, Math.min(pagination.currentPage - 2, Math.max(1, pagination.lastPage - 4)));
+                const windowPages: number[] = [];
+                for (let p = windowStart; p <= Math.min(pagination.lastPage, windowStart + 4); p++) windowPages.push(p);
+                return windowPages.map((pageNum) => (
                   <button
                     key={pageNum}
                     onClick={() => setCurrentPage(pageNum)}
@@ -422,8 +420,8 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                   >
                     {pageNum}
                   </button>
-                );
-              })}
+                ));
+              })()}
 
               <button
                 type="button"
@@ -433,10 +431,12 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
               >
                 <ChevronRight size={16} />
               </button>
+              <PageJump page={pagination.currentPage} totalPages={pagination.lastPage} onJump={setCurrentPage} />
             </div>
           </div>
         )}
       </div>
+      </TransitionWrapper>
 
       {/* Detail Modal */}
       {selectedRequest && createPortal(

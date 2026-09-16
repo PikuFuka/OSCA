@@ -57,6 +57,10 @@ class Senior extends Authenticatable
                 $trimmed = trim((string) $senior->osca_id);
                 $senior->osca_id = $trimmed === '' ? null : $trimmed;
             }
+            // Auto-calculate exact age from date_of_birth
+            if ($senior->date_of_birth) {
+                $senior->age = \Illuminate\Support\Carbon::parse($senior->date_of_birth)->age;
+            }
             // Keep osca_id_trim in sync for fallback regular column (VIRTUAL columns auto-sync)
             try {
                 if (\Illuminate\Support\Facades\Schema::hasColumn('seniors', 'osca_id_trim')) {
@@ -93,14 +97,13 @@ class Senior extends Authenticatable
     // Helper to get full name
     public function getFullNameAttribute()
     {
-        $name = $this->first_name;
-        if ($this->middle_name) {
-            $name .= ' ' . $this->middle_name;
-        }
-        $name .= ' ' . $this->last_name;
-        if ($this->extension_name) {
-            $name .= ' ' . $this->extension_name;
-        }
-        return $name;
+        $parts = array_filter([
+            trim((string) $this->first_name),
+            trim((string) $this->middle_name),
+            trim((string) $this->last_name),
+            trim((string) $this->extension_name),
+        ], fn($p) => $p !== '');
+
+        return implode(' ', $parts);
     }
 }

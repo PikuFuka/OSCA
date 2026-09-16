@@ -122,6 +122,9 @@ class SeniorController extends Controller
         $hasSearch = $search !== '';
         $barangay = $request->get('barangay');
         $status = $request->get('status');
+        $minAge = $request->get('min_age');
+        $maxAge = $request->get('max_age');
+        $category = $request->get('category');
         $page = (int) $request->get('page', 1);
         $perPageRaw = $request->get('per_page', 15);
         $sortBy = $request->get('sort', 'last_name');
@@ -131,19 +134,24 @@ class SeniorController extends Controller
         $sortOrder = strtolower($sortOrder) === 'desc' ? 'desc' : 'asc';
 
         // Fast-path: cache paginated search results for 45s (file cache, offline-friendly)
+        $cacheVersion = Cache::get('seniors:cache_version', 1);
         $cacheKey = sprintf(
-            'seniors:index:%s:%s:%s:%s:%s:%s:%s',
+            'seniors:index:v%s:%s:%s:%s:%s:%s:%s:%s:%s:%s:%s',
+            $cacheVersion,
             $hasSearch ? md5($search) : 'nosearch',
             $barangay ?? 'all',
             $status ?? ($request->has('status') ? $status : 'default-active'),
+            $minAge ?? 'nomin',
+            $maxAge ?? 'nomax',
+            $category ?? 'allcat',
             $perPageRaw,
             $sortBy,
             $sortOrder,
             $page
         );
-        $shouldCache = $hasSearch || $request->has('barangay') || $request->has('page');
+        $shouldCache = $hasSearch || $request->has('barangay') || $request->has('page') || $request->has('min_age') || $request->has('max_age') || $request->has('category');
 
-        $exec = function () use ($request, $search, $hasSearch, $barangay, $status, $perPageRaw, $sortBy, $sortOrder) {
+        $exec = function () use ($request, $search, $hasSearch, $barangay, $status, $minAge, $maxAge, $category, $perPageRaw, $sortBy, $sortOrder) {
             $query = Senior::withCount('familyMembers')
                 ->select(['id','osca_id','first_name','middle_name','last_name','extension_name','date_of_birth','age','place_of_birth','sex','mothers_maiden_name','pension_status','barangay','street_address','contact_number','emergency_name','emergency_contact','rrn','national_id','profile_photo_path','id_config','status','created_at','updated_at']);
 
@@ -159,6 +167,34 @@ class SeniorController extends Controller
 
             if ($barangay && $barangay !== 'All Barangays') {
                 $query->where('barangay', $barangay);
+            }
+
+            if (is_numeric($minAge) && (int) $minAge >= 0) {
+                $query->where('age', '>=', (int) $minAge);
+            }
+
+            if (is_numeric($maxAge) && (int) $maxAge >= 0) {
+                $query->where('age', '<=', (int) $maxAge);
+            }
+
+            if ($category && $category !== 'All Categories') {
+                $query->where(function ($q) use ($category) {
+                    $lower = strtolower(trim((string) $category));
+                    if ($lower === 'national') {
+                        $q->whereRaw('LOWER(pension_status) LIKE ?', ['%national%']);
+                    } elseif ($lower === 'local') {
+                        $q->whereRaw('LOWER(pension_status) LIKE ?', ['%local%']);
+                    } elseif ($lower === 'pensioner') {
+                        $q->whereRaw('LOWER(pension_status) LIKE ?', ['%pensioner%'])
+                          ->whereRaw('LOWER(pension_status) NOT LIKE ?', ['%social%']);
+                    } elseif ($lower === 'indigent') {
+                        $q->whereRaw('LOWER(pension_status) LIKE ?', ['%indigent%']);
+                    } elseif ($lower === 'none') {
+                        $q->where('pension_status', 'None')->orWhereNull('pension_status');
+                    } else {
+                        $q->where('pension_status', $category);
+                    }
+                });
             }
 
             if ((int) $perPageRaw == -1) {
@@ -408,6 +444,12 @@ class SeniorController extends Controller
                 'details' => $request->validated(),
                 'ip_address' => $request->ip(),
             ]);
+        }
+
+        if (Cache::has('seniors:cache_version')) {
+            Cache::increment('seniors:cache_version');
+        } else {
+            Cache::forever('seniors:cache_version', 2);
         }
 
         return response()->json([
@@ -822,5 +864,70 @@ class SeniorController extends Controller
         });
 
         return response()->json($stats);
+    }
+
+    /**
+     * Get seniors whose birthday is today + auto-correct their age.
+     */
+    public function birthdays()
+    {
+        $today = Carbon::today();
+        $month = $today->month;
+        $day = $today->day;
+
+        $seniors = Senior::whereMonth('date_of_birth', $month)
+            ->whereDay('date_of_birth', $day)
+            ->whereNotNull('date_of_birth')
+            ->where('status', '!=', 'Deceased')
+            ->orderBy('last_name')
+            ->get();
+
+        // Lazily correct ages
+        $updated = 0;
+        foreach ($seniors as $senior) {
+            $correctAge = Carbon::parse($senior->date_of_birth)->age;
+            if ((int) $senior->age !== $correctAge) {
+                $senior->timestamps = false;
+                $senior->update(['age' => $correctAge]);
+                $senior->age = $correctAge;
+                $updated++;
+            }
+        }
+
+        if ($updated > 0) {
+            Cache::forget('stats:v2:all:all');
+            if (Cache::has('seniors:cache_version')) {
+                Cache::increment('seniors:cache_version');
+            } else {
+                Cache::forever('seniors:cache_version', 2);
+            }
+        }
+
+        $mapped = $seniors->map(function ($s) {
+            $photoUrl = $s->profile_photo_path ? '/api/storage/profiles/' . basename($s->profile_photo_path) : null;
+            return [
+                'id' => $s->id,
+                'oscaId' => $s->osca_id,
+                'firstName' => $s->first_name,
+                'middleName' => $s->middle_name,
+                'lastName' => $s->last_name,
+                'extensionName' => $s->extension_name,
+                'name' => $s->full_name,
+                'fullName' => $s->full_name,
+                'age' => (int) $s->age,
+                'sex' => $s->sex,
+                'gender' => $s->sex,
+                'barangay' => $s->barangay,
+                'idPhoto' => $photoUrl,
+                'profilePhotoPath' => $photoUrl,
+                'dateOfBirth' => $s->date_of_birth?->format('Y-m-d'),
+            ];
+        });
+
+        return response()->json([
+            'count' => $seniors->count(),
+            'date' => $today->format('F j, Y'),
+            'seniors' => $mapped,
+        ]);
     }
 }

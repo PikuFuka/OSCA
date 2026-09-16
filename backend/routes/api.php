@@ -39,6 +39,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/seniors/deceased', [SeniorController::class, 'deceased']);
     Route::post('/seniors/{id}/restore', [SeniorController::class, 'restore']);
     Route::get('/seniors/statistics', [SeniorController::class, 'statistics']);
+    Route::get('/seniors/birthdays', [SeniorController::class, 'birthdays']);
     Route::get('/seniors/{id}', [SeniorController::class, 'show']);
     Route::post('/seniors', [SeniorController::class, 'store']);
     Route::put('/seniors/{id}', [SeniorController::class, 'update']);

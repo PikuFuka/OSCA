@@ -4,10 +4,21 @@ import TransitionWrapper from './TransitionWrapper';
 import Skeleton from './Skeleton';
 import { RegistrySkeleton } from './skeletons';
 import { createPortal } from 'react-dom';
-import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock, Edit2Icon, ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
+import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock, Edit2Icon, ChevronLeft, ChevronRight, Filter, ArrowUpDown } from 'lucide-react';
 import { BARANGAYS, SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } from '../types';
 import { seniorsAPI, activityLogsAPI } from '../services/api';
 import ConfirmModal from './ConfirmModal';
+import {
+  TableHeadCell,
+  TableAvatar,
+  StatusPill,
+  CategoryPill,
+  TableActionButton,
+  EmptyTableRow,
+  ShowingText,
+  PageJump,
+  scrollMainToTop,
+} from './Table';
 
 // Initial draggable positions from shared config
 const initialTextPositions = INITIAL_ID_CONFIG;
@@ -204,6 +215,14 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   const [searchTerm, setSearchTerm] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filterBarangay, setFilterBarangay] = useState('All Barangays');
+  const [filterCategory, setFilterCategory] = useState('All Categories');
+  const [ageMin, setAgeMin] = useState('');
+  const [ageMax, setAgeMax] = useState('');
+  const [debouncedAgeMin, setDebouncedAgeMin] = useState('');
+  const [debouncedAgeMax, setDebouncedAgeMax] = useState('');
+  const [sortValue, setSortValue] = useState('last_name:asc');
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -216,7 +235,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
   // Fetch seniors from API — stale-while-revalidate + abort for fast search
   // Skeleton is shown only on first load; fast search (abort/cache) activates after
-  const fetchSeniors = async (background = false) => {
+  const fetchSeniors = async (background = false, fresh = false) => {
     // Cancel previous in-flight search only after initial load (fast path)
     if (hasInitialLoaded && abortRef.current) abortRef.current.abort();
     const controller = new AbortController();
@@ -227,20 +246,27 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     else if (!background && hasInitialLoaded) setIsSearching(true);
 
     try {
+      const [sortField, sortDir] = sortValue.split(':');
       const response = await seniorsAPI.getAll({
         search: debouncedSearch || undefined,
         barangay: filterBarangay === 'All Barangays' ? undefined : filterBarangay,
+        min_age: debouncedAgeMin || undefined,
+        max_age: debouncedAgeMax || undefined,
+        category: filterCategory === 'All Categories' ? undefined : filterCategory,
+        sort: sortField,
+        order: sortDir,
         page: page,
-        // Use frontend cache for same search (instant), background refresh via backend file cache (45s)
-        // No fresh:true — allows withCache to return stale instantly
+        per_page: itemsPerPage,
+        fresh: fresh || undefined,
         signal: controller.signal as any,
       });
       
       if (response && response.data) {
         // Laravel Paginate returns data in 'data' field
+        const meta = response.meta ?? response;
         setSeniors(response.data);
-        setTotalPages(response.last_page || 1);
-        setTotalCount(response.total || 0);
+        setTotalPages(meta.last_page || 1);
+        setTotalCount(meta.total || 0);
       } else {
         setSeniors(Array.isArray(response) ? response : []);
         setTotalPages(1);
@@ -263,7 +289,27 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
   useEffect(() => {
     fetchSeniors();
-  }, [debouncedSearch, filterBarangay, page]);
+  }, [debouncedSearch, debouncedAgeMin, debouncedAgeMax, filterBarangay, filterCategory, sortValue, page]);
+
+  useEffect(() => {
+    if (!filtersOpen) return;
+    const onPointerDown = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setFiltersOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setFiltersOpen(false);
+    };
+    document.addEventListener('mousedown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [filtersOpen]);
+
+  useEffect(() => {
+    scrollMainToTop();
+  }, [page]);
 
   // Cleanup abort on unmount
   useEffect(() => {
@@ -503,7 +549,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     senior: SeniorCitizen | null;
   }>({ isOpen: false, type: null, senior: null });
 
-  const itemsPerPage = 8;
+  const itemsPerPage = 15;
   const isAdmin = currentUser.role === 'Admin';
   const isStaff = currentUser.role === 'Staff';
   const canGenerateID = isAdmin || isStaff;
@@ -514,11 +560,13 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     if (!hasInitialLoaded) return;
     const timer = setTimeout(() => {
       setDebouncedSearch(searchTerm.trim());
+      setDebouncedAgeMin(ageMin.trim());
+      setDebouncedAgeMax(ageMax.trim());
       setPage(1);
     }, 260);
 
     return () => clearTimeout(timer);
-  }, [searchTerm, hasInitialLoaded]);
+  }, [searchTerm, ageMin, ageMax, hasInitialLoaded]);
 
   // No need for client-side filtering and pagination as we use server-side
   const displayedSeniors = seniors;
@@ -558,6 +606,24 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     setIdModalOpen(true);
     // Preload the model to reduce delay on first capture/upload.
     void getSelfieSegmentationInstance().catch(() => undefined);
+
+    // Fetch fresh details in background to ensure latest extensionName, photo, etc.
+    const targetId = senior.id || (senior as any).oscaId || (senior as any).osca_id;
+    if (targetId) {
+      seniorsAPI.getByIdFresh(targetId)
+        .then((fullData: any) => {
+          if (fullData) {
+            setIdGenerationSenior((prev: any) => {
+              if (!prev || (prev.id !== senior.id && prev.oscaId !== senior.oscaId)) return prev;
+              return { ...prev, ...fullData };
+            });
+            if (fullData.idPhoto) {
+              setIdPhoto((curr) => curr || fullData.idPhoto);
+            }
+          }
+        })
+        .catch(() => undefined);
+    }
   };
 
   const startWebcam = async () => {
@@ -926,22 +992,12 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     return 'None'; // Default to None if unknown
   };
 
-  const getCategoryStyle = (category: string) => {
-    switch(category) {
-      case 'National': return 'bg-blue-50 text-blue-700 border-blue-100';
-      case 'Local': return 'bg-purple-50 text-purple-700 border-purple-100';
-      case 'Pensioner': return 'bg-amber-50 text-amber-700 border-amber-100';
-      case 'None': return 'bg-slate-50 text-slate-500 border-slate-100';
-      case 'Indigent': return 'bg-rose-50 text-rose-700 border-rose-100';
-      default: return 'bg-slate-50 text-slate-500 border-slate-100';
-    }
-  };
-
   const formatIdDisplayName = (senior: SeniorCitizen) => {
-    const lastName = senior.lastName?.trim() || '';
-    const firstName = senior.firstName?.trim() || '';
-    const middleName = senior.middleName?.trim() || '';
-    const extensionName = senior.extensionName?.trim() || '';
+    if (!senior) return '';
+    const lastName = (senior.lastName || (senior as any).last_name)?.trim() || '';
+    const firstName = (senior.firstName || (senior as any).first_name)?.trim() || '';
+    const middleName = (senior.middleName || (senior as any).middle_name)?.trim() || '';
+    const extensionName = (senior.extensionName || (senior as any).extension_name)?.trim() || '';
 
     const orderedName = [
       lastName ? `${lastName},` : '',
@@ -950,19 +1006,56 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
       middleName,
     ].filter(Boolean).join(' ');
 
-    return orderedName || senior.name;
+    if (orderedName) return orderedName;
+
+    if (senior.name) {
+      if (extensionName && !senior.name.toLowerCase().includes(extensionName.toLowerCase())) {
+        return `${senior.name} ${extensionName}`.trim();
+      }
+      return senior.name;
+    }
+
+    return '';
+  };
+
+  const getMemberDisplayName = (senior: SeniorCitizen) => {
+    if (!senior) return '';
+    const ext = (senior.extensionName || (senior as any).extension_name)?.trim() || '';
+    if (senior.name) {
+      if (ext && !senior.name.toLowerCase().includes(ext.toLowerCase())) {
+        return `${senior.name} ${ext}`.trim();
+      }
+      return senior.name;
+    }
+    return formatIdDisplayName(senior);
+  };
+
+  const filtersActive =
+    searchTerm !== '' ||
+    filterBarangay !== 'All Barangays' ||
+    filterCategory !== 'All Categories' ||
+    ageMin !== '' ||
+    ageMax !== '';
+
+  const activeFilterCount =
+    (filterBarangay !== 'All Barangays' ? 1 : 0) +
+    (filterCategory !== 'All Categories' ? 1 : 0) +
+    (ageMin !== '' ? 1 : 0) +
+    (ageMax !== '' ? 1 : 0);
+
+  const resetFilters = () => {
+    setSearchTerm('');
+    setFilterBarangay('All Barangays');
+    setFilterCategory('All Categories');
+    setAgeMin('');
+    setAgeMax('');
+    setPage(1);
   };
   
   return (
     <div className="space-y-8">
-      {/* Page Header */}
-      <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-6">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-none">Member Registry</h2>
-          <p className="text-[11px] font-semibold text-slate-400 tracking-wide mt-1.5 bg-white/50 w-fit px-2.5 py-1 rounded-md border border-slate-200/60 shadow-sm uppercase">Official Records</p>
-        </div>
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full lg:w-auto">
+      {/* Controls Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
           {/* Search Input */}
           <div className="relative group flex-1 lg:w-[320px]">
             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-systemBlue transition-colors pointer-events-none">
@@ -990,31 +1083,158 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
             )}
           </div>
 
-          {/* Barangay Filter Select */}
-          <div className="relative w-full sm:w-[180px]">
+          {/* Sort Select */}
+          <div className="relative w-full sm:w-[190px] shrink-0">
             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-              <MapPin size={16} />
+              <ArrowUpDown size={16} />
             </div>
-            <select 
-              id="registry-barangay-filter"
-              name="registryBarangayFilter"
-              value={filterBarangay}
-              onChange={(e) => { setFilterBarangay(e.target.value); setPage(1); }}
+            <select
+              id="registry-sort"
+              name="registrySort"
+              value={sortValue}
+              onChange={(e) => { setSortValue(e.target.value); setPage(1); }}
               className="w-full pl-10 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm cursor-pointer appearance-none"
             >
-              <option value="All Barangays">All Barangays</option>
-              {BARANGAYS.map(b => (
-                <option key={b} value={b}>{b}</option>
-              ))}
+              <option value="created_at:desc">Newest first</option>
+              <option value="created_at:asc">Oldest first</option>
+              <option value="last_name:asc">Name A–Z</option>
+              <option value="last_name:desc">Name Z–A</option>
+              <option value="age:asc">Age: youngest first</option>
+              <option value="age:desc">Age: oldest first</option>
             </select>
             <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
               <ChevronRight size={14} className="rotate-90" />
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Queue Alert banner */}
+          {/* Filters Dropdown */}
+          <div className="relative shrink-0" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((o) => !o)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-[13px] font-semibold shadow-sm transition-all ${filtersOpen || activeFilterCount > 0 ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-700 border-slate-200 hover:border-slate-300'}`}
+            >
+              <Filter size={16} strokeWidth={2.5} />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="min-w-5 h-5 px-1 grid place-items-center rounded-full bg-systemBlue text-white text-[10px] font-extrabold tabular-nums">{activeFilterCount}</span>
+              )}
+            </button>
+
+            {filtersOpen && (
+              <div className="absolute right-0 top-full mt-2 w-[300px] bg-white border border-slate-200 rounded-2xl shadow-xl shadow-slate-200/60 p-4 space-y-4 z-50">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Barangay</p>
+                  <div className="relative">
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                      <MapPin size={16} />
+                    </div>
+                    <select
+                      id="registry-barangay-filter"
+                      name="registryBarangayFilter"
+                      value={filterBarangay}
+                      onChange={(e) => { setFilterBarangay(e.target.value); setPage(1); }}
+                      className="w-full pl-10 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm cursor-pointer appearance-none"
+                    >
+                      <option value="All Barangays">All Barangays</option>
+                      {BARANGAYS.map(b => (
+                        <option key={b} value={b}>{b}</option>
+                      ))}
+                    </select>
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                      <ChevronRight size={14} className="rotate-90" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Category</p>
+                  <div className="relative">
+                    <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                      <Users size={16} />
+                    </div>
+                    <select
+                      id="registry-category-filter"
+                      name="registryCategoryFilter"
+                      value={filterCategory}
+                      onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
+                      className="w-full pl-10 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm cursor-pointer appearance-none"
+                    >
+                      <option value="All Categories">All Categories</option>
+                      <option value="National">National</option>
+                      <option value="Local">Local</option>
+                      <option value="Pensioner">Pensioner</option>
+                      <option value="Indigent">Indigent</option>
+                      <option value="None">None</option>
+                    </select>
+                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                      <ChevronRight size={14} className="rotate-90" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Age range</p>
+                  <div className="flex items-center gap-2">
+                    <input
+                      id="registry-age-min"
+                      name="registryAgeMin"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Min age"
+                      value={ageMin}
+                      onChange={(e) => setAgeMin(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
+                      disabled={!hasInitialLoaded && loading}
+                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm tabular-nums disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-wait"
+                    />
+                    <span className="text-slate-300 font-bold">–</span>
+                    <input
+                      id="registry-age-max"
+                      name="registryAgeMax"
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="Max age"
+                      value={ageMax}
+                      onChange={(e) => setAgeMax(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))}
+                      disabled={!hasInitialLoaded && loading}
+                      className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm tabular-nums disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-wait"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                  {filtersActive ? (
+                    <button
+                      type="button"
+                      onClick={resetFilters}
+                      className="flex items-center gap-1.5 text-[12px] font-bold text-slate-500 hover:text-rose-600 transition-colors"
+                    >
+                      <X size={14} strokeWidth={2.5} /> Reset all
+                    </button>
+                  ) : (
+                    <span className="text-[12px] font-medium text-slate-400">No filters applied</span>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => setFiltersOpen(false)}
+                    className="px-4 py-2 rounded-xl bg-slate-900 text-white text-[12px] font-bold hover:bg-slate-700 transition-colors"
+                  >
+                    Done
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Total */}
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm whitespace-nowrap shrink-0">
+            <Users size={16} className="text-slate-400" />
+            <span className="text-[13px] font-extrabold text-slate-900 tabular-nums">{totalCount.toLocaleString()}</span>
+            <span className="text-[11px] font-semibold text-slate-400">{totalCount === 1 ? 'member' : 'members'}</span>
+          </div>
+        </div>
+
+        {/* Queue Alert banner */}
       {setView && (
         <div className="bg-gradient-to-r from-blue-50/50 to-indigo-50/20 border border-blue-100 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-xl flex items-center justify-center shrink-0 shadow-md shadow-blue-500/10">
@@ -1037,27 +1257,31 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
       )}
       
       {/* Table Container Card */}
+      <TransitionWrapper isLoading={loading && seniors.length === 0} skeleton={
+        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden relative">
+          <div className="overflow-x-auto">
+            <RegistrySkeleton />
+          </div>
+        </div>
+      }>
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden relative">
         {isSearching && <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-orange-400 via-amber-400 to-blue-500 animate-pulse z-10" aria-hidden />}
         <div className="overflow-x-auto">
-          <TransitionWrapper isLoading={loading && seniors.length === 0} skeleton={<RegistrySkeleton />}>
-            {!(loading && seniors.length === 0) && (
+          {!(loading && seniors.length === 0) && (
             <div className={isSearching ? "opacity-60 transition-opacity duration-200" : "transition-opacity duration-200"}>
             <table className="w-full text-left table-fixed">
-              <thead>
+              <thead className="bg-slate-50/70">
                 <tr className="border-b border-slate-100">
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[32%]">Member Identity</th>
-                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Age / Locality</th>
-                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Category</th>
-                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[12%] text-center">Status</th>
-                  <th className="px-5 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-center">Modified</th>
-                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-[0.15em] w-[14%] text-right">Actions</th>
+                  <TableHeadCell className="px-6 w-[32%]">Member Identity</TableHeadCell>
+                  <TableHeadCell className="px-5 w-[14%]" align="center">Age / Locality</TableHeadCell>
+                  <TableHeadCell className="px-5 w-[14%]" align="center">Category</TableHeadCell>
+                  <TableHeadCell className="px-5 w-[12%]" align="center">Status</TableHeadCell>
+                  <TableHeadCell className="px-5 w-[14%]" align="center">Modified</TableHeadCell>
+                  <TableHeadCell className="px-6 w-[14%]" align="right">Actions</TableHeadCell>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {displayedSeniors.length > 0 ? displayedSeniors.map((senior) => {
-                  const category = getDisplayCategory(senior.pensionStatus);
-                  const isDeceased = senior.status === 'Deceased';
                   return (
                   <tr 
                     key={senior.id} 
@@ -1065,16 +1289,10 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                     onClick={() => handleViewDetails(senior)}
                   >
                     {/* Identity */}
-                    <td className="px-6 py-4">
+                    <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
                         <div className="relative shrink-0">
-                          {senior.idPhoto ? (
-                            <img src={senior.idPhoto} alt={senior.name} loading="lazy" width={36} height={36} className="w-9 h-9 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0 bg-slate-50" />
-                          ) : (
-                            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200 flex items-center justify-center text-slate-400 font-extrabold text-[10px]">
-                              {senior.name.split(' ').map((n) => n[0]).filter(Boolean).slice(0, 2).join('').toUpperCase()}
-                            </div>
-                          )}
+                          <TableAvatar name={getMemberDisplayName(senior)} photo={senior.idPhoto} />
                           <span className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ${
                             senior.status === 'Active' ? 'bg-emerald-500' : 
                             senior.status === 'Pending' ? 'bg-amber-500' : 
@@ -1082,44 +1300,31 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                           }`} />
                         </div>
                         <div className="min-w-0">
-                          <p className="text-[13px] font-semibold text-slate-900 leading-tight truncate group-hover:text-systemBlue transition-colors">{senior.name}</p>
-                          <p className="text-[11px] font-medium text-slate-400 tracking-wider mt-0.5 truncate">{getMemberOscaId(senior)}</p>
+                          <p className="text-[13px] font-bold text-slate-900 leading-tight truncate uppercase group-hover:text-systemBlue transition-colors">{getMemberDisplayName(senior)}</p>
+                          <p className="text-[11px] font-medium text-slate-400 tracking-wider mt-0.5 truncate tabular-nums">{getMemberOscaId(senior)}</p>
                         </div>
                       </div>
                     </td>
 
                     {/* Age / Locality */}
                     <td className="px-5 py-4 text-center">
-                      <div className="flex flex-col">
-                        <span className="text-[13px] font-bold text-slate-800">{senior.age} yrs</span>
-                        <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 truncate">Brgy. {senior.barangay}</span>
+                      <div className="flex flex-col items-center">
+                        <span className="text-[13px] font-bold text-slate-800 tabular-nums">{senior.age} yrs</span>
+                        <span className="flex items-center gap-1 text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 truncate"><MapPin size={11} className="shrink-0" />Brgy. {senior.barangay}</span>
                       </div>
                     </td>
 
                     {/* Category */}
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-center">
-                        <span className={`text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-lg border whitespace-nowrap ${getCategoryStyle(category)}`}>
-                          {category}
-                        </span>
+                        <CategoryPill label={getDisplayCategory(senior.pensionStatus)} />
                       </div>
                     </td>
 
                     {/* Status */}
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-center">
-                        <span className={`inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-widest px-2.5 py-0.5 rounded-full border whitespace-nowrap ${
-                          senior.status === 'Active' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                          senior.status === 'Pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
-                          isDeceased ? 'bg-slate-50 text-slate-500 border-slate-200' :
-                          'bg-slate-50 text-slate-400 border-slate-100'
-                        }`}>
-                          <span className={`w-1 h-1 rounded-full ${
-                            senior.status === 'Active' ? 'bg-emerald-500' : 
-                            senior.status === 'Pending' ? 'bg-amber-500 animate-pulse' : 'bg-slate-400'
-                          }`} />
-                          {senior.status}
-                        </span>
+                        <StatusPill status={senior.status} />
                       </div>
                     </td>
 
@@ -1138,58 +1343,59 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
                     {/* Actions */}
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); handleViewDetails(senior); }}
-                          className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-systemBlue hover:text-white text-slate-400 hover:shadow-md hover:shadow-blue-500/15 flex items-center justify-center transition-all border border-slate-100 hover:border-systemBlue active:scale-95"
+                      <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                        <TableActionButton
                           title="Inspect Details"
+                          tone="view"
+                          size="md"
+                          onClick={(e) => { e.stopPropagation(); handleViewDetails(senior); }}
                         >
-                          <Eye size={13} strokeWidth={2.5} />
-                        </button>
+                          <Eye size={16} strokeWidth={2.5} />
+                        </TableActionButton>
 
                         {canGenerateID && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openEditMember(senior); }}
-                            className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-indigo-500 hover:text-white text-slate-400 hover:shadow-md hover:shadow-indigo-500/15 flex items-center justify-center transition-all border border-slate-100 hover:border-indigo-500 active:scale-95"
+                          <TableActionButton
                             title="Edit Record"
+                            tone="neutral"
+                            size="md"
+                            onClick={(e) => { e.stopPropagation(); openEditMember(senior); }}
                           >
-                            <Edit2 size={13} strokeWidth={2.5} />
-                          </button>
+                            <Edit2 size={16} strokeWidth={2.5} />
+                          </TableActionButton>
                         )}
 
                         {canGenerateID && (
-                          <button 
-                            disabled={senior.status !== 'Active'}
-                            onClick={(e) => { e.stopPropagation(); handleGenerateID(senior); }} 
-                            className={`w-7 h-7 border rounded-lg flex items-center justify-center transition-all shadow-sm active:scale-95 ${
-                              senior.status !== 'Active' 
-                                ? 'bg-slate-50 opacity-40 cursor-not-allowed text-slate-300 border-slate-200' 
-                                : 'bg-white text-emerald-600 border-emerald-100 hover:bg-emerald-500 hover:text-white hover:border-emerald-500 hover:shadow-md hover:shadow-emerald-500/15'
-                            }`} 
+                          <TableActionButton
                             title={senior.status === 'Active' ? "Generate ID" : "Approval Restricted"}
+                            tone="success"
+                            size="md"
+                            disabled={senior.status !== 'Active'}
+                            onClick={(e) => { e.stopPropagation(); handleGenerateID(senior); }}
                           >
-                            <IdCard size={13} strokeWidth={2.5} />
-                          </button>
+                            <IdCard size={16} strokeWidth={2.5} />
+                          </TableActionButton>
                         )}
                         
                         {isAdmin && (
                           <>
                              {senior.status !== 'Deceased' && (
-                               <button
-                                 onClick={(e) => { e.stopPropagation(); setConfirmState({ isOpen: true, type: 'Decease', senior }); }}
-                                 className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-amber-500 hover:text-white text-slate-400 hover:shadow-md hover:shadow-amber-500/15 flex items-center justify-center transition-all border border-slate-100 hover:border-amber-500 active:scale-95"
+                               <TableActionButton
                                  title="Mark as Deceased"
+                                 tone="warning"
+                                 size="md"
+                                 onClick={(e) => { e.stopPropagation(); setConfirmState({ isOpen: true, type: 'Decease', senior }); }}
                                >
-                                 <UserX size={13} strokeWidth={2.5} />
-                               </button>
+                                 <UserX size={16} strokeWidth={2.5} />
+                               </TableActionButton>
                              )}
-                             <button 
-                               onClick={(e) => { e.stopPropagation(); setConfirmState({ isOpen: true, type: 'Delete', senior }); }} 
-                               className="w-7 h-7 rounded-lg bg-slate-50 hover:bg-rose-500 hover:text-white text-slate-400 hover:shadow-md hover:shadow-rose-500/15 flex items-center justify-center transition-all border border-slate-100 hover:border-rose-500 active:scale-95" 
+                             <TableActionButton
                                title="Delete Member"
+                               tone="danger"
+                               size="md"
+                               onClick={(e) => { e.stopPropagation(); setConfirmState({ isOpen: true, type: 'Delete', senior }); }}
                              >
-                               <Trash2 size={13} strokeWidth={2.5} />
-                             </button>
+                               <Trash2 size={16} strokeWidth={2.5} />
+                             </TableActionButton>
                           </>
                         )}
                       </div>
@@ -1197,34 +1403,27 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   </tr>
                   );
                 }) : (
-                   /* Empty State */
-                   <tr>
-                    <td colSpan={6} className="px-6 py-20 text-center">
-                      <div className="flex flex-col items-center justify-center py-10">
-                        <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center mb-5">
-                          <Inbox size={28} className="text-slate-300" />
-                        </div>
-                        <h3 className="text-[15px] font-bold text-slate-700 mb-1">No Members Found</h3>
-                        <p className="text-[13px] text-slate-400 font-medium text-center max-w-xs">
-                          Try adjusting your search criteria or barangay filter options.
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
+                  <EmptyTableRow
+                    colSpan={6}
+                    title="No Members Found"
+                    message="Try adjusting your search criteria or barangay filter options."
+                  />
                 )}
               </tbody>
             </table>
             </div>
             )}
-          </TransitionWrapper>
         </div>
 
         {/* Pagination */}
-        {!loading && totalPages > 1 && (
+        {!loading && (
           <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 bg-slate-50/30">
-            <p className="text-[12px] font-medium text-slate-400">
-              Showing <span className="font-bold text-slate-600">{displayedSeniors.length}</span> of <span className="font-bold text-slate-600">{totalCount}</span> records
-            </p>
+            <ShowingText
+              from={displayedSeniors.length ? (page - 1) * itemsPerPage + 1 : 0}
+              to={(page - 1) * itemsPerPage + displayedSeniors.length}
+              total={totalCount}
+              noun="members"
+            />
             <div className="flex items-center gap-1.5">
               <button
                 type="button"
@@ -1236,9 +1435,11 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
               </button>
               
               {/* Page Numbers */}
-              {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-                const pageNum = i + 1;
-                return (
+              {(() => {
+                const windowStart = Math.max(1, Math.min(page - 2, Math.max(1, totalPages - 4)));
+                const windowPages: number[] = [];
+                for (let p = windowStart; p <= Math.min(totalPages, windowStart + 4); p++) windowPages.push(p);
+                return windowPages.map((pageNum) => (
                   <button
                     key={pageNum}
                     onClick={() => setPage(pageNum)}
@@ -1250,8 +1451,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   >
                     {pageNum}
                   </button>
-                );
-              })}
+                ));
+              })()}
 
               <button
                 type="button"
@@ -1261,10 +1462,12 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
               >
                 <ChevronRight size={16} />
               </button>
+              <PageJump page={page} totalPages={totalPages} onJump={setPage} />
             </div>
           </div>
         )}
       </div>
+      </TransitionWrapper>
 
       {/* ID Generation Modal */}
       {idModalOpen && idGenerationSenior && createPortal(
@@ -1788,10 +1991,46 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                 onClick={async () => {
                   setIsProcessing(true);
                   try {
-                    await seniorsAPI.update(selectedSenior.id, editFormData);
+                    const res = await seniorsAPI.update(selectedSenior.id, editFormData);
                     notify("Profile updated successfully.", "success");
+                    const updatedSenior = res?.senior || {};
+                    // Immediately update local registry state so table reflects changes without delay
+                    setSeniors(prev => prev.map(s => {
+                      if (s.id === selectedSenior.id || (s.oscaId && s.oscaId === selectedSenior.oscaId)) {
+                        const newExt = editFormData.extensionName !== undefined ? editFormData.extensionName : s.extensionName;
+                        const newFirst = editFormData.firstName || s.firstName;
+                        const newMiddle = editFormData.middleName || s.middleName;
+                        const newLast = editFormData.lastName || s.lastName;
+                        const computedName = updatedSenior.name || [newFirst, newMiddle, newLast, newExt].filter(Boolean).join(' ');
+                        return {
+                          ...s,
+                          ...updatedSenior,
+                          firstName: newFirst,
+                          middleName: newMiddle,
+                          lastName: newLast,
+                          extensionName: newExt,
+                          name: computedName,
+                          dateOfBirth: editFormData.dateOfBirth || s.dateOfBirth,
+                          pensionStatus: editFormData.pensionStatus || s.pensionStatus,
+                          barangay: editFormData.barangay || s.barangay,
+                          streetAddress: editFormData.streetAddress || s.streetAddress,
+                          contactNumber: editFormData.contactNumber || s.contactNumber,
+                        };
+                      }
+                      return s;
+                    }));
+                    if (idGenerationSenior && (idGenerationSenior.id === selectedSenior.id || idGenerationSenior.oscaId === selectedSenior.oscaId)) {
+                      setIdGenerationSenior((prev: any) => prev ? {
+                        ...prev,
+                        ...updatedSenior,
+                        extensionName: editFormData.extensionName !== undefined ? editFormData.extensionName : prev.extensionName,
+                        firstName: editFormData.firstName || prev.firstName,
+                        middleName: editFormData.middleName || prev.middleName,
+                        lastName: editFormData.lastName || prev.lastName,
+                      } : prev);
+                    }
                     setSelectedSenior(null);
-                    fetchSeniors();
+                    fetchSeniors(false, true);
                   } catch (error: any) {
                     console.error(error); notify("Failed to update profile.", "error");
                   } finally {

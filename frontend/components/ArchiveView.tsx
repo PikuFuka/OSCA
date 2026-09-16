@@ -1,10 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Search, RefreshCw, UserX, UserMinus, Loader2 } from 'lucide-react';
+import { Search, RefreshCw, Loader2 } from 'lucide-react';
 import { seniorsAPI } from '../services/api';
 import { SeniorCitizen } from '../types';
 import ConfirmModal from './ConfirmModal';
 import TransitionWrapper from './TransitionWrapper';
 import Skeleton from './Skeleton';
+import {
+  TableHeadCell,
+  TableAvatar,
+  TableActionButton,
+  EmptyTableRow,
+  TablePagination,
+  scrollMainToTop,
+} from './Table';
 
 interface ArchiveViewProps {
   notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
@@ -14,7 +22,7 @@ interface ArchiveViewProps {
 const ArchiveSkeleton = () => {
   return (
     <table className="w-full text-left">
-      <thead>
+      <thead className="bg-slate-50/70">
         <tr className="text-[10px] font-bold tracking-widest text-slate-400 uppercase border-b border-slate-100">
           <th className="px-8 py-5">Member Profile</th>
           <th className="px-8 py-5">Age / Gender</th>
@@ -24,7 +32,7 @@ const ArchiveSkeleton = () => {
         </tr>
       </thead>
       <tbody className="divide-y divide-slate-50">
-        {[...Array(6)].map((_, i) => (
+        {[...Array(15)].map((_, i) => (
           <tr key={i}>
             <td className="px-8 py-4">
               <div className="flex items-center gap-3">
@@ -60,6 +68,8 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeTab, setActiveTab] = useState<'deleted' | 'deceased'>('deleted');
   const [searchTerm, setSearchTerm] = useState('');
+  const [page, setPage] = useState(1);
+  const archivePerPage = 15;
   
   const [confirmState, setConfirmState] = useState<{
     isOpen: boolean;
@@ -86,6 +96,10 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
   useEffect(() => {
     fetchArchiveData();
   }, []);
+
+  useEffect(() => {
+    scrollMainToTop();
+  }, [page]);
 
   const triggerRestore = (senior: SeniorCitizen) => {
     setConfirmState({ isOpen: true, senior, type: 'restore' });
@@ -141,24 +155,31 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
                 placeholder="Search archive..."
                 className="w-full pl-14 pr-6 py-4 bg-white/80 backdrop-blur-md border border-slate-200 rounded-xl text-slate-800 placeholder:text-slate-400 focus:outline-none focus:border-systemBlue/50 focus:ring-4 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
               />
             </div>
           </div>
         </div>
       )}
 
+      <TransitionWrapper isLoading={loading} skeleton={
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
+          <div className="overflow-x-auto border-t border-slate-50">
+            <ArchiveSkeleton />
+          </div>
+        </div>
+      }>
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
         <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-2 bg-slate-200/50 p-1.5 rounded-xl backdrop-blur-sm border border-slate-200">
-            <button 
-              onClick={() => setActiveTab('deleted')}
+              <button 
+                onClick={() => { setActiveTab('deleted'); setPage(1); }}
               className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'deleted' ? 'bg-white text-systemBlue shadow-lg shadow-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Deleted
             </button>
-            <button 
-              onClick={() => setActiveTab('deceased')}
+              <button 
+                onClick={() => { setActiveTab('deceased'); setPage(1); }}
               className={`px-8 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all duration-300 ${activeTab === 'deceased' ? 'bg-white text-systemBlue shadow-lg shadow-slate-200' : 'text-slate-500 hover:text-slate-700'}`}
             >
               Deceased
@@ -167,34 +188,31 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
         </div>
 
         <div className="overflow-x-auto border-t border-slate-50">
-          <TransitionWrapper isLoading={loading} skeleton={<ArchiveSkeleton />}>
-            {!loading && (
+          {!loading && (
             <table className="w-full text-left">
-              <thead>
-                <tr>
-                  <th className="px-8 py-5">Member Profile</th>
-                  <th className="px-8 py-5">Age / Gender</th>
-                  <th className="px-8 py-5">Barangay</th>
-                  <th className="px-8 py-5">{activeTab === 'deleted' ? 'Deleted At' : 'Status'}</th>
-                  <th className="px-8 py-5 text-right">Actions</th>
+              <thead className="bg-slate-50/70">
+                <tr className="border-b border-slate-100">
+                  <TableHeadCell className="px-8 py-5">Member Profile</TableHeadCell>
+                  <TableHeadCell className="px-8 py-5">Age / Gender</TableHeadCell>
+                  <TableHeadCell className="px-8 py-5">Barangay</TableHeadCell>
+                  <TableHeadCell className="px-8 py-5">{activeTab === 'deleted' ? 'Deleted At' : 'Status'}</TableHeadCell>
+                  <TableHeadCell className="px-8 py-5" align="right">Actions</TableHeadCell>
                 </tr>
               </thead>
               <tbody>
-                {filteredData.length > 0 ? filteredData.map((senior) => (
-                  <tr key={senior.id}>
+                {filteredData.length > 0 ? filteredData.slice((page - 1) * archivePerPage, page * archivePerPage).map((senior) => (
+                  <tr key={senior.id} className="group hover:bg-slate-50/60 transition-colors">
                     <td className="px-8 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 shrink-0">
-                          {activeTab === 'deleted' ? <UserMinus size={20} /> : <UserX size={20} />}
-                        </div>
-                        <div>
-                          <p className="font-bold text-slate-900">{senior.name}</p>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{senior.id}</p>
+                        <TableAvatar name={senior.name} />
+                        <div className="min-w-0">
+                          <p className="font-bold text-[13px] text-slate-900 uppercase leading-tight truncate">{senior.name}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest tabular-nums">{senior.id}</p>
                         </div>
                       </div>
                     </td>
                     <td className="px-8 py-4">
-                      <p className="text-sm font-bold text-slate-700">{senior.age} yrs</p>
+                      <p className="text-sm font-bold text-slate-700 tabular-nums">{senior.age} yrs</p>
                       <p className="text-xs text-slate-500">{senior.gender}</p>
                     </td>
                     <td className="px-8 py-4 text-sm font-medium text-slate-600">{senior.barangay}</td>
@@ -206,38 +224,48 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
                       </span>
                     </td>
                     <td className="px-8 py-4 text-right">
-                      {activeTab === 'deleted' ? (
-                        <button 
-                          onClick={() => triggerRestore(senior)}
-                          className="w-10 h-10 bg-emerald-50 hover:bg-emerald-600 text-emerald-600 hover:text-white rounded-xl border border-emerald-100 flex items-center justify-center transition-all duration-300 shadow-sm ml-auto"
-                          title="Restore Record"
-                        >
-                          <RefreshCw size={18} />
-                        </button>
-                      ) : (
-                        <button 
-                          onClick={() => triggerUnDeceased(senior)}
-                          className="w-10 h-10 bg-systemBlue/5 hover:bg-systemBlue text-systemBlue hover:text-white rounded-xl border border-systemBlue/10 flex items-center justify-center transition-all duration-300 shadow-sm ml-auto"
-                          title="Revert to Active"
-                        >
-                          <RefreshCw size={18} />
-                        </button>
-                      )}
+                      <div className="flex items-center justify-end">
+                        {activeTab === 'deleted' ? (
+                          <TableActionButton
+                            title="Restore Record"
+                            tone="success"
+                            onClick={() => triggerRestore(senior)}
+                          >
+                            <RefreshCw size={14} />
+                          </TableActionButton>
+                        ) : (
+                          <TableActionButton
+                            title="Revert to Active"
+                            tone="success"
+                            onClick={() => triggerUnDeceased(senior)}
+                          >
+                            <RefreshCw size={14} />
+                          </TableActionButton>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )) : (
-                  <tr>
-                    <td colSpan={5} className="px-8 py-16 text-center text-slate-400 font-bold">
-                      No records found in this category.
-                    </td>
-                  </tr>
+                  <EmptyTableRow colSpan={5} title="No records found" message="No records found in this category." />
                 )}
               </tbody>
             </table>
             )}
-          </TransitionWrapper>
         </div>
+
+        {!loading && (
+          <TablePagination
+            page={page}
+            totalPages={Math.max(1, Math.ceil(filteredData.length / archivePerPage))}
+            onPage={setPage}
+            from={(page - 1) * archivePerPage + 1}
+            to={Math.min(page * archivePerPage, filteredData.length)}
+            total={filteredData.length}
+            noun="records"
+          />
+        )}
       </div>
+      </TransitionWrapper>
 
       {/* Confirm Action Modal */}
       <ConfirmModal

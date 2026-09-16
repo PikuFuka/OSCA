@@ -80,10 +80,6 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
-      <div>
-        <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight leading-none mb-2">Backup & Recovery</h2>
-        <p className="text-sm font-bold text-slate-500 max-w-2xl mt-1">Export or restore the OSCA database. Always download a backup before importing.</p>
-      </div>
 
       <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between">
         <div>

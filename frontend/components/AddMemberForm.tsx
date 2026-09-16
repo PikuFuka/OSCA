@@ -446,7 +446,16 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
       if (applicantType === 'existing' && !formData.oscaId.trim()) newErrors.push("OSCA ID is required");
       if (!formData.lastName.trim()) newErrors.push("Last Name is required");
       if (!formData.firstName.trim()) newErrors.push("First Name is required");
-      if (!formData.dateOfBirth) newErrors.push("Date of Birth is required");
+      if (!formData.dateOfBirth) {
+        newErrors.push("Date of Birth is required");
+      } else {
+        const birthDate = new Date(formData.dateOfBirth);
+        const today = new Date();
+        let computedAge = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) computedAge--;
+        if (computedAge < 60) newErrors.push("Applicant must be at least 60 years old to register");
+      }
     } else if (currentStep === 2) {
       if (!formData.streetAddress.trim()) newErrors.push("Street Address is required");
       if (!formData.contactNumber.trim()) newErrors.push("Contact Number is required");
@@ -535,7 +544,13 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
         : 'Application successfully processed!';
       notify(msg, "success");
     } catch (error: any) {
-      console.error(error); notify('Failed to submit application. Please try again.', 'error');
+      console.error(error);
+      const serverMsg: string = error?.message || '';
+      if (/at least 60/i.test(serverMsg)) {
+        notify('Cannot register: applicant age is below 60. Please check the date of birth.', 'error');
+      } else {
+        notify('Failed to submit application. Please try again.', 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -621,10 +636,6 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
         
         {/* Registration Gateway Hero */}
         <div className="text-center space-y-3 mb-8 pt-4">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-100 mb-2">
-             <Clock size={12} className="text-blue-600" />
-             <span className="text-[10px] font-bold uppercase tracking-widest text-blue-700">Estimated Completion: 5–10 minutes</span>
-          </div>
           <h2 className="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">Registration Gateway</h2>
           <p className="text-slate-500 font-medium max-w-lg mx-auto">
             Choose a category to begin the registration process.

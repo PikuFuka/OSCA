@@ -20,16 +20,41 @@ import {
 } from 'recharts';
 import { 
   Users, TrendingUp, TrendingDown, UserX, IdCard, MapPin, ClipboardList, Award, 
-  Calendar as CalendarIcon, Clock, CheckCircle2, Download, AlertCircle, RefreshCw
+  Calendar as CalendarIcon, Clock, CheckCircle2, Download, AlertCircle, RefreshCw,
+  Cake, Sparkles, PartyPopper, ChevronRight
 } from 'lucide-react';
 import { ViewType, BARANGAYS } from '../types';
 import { seniorsAPI, requestsAPI } from '../services/api';
+import { TableAvatar } from './Table';
+
 interface DashboardProps {
   setView?: (view: ViewType) => void;
   onCardNavigate?: (view: ViewType, reportSection?: 'masterlist' | 'centenarians' | 'deceased' | 'newly-registered') => void;
 }
 
 const formatNumber = (num: number) => num.toLocaleString();
+
+const CELEBRANT_AVATAR_COLORS = [
+  'bg-[#EAF8F1] text-[#1E7E52] border-[#D1F2E2]',
+  'bg-[#FDF0E9] text-[#C25828] border-[#FBDBCB]',
+  'bg-[#EEF0FD] text-[#4F58C8] border-[#DCE0FB]',
+  'bg-[#FEF6E6] text-[#A26C16] border-[#FDEBC5]',
+  'bg-[#EFF6FF] text-[#2563EB] border-[#DBEAFE]',
+  'bg-[#FDF2F8] text-[#DB2777] border-[#FCE7F3]',
+];
+
+const getCelebrantInitials = (name: string) => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return 'SC';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[1][0]).toUpperCase();
+};
+
+const getCelebrantColor = (name: string, index: number) => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) >>> 0;
+  return CELEBRANT_AVATAR_COLORS[(hash + index) % CELEBRANT_AVATAR_COLORS.length];
+};
 
 const SimpleTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -124,6 +149,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   const [selectedBarangay, setSelectedBarangay] = useState('All Barangays');
   const [selectedYear, setSelectedYear] = useState('All Years');
   const [stats, setStats] = useState<any>(null);
+  const [birthdaysData, setBirthdaysData] = useState<{ count: number; date: string; seniors: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -142,16 +168,18 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
     setError(null);
     setLoading(true);
     try {
-      const [data, pendingData] = await Promise.all([
+      const [data, pendingData, birthdayRes] = await Promise.all([
         seniorsAPI.getStatistics(selectedBarangay, selectedYear),
         // Use same perPage as Approvals (15) and bypass cache for accurate count — fixes 1 vs 2 mismatch
-        requestsAPI.getPending(1, 15, { fresh: true })
+        requestsAPI.getPending(1, 15, { fresh: true }),
+        seniorsAPI.getBirthdays().catch(() => ({ count: 0, date: '', seniors: [] }))
       ]);
       
       const accuratePendingCount = pendingData.total ?? pendingData.data?.length ?? 0;
       data.pending = accuratePendingCount;
 
       setStats(data);
+      setBirthdaysData(birthdayRes);
     } catch (err: any) {
       if (err.status !== 401) {
         setError('Failed to load analytical data.');
@@ -164,6 +192,12 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   useEffect(() => {
     fetchStats();
   }, [selectedBarangay, selectedYear]);
+
+  const celebrants = useMemo(() => {
+    if (!birthdaysData?.seniors) return [];
+    if (selectedBarangay === 'All Barangays') return birthdaysData.seniors;
+    return birthdaysData.seniors.filter((s: any) => s.barangay === selectedBarangay);
+  }, [birthdaysData, selectedBarangay]);
 
   const data = useMemo(() => {
     if (!stats) return null;
@@ -215,34 +249,27 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   return (
     <TransitionWrapper isLoading={isDataLoading} skeleton={<DashboardSkeleton />}>
       {!isDataLoading && (
-        <div className="space-y-5 pb-16 bg-[#f8fafc] min-h-screen stagger-in min-w-0 w-full" style={{ minWidth: 0 }}>
+        <div className="space-y-6 pb-16 bg-[#f8fafc] min-h-screen stagger-in min-w-0 w-full" style={{ minWidth: 0 }}>
       
       {/* Utility / Control Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900 tracking-tight">OSCA Analytics</h2>
-          <p className="text-xs text-slate-500 mt-1">Enterprise Data Warehouse • {selectedBarangay}</p>
+      <div className="flex items-center justify-end gap-3 mb-2">
+        <div className="flex items-center gap-2 bg-white px-3 py-2 border border-slate-200 hover:border-slate-300 transition-colors">
+          <CalendarIcon size={14} className="text-slate-500" />
+          <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="text-xs font-semibold text-slate-700 outline-none bg-transparent cursor-pointer">
+            {years.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
         </div>
-        
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2 bg-white px-3 py-2 border border-slate-200 hover:border-slate-300 transition-colors">
-            <CalendarIcon size={14} className="text-slate-500" />
-            <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="text-xs font-semibold text-slate-700 outline-none bg-transparent cursor-pointer">
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
-            </select>
-          </div>
-          <div className="flex items-center gap-2 bg-white px-3 py-2 border border-slate-200 hover:border-slate-300 transition-colors">
-            <MapPin size={14} className="text-slate-500" />
-            <select value={selectedBarangay} onChange={(e) => setSelectedBarangay(e.target.value)} className="text-xs font-semibold text-slate-700 outline-none bg-transparent cursor-pointer w-full min-w-[120px]">
-              <option value="All Barangays">All Barangays</option>
-              {BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
-            </select>
-          </div>
-          <div className="w-px h-6 bg-slate-200 hidden sm:block"></div>
-          <button onClick={() => alert('Generating PDF Report...')} className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 text-xs font-semibold flex items-center gap-2 transition-colors">
-            <Download size={14} /> <span className="hidden sm:block">Export</span>
-          </button>
+        <div className="flex items-center gap-2 bg-white px-3 py-2 border border-slate-200 hover:border-slate-300 transition-colors">
+          <MapPin size={14} className="text-slate-500" />
+          <select value={selectedBarangay} onChange={(e) => setSelectedBarangay(e.target.value)} className="text-xs font-semibold text-slate-700 outline-none bg-transparent cursor-pointer w-full min-w-[120px]">
+            <option value="All Barangays">All Barangays</option>
+            {BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
+          </select>
         </div>
+        <div className="w-px h-6 bg-slate-200 hidden sm:block"></div>
+        <button onClick={() => alert('Generating PDF Report...')} className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 text-xs font-semibold flex items-center gap-2 transition-colors">
+          <Download size={14} /> <span className="hidden sm:block">Export</span>
+        </button>
       </div>
 
       {/* Primary KPIs */}
@@ -491,7 +518,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                   {data.allBarangayStats?.length || 0} Barangays
                 </span>
               </div>
-              <p className="text-[12px] leading-4 text-slate-500 mt-1">Density distribution — darker means denser, lightest is sparsest.</p>
             </div>
             <div className="flex items-center gap-3 shrink-0 bg-slate-50 border border-slate-200 rounded-full px-3 py-1.5">
               <span className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Low</span>
@@ -558,10 +584,102 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
             )}
           </div>
 
-          <div className="px-6 sm:px-8 py-3 bg-white border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-[11px] text-slate-500">
-            <span className="font-medium">16 barangays • Sorted by population • Tap a tile for barangay filter (coming soon)</span>
+          <div className="px-6 sm:px-8 py-3 bg-white border-t border-slate-100 flex items-center justify-end text-[11px] text-slate-500">
             <span className="inline-flex items-center gap-1.5 font-semibold text-slate-600">
               <span className="h-2 w-2 rounded-full bg-blue-600" /> Most dense: {(data.allBarangayStats?.[0]?.name || '—')} ({formatNumber(data.allBarangayStats?.[0]?.count || 0)})
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* Birthday Celebrants Collection (Lowest, below Geographic Heatmap) */}
+      <div className="grid grid-cols-1">
+        <div className="bg-white rounded-[24px] border border-slate-200/70 shadow-sm overflow-hidden">
+          <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-8 w-8 rounded-xl bg-blue-600 text-white grid place-items-center shadow-sm">
+                <Cake size={16} strokeWidth={2.5} />
+              </div>
+              <h3 className="text-[15px] font-extrabold tracking-tight text-slate-900">Today's Birthday Celebrants</h3>
+              <span className="inline-flex items-center rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-[10px] font-bold tracking-widest text-slate-600 uppercase">
+                {celebrants.length} {celebrants.length === 1 ? 'Celebrant' : 'Celebrants'}{selectedBarangay !== 'All Barangays' ? ` (${selectedBarangay})` : ''}
+              </span>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-6 bg-slate-50/40">
+            {celebrants.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
+                <Cake size={28} className="mx-auto text-slate-300 mb-2" />
+                <p className="text-sm font-semibold text-slate-500">No birthdays today.</p>
+                <p className="text-xs text-slate-400 mt-1">
+                  No registered seniors in {selectedBarangay === 'All Barangays' ? 'the municipality' : selectedBarangay} are celebrating their birthday on this date.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+                {celebrants.map((senior: any, idx: number) => {
+                  const displayName = senior.fullName || senior.name || [senior.firstName, senior.middleName, senior.lastName, senior.extensionName].filter(Boolean).join(' ');
+                  const initials = getCelebrantInitials(displayName);
+                  const avatarColor = getCelebrantColor(displayName, idx);
+                  const isMale = (senior.sex || senior.gender || '').toLowerCase().startsWith('m');
+
+                  return (
+                    <div
+                      key={senior.id || senior.oscaId || idx}
+                      className="bg-white border border-slate-200/90 rounded-2xl px-5 py-4 flex items-center justify-between gap-4 shadow-xs hover:border-slate-300 hover:shadow-sm transition-all min-w-0"
+                    >
+                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                        {senior.idPhoto || senior.profilePhotoPath ? (
+                          <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-slate-200 shadow-2xs">
+                            <img src={senior.idPhoto || senior.profilePhotoPath} alt={displayName} className="w-full h-full object-cover" />
+                          </div>
+                        ) : (
+                          <div className={`w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-sm shrink-0 border ${avatarColor} shadow-2xs`}>
+                            {initials}
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-extrabold text-[13px] text-slate-900 tracking-tight leading-snug uppercase truncate">
+                            {displayName}
+                          </h4>
+                          <p className="text-[11px] font-semibold text-slate-400 mt-0.5 truncate tabular-nums">
+                            OSCA #{senior.oscaId || 'N/A'}
+                          </p>
+                          <div className="flex items-center gap-1 text-[11px] font-medium text-slate-400 mt-0.5 truncate">
+                            <MapPin size={11} className="text-slate-400 shrink-0" />
+                            <span>Brgy. {senior.barangay}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2.5 shrink-0">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#FEF5EA] border border-[#FDE5CA] text-[#B85D19] font-bold text-[11px] whitespace-nowrap shadow-2xs">
+                          <Cake size={13} className="text-[#C25828]" strokeWidth={2.5} />
+                          <span>{senior.age} today</span>
+                        </span>
+
+                        {isMale ? (
+                          <span className="px-2.5 py-1.5 rounded-full bg-[#EFF6FF] border border-[#DBEAFE] text-[#2563EB] font-extrabold text-[10px] tracking-wider uppercase whitespace-nowrap">
+                            MALE
+                          </span>
+                        ) : (
+                          <span className="px-2.5 py-1.5 rounded-full bg-[#FDF2F8] border border-[#FCE7F3] text-[#DB2777] font-extrabold text-[10px] tracking-wider uppercase whitespace-nowrap">
+                            FEMALE
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="px-6 sm:px-8 py-3 bg-white border-t border-slate-100 flex items-center justify-end text-[11px] text-slate-500">
+            <span className="inline-flex items-center gap-1.5 font-semibold text-slate-600">
+              <Cake size={13} className="text-amber-500" /> {celebrants.length} total celebrant{celebrants.length !== 1 ? 's' : ''} today
             </span>
           </div>
         </div>
