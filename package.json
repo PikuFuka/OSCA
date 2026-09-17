@@ -3,12 +3,15 @@
   "version": "1.0.0",
   "description": "Root package to run OSCA backend and frontend",
   "scripts": {
-  "mysql": "C:\\xampp\\mysql\\bin\\mysqld.exe --defaults-file=C:\\xampp\\mysql\\bin\\my.ini --standalone",
+    "mysql": "C:\\xampp\\mysql\\bin\\mysqld.exe --defaults-file=C:\\xampp\\mysql\\bin\\my.ini --standalone",
     "backend": "cd backend && php artisan serve",
     "frontend": "npm run dev --prefix frontend",
     "dev": "concurrently \"npm run mysql\" \"npm run backend\" \"npm run frontend\"",
     "build:frontend": "npm run build --prefix frontend",
-    "deploy:apache": "npm run build:frontend"
+    "deploy:apache": "npm run build:frontend",
+    "server:nginx": "powershell -ExecutionPolicy Bypass -File backend/deploy/nginx/start-server.ps1",
+    "server:stop": "powershell -ExecutionPolicy Bypass -File backend/deploy/nginx/stop-server.ps1",
+    "start": "npm run build:frontend && npm run server:nginx"
   },
   "devDependencies": {
     "concurrently": "^9.2.1"
