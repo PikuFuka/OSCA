@@ -20,7 +20,8 @@ class UserController extends Controller
             return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
         }
 
-        $users = User::orderBy('name')->get();
+        // Staff accounts are few; take() only guards against abuse.
+        $users = User::orderBy('name')->take(500)->get();
 
         return response()->json([
             'data' => $users->map(function($user) {

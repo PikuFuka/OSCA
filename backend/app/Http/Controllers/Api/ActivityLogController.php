@@ -15,12 +15,8 @@ class ActivityLogController extends Controller
      */
     public function index(Request $request)
     {
-        // Prune logs older than the configured retention window (0 = keep all).
-        $retentionDays = (int) config('audit.retention_days', 90);
-        if ($retentionDays > 0) {
-            ActivityLog::where('created_at', '<', now()->subDays($retentionDays))->delete();
-        }
-
+        // Pure read. Retention pruning runs as a daily scheduled job
+        // (App\Support\AuditRetention via routes/console.php).
         $query = ActivityLog::with('user');
 
         // Search filter
@@ -61,7 +57,7 @@ class ActivityLogController extends Controller
             $query->whereDate('created_at', '<=', $request->to);
         }
 
-        $logs = $query->orderBy('created_at', 'desc')->paginate($request->get('per_page', 50));
+        $logs = $query->orderBy('created_at', 'desc')->paginate(\App\Support\Pagination::perPage($request, 50));
         // Modular: Resource handles transform (was 20 lines inline)
         return ActivityLogResource::collection($logs);
     }

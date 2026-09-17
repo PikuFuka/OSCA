@@ -21,50 +21,23 @@ class RequestController extends Controller
      */
     public function index(Request $request)
     {
-        // Reconciliation moved to queued job ReconcilePendingRequests (see app/Jobs) — kept sync for backward compat
-        // \App\Jobs\ReconcilePendingRequests::dispatchSync();
-        $this->ensurePendingApprovalRequests();
-
+        // Pure read. Pending-request reconciliation runs as a scheduled
+        // queued job (see routes/console.php) — never on the request path.
         $query = SeniorRequest::with(['senior', 'senior.documents' => fn($q) => $q->select(['id','senior_id','document_type','file_name'])]);
 
         $query->when($request->has('status'), fn($q) => $q->where('status', $request->status), fn($q) => $q->where('status','Pending'));
 
-        $requests = $query->orderBy('created_at','desc')->paginate($request->get('per_page', 50));
+        $requests = $query->orderBy('created_at','desc')->paginate($this->perPage($request, 50));
         // Modular resource keeps controller thin
         return RequestResource::collection($requests)->response();
     }
 
-    private function ensurePendingApprovalRequests(): void
+    /**
+     * Clamp client-controlled page size (1.2: unbounded per_page = memory bomb).
+     */
+    private function perPage(Request $request, int $default = 50, int $max = 100): int
     {
-        // Force status to Pending if osca_id is null or empty
-        Senior::where(function ($query) {
-            $query->whereNull('osca_id')
-                ->orWhereRaw("TRIM(osca_id) = ''");
-        })->where('status', '!=', 'Pending')->update(['status' => 'Pending']);
-
-        $pendingSeniorIdsWithRequests = SeniorRequest::query()
-            ->where('status', 'Pending')
-            ->pluck('senior_id')
-            ->all();
-
-        Senior::query()
-            ->where('status', 'Pending')
-            ->where(function ($query) {
-                $query->whereNull('osca_id')
-                    ->orWhereRaw("TRIM(osca_id) = ''");
-            })
-            ->when($pendingSeniorIdsWithRequests !== [], function ($query) use ($pendingSeniorIdsWithRequests) {
-                $query->whereNotIn('id', $pendingSeniorIdsWithRequests);
-            })
-            ->orderBy('id')
-            ->get(['id'])
-            ->each(function (Senior $senior) {
-                SeniorRequest::create([
-                    'senior_id' => $senior->id,
-                    'type' => 'New Application',
-                    'status' => 'Pending',
-                ]);
-            });
+        return \App\Support\Pagination::perPage($request, $default, $max);
     }
 
     /**
@@ -94,23 +67,28 @@ class RequestController extends Controller
         // Create an update request with the proposed changes stored as pending_data
         $pendingData = $validated;
 
-        // Handle file uploads attached to the update request — filesystem first
+        // Handle file uploads attached to the update request — filesystem first.
+        // NOTE: these are pending-attachment rows (one per request), NOT the
+        // senior's live documents, so they must not go through
+        // DocumentService::store (which replaces same-type rows). storeAs
+        // streams the upload straight to disk (1.4: no double-buffer).
         $documentTypes = ['birthCert', 'cedula', 'brgyCert', 'idPicture'];
         foreach ($documentTypes as $type) {
             if ($request->hasFile($type)) {
                 $file = $request->file($type);
-                $binary = file_get_contents($file->getRealPath());
                 $fileName = $file->getClientOriginalName();
                 $safeName = Str::slug(pathinfo($fileName, PATHINFO_FILENAME)) ?: 'document';
                 $ext = pathinfo($fileName, PATHINFO_EXTENSION) ?: 'bin';
-                $docFileName = $safeName . '.' . $ext;
-                $filePath = "documents/{$senior->id}/" . time() . "_{$type}_{$docFileName}";
-                Storage::disk('local')->put($filePath, $binary);
+                $filePath = $file->storeAs(
+                    "documents/{$senior->id}",
+                    time() . "_{$type}_{$safeName}.{$ext}",
+                    'local'
+                );
 
                 SeniorDocument::create([
                     'senior_id'     => $senior->id,
                     'document_type' => $type,
-                    'file_content'  => null,
+                    'file_content'  => '',
                     'file_path'     => $filePath,
                     'file_name'     => $fileName,
                     'mime_type'     => $file->getMimeType(),

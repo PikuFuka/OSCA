@@ -24,6 +24,12 @@ use App\Services\Senior\DocumentService;
 
 class SeniorController extends Controller
 {
+    /** Hard cap for per_page=-1 full exports (memory bomb guard). */
+    private const EXPORT_ROW_CAP = 5000;
+
+    /** Hard cap for uncapped small-list endpoints (shape-preserving). */
+    private const LIST_ROW_CAP = 1000;
+
     private function applyValidOscaIdScope($query)
     {
         static $hasTrim = null;
@@ -199,13 +205,17 @@ class SeniorController extends Controller
             }
 
             if ((int) $perPageRaw == -1) {
-                // Allow full export for Accounts/BatchPrint — select is limited to 23 columns so 5k+ rows is ~2MB
-                $seniors = $query->orderBy($sortBy, $sortOrder)->get();
-                $transformed = $seniors->map(fn($s) => $this->transformSenior($s));
-                return response()->json(['data' => $transformed, 'total' => $transformed->count()]);
+                // Full export for Accounts/BatchPrint — hard-capped so the
+                // registry can't OOM the worker as it grows. The 'capped'
+                // flag tells the frontend when to warn instead of assuming
+                // completeness.
+                $seniors = $query->orderBy($sortBy, $sortOrder)->take(self::EXPORT_ROW_CAP + 1)->get();
+                $capped = $seniors->count() > self::EXPORT_ROW_CAP;
+                $transformed = $seniors->take(self::EXPORT_ROW_CAP)->map(fn($s) => $this->transformSenior($s));
+                return response()->json(['data' => $transformed, 'total' => $transformed->count(), 'capped' => $capped]);
             }
 
-            $perPage = min((int) $perPageRaw, 100);
+            $perPage = max(1, min((int) $perPageRaw, 100));
             $seniors = $query->orderBy($sortBy, $sortOrder)->paginate($perPage);
             // Modular: use Resource instead of inline transformSenior (legacy kept for reference)
             return \App\Http\Resources\SeniorResource::collection($seniors);
@@ -264,14 +274,15 @@ class SeniorController extends Controller
             $this->applySeniorSearch($query, (string) $request->search);
         }
 
-        $seniors = $query->orderBy('deleted_at', 'desc')->get();
-        $transformed = $seniors->map(function($senior) {
+        $seniors = $query->orderBy('deleted_at', 'desc')->take(self::LIST_ROW_CAP + 1)->get();
+        $capped = $seniors->count() > self::LIST_ROW_CAP;
+        $transformed = $seniors->take(self::LIST_ROW_CAP)->map(function($senior) {
             $data = $this->transformSenior($senior);
             $data['deleted_at'] = $senior->deleted_at->format('M d, Y H:i');
             return $data;
         });
 
-        return response()->json(['data' => $transformed]);
+        return response()->json(['data' => $transformed, 'capped' => $capped]);
     }
 
     /**
@@ -285,12 +296,13 @@ class SeniorController extends Controller
             $this->applySeniorSearch($query, (string) $request->search);
         }
 
-        $seniors = $query->orderBy('updated_at', 'desc')->get();
-        $transformed = $seniors->map(function($senior) {
+        $seniors = $query->orderBy('updated_at', 'desc')->take(self::LIST_ROW_CAP + 1)->get();
+        $capped = $seniors->count() > self::LIST_ROW_CAP;
+        $transformed = $seniors->take(self::LIST_ROW_CAP)->map(function($senior) {
             return $this->transformSenior($senior);
         });
 
-        return response()->json(['data' => $transformed]);
+        return response()->json(['data' => $transformed, 'capped' => $capped]);
     }
 
     /**
@@ -596,32 +608,10 @@ class SeniorController extends Controller
         ]);
 
         try {
+            // DocumentService streams the upload straight to disk (1.4: no
+            // file_get_contents + put double-buffer) and replaces same-type.
             $file = $request->file('document');
-            $binary = file_get_contents($file->getRealPath());
-            $fileName = $file->getClientOriginalName();
-            $safeName = Str::slug(pathinfo($fileName, PATHINFO_FILENAME)) ?: 'document';
-            $ext = pathinfo($fileName, PATHINFO_EXTENSION) ?: 'bin';
-            $docFileName = $safeName . '.' . $ext;
-            $filePath = "documents/{$senior->id}/" . time() . "_{$request->documentType}_{$docFileName}";
-
-            // Clean up previous document's filesystem file if replacing
-            $existing = SeniorDocument::where('senior_id', $senior->id)->where('document_type', $request->documentType)->first();
-            if ($existing && $existing->file_path) {
-                Storage::disk('local')->delete($existing->file_path);
-            }
-
-            Storage::disk('local')->put($filePath, $binary);
-
-            SeniorDocument::updateOrCreate(
-                ['senior_id' => $senior->id, 'document_type' => $request->documentType],
-                [
-                    'file_content' => null,
-                    'file_path' => $filePath,
-                    'file_name' => $fileName,
-                    'mime_type' => $file->getMimeType(),
-                    'file_size' => $file->getSize(),
-                ]
-            );
+            app(DocumentService::class)->store($senior->id, $request->documentType, $file);
 
             $path = null;
             if ($request->documentType === 'idPicture') {
@@ -693,24 +683,7 @@ class SeniorController extends Controller
             $senior->update(['profile_photo_path' => $path]);
 
             // Also save to documents as idPicture — filesystem first
-            $docFilePath = "documents/{$senior->id}/" . time() . "_idPicture_{$filename}";
-            // Remove previous file if replacing
-            $prev = SeniorDocument::where('senior_id', $senior->id)->where('document_type', 'idPicture')->first();
-            if ($prev && $prev->file_path) {
-                Storage::disk('local')->delete($prev->file_path);
-            }
-            Storage::disk('local')->put($docFilePath, $binaryImage);
-
-            SeniorDocument::updateOrCreate(
-                ['senior_id' => $senior->id, 'document_type' => 'idPicture'],
-                [
-                    'file_content' => null,
-                    'file_path' => $docFilePath,
-                    'file_name' => $filename,
-                    'mime_type' => 'image/png',
-                    'file_size' => strlen($binaryImage),
-                ]
-            );
+            app(DocumentService::class)->storeFromBinary($senior->id, 'idPicture', $binaryImage, $filename, 'image/png');
 
             return response()->json([
                 'success' => true,
@@ -755,14 +728,13 @@ class SeniorController extends Controller
                                   ->where('senior_id', $senior->id)
                                   ->firstOrFail();
 
-        $binary = $document->getFileBinary();
-        if ($binary === null) {
+        // hasFile() decides the 404 without loading bytes; the service
+        // streams from disk (1.4: no full-file buffering per download).
+        if (!$document->hasFile()) {
             abort(404, 'Document file not found.');
         }
 
-        return response($binary)
-            ->header('Content-Type', $document->mime_type)
-            ->header('Content-Disposition', 'inline; filename="' . $document->file_name . '"');
+        return app(DocumentService::class)->stream($document);
     }
 
     /**
@@ -917,6 +889,7 @@ class SeniorController extends Controller
             ->whereNotNull('date_of_birth')
             ->where('status', '!=', 'Deceased')
             ->orderBy('last_name')
+            ->take(self::LIST_ROW_CAP)
             ->get();
 
         // Lazily correct ages
