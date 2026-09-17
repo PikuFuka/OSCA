@@ -1,5 +1,6 @@
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import { useSeniorStream } from '../core/api/realtime';
 import TransitionWrapper from './TransitionWrapper';
 import Skeleton from './Skeleton';
 import { RegistrySkeleton } from './skeletons';
@@ -290,6 +291,16 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   useEffect(() => {
     fetchSeniors();
   }, [debouncedSearch, debouncedAgeMin, debouncedAgeMax, filterBarangay, filterCategory, sortValue, page]);
+
+  // Realtime refresh: when another device creates/updates/deletes a senior,
+  // the server pings this stream and the list silently refetches in the
+  // background (no spinner, cache bypassed). The ref avoids re-subscribing
+  // on every render since fetchSeniors is redefined each render.
+  const fetchSeniorsRef = useRef(fetchSeniors);
+  fetchSeniorsRef.current = fetchSeniors;
+  useSeniorStream(useCallback(() => {
+    fetchSeniorsRef.current(true, true);
+  }, []));
 
   useEffect(() => {
     if (!filtersOpen) return;
