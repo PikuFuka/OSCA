@@ -33,7 +33,7 @@ class SeniorResource extends JsonResource
             'emergencyName' => $this->emergency_name,
             'emergencyContact' => $this->emergency_contact,
             'idConfig' => $this->id_config,
-            'idPhoto' => $this->profile_photo_path ? '/api/storage/profiles/' . basename($this->profile_photo_path) : null,
+            'idPhoto' => \App\Support\MediaUrls::photo($this->profile_photo_path),
             'familyMembersCount' => $this->family_members_count ?? 0,
             'updatedAt' => $this->updated_at?->format('M d, Y h:i A') ?? null,
         ];

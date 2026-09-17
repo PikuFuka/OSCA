@@ -8,6 +8,8 @@ use App\Models\Senior;
 use App\Models\SeniorDocument;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Storage;
 use App\Http\Requests\ApproveRequestRequest;
 use App\Http\Resources\RequestResource;
 use App\Services\Request\RequestService;
@@ -82,6 +84,13 @@ class RequestController extends Controller
             ], 404);
         }
 
+        $authUser = $request->user();
+        if ($authUser instanceof Senior) {
+            if ((string)$authUser->id !== (string)$senior->id && (string)$authUser->osca_id !== (string)$senior->osca_id) {
+                return response()->json(['message' => 'Forbidden. You cannot submit update requests for other members.'], 403);
+            }
+        }
+
         // Create an update request with the proposed changes stored as pending_data
         $pendingData = $validated;
 
@@ -147,7 +156,8 @@ class RequestController extends Controller
     {
         $seniorRequest = SeniorRequest::with('senior')->findOrFail($id);
         try {
-            $service->approve($seniorRequest, $request->validated()['osca_id'] ?? null, $request->user());
+            $validated = $request->validated();
+            $service->approve($seniorRequest, $validated['osca_id'] ?? null, $request->user(), $validated['password'] ?? null);
             return response()->json([
                 'success' => true,
                 'message' => $seniorRequest->type === 'Information Update' ? 'Update approved – member record has been updated.' : 'New application approved – member is now active.',

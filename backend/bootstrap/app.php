@@ -12,7 +12,15 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->trustProxies(at: '*');
+
+        // Strips ?token= globally (see middleware docblock). Never authenticates.
         $middleware->append(\App\Http\Middleware\AuthenticateWithToken::class);
+
+        $middleware->alias([
+            'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+            'password.changed' => \App\Http\Middleware\EnsurePasswordChanged::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

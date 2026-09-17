@@ -63,6 +63,8 @@ class UserController extends Controller
             'role' => $validated['role'],
             'barangay_assignment' => $validated['barangay_assignment'] ?? $validated['barangay'] ?? null,
             'status' => 'Active',
+            // New accounts must pick their own password on first sign-in.
+            'force_password_change' => true,
         ]);
 
         ActivityLog::create([
@@ -114,7 +116,14 @@ class UserController extends Controller
         ]);
 
         if (!empty($validated['password'])) {
-            $user->update(['password' => Hash::make($validated['password'])]);
+            $user->update([
+                'password' => Hash::make($validated['password']),
+                // An admin-set password is temporary by policy: the owner must
+                // change it before the account becomes usable again.
+                'force_password_change' => true,
+            ]);
+            // Kill existing sessions so a stale/compromised token cannot survive the reset.
+            $user->tokens()->delete();
         }
 
         ActivityLog::create([

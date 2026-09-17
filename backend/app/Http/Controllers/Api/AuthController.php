@@ -61,6 +61,7 @@ class AuthController extends Controller
                     'email' => $user->email,
                     'role' => $user->role,
                     'barangay_assignment' => $user->barangay_assignment,
+                    'force_password_change' => (bool) $user->force_password_change,
                 ],
                 'token' => $token,
             ]);
@@ -68,7 +69,13 @@ class AuthController extends Controller
 
         // Try senior citizen login
         $senior = Senior::where('osca_id', $identifier)->first();
-        
+
+        if ($senior && !$senior->password) {
+            throw ValidationException::withMessages([
+                'identifier' => ['No password has been set for this account yet. Please contact the OSCA office to set your password.'],
+            ]);
+        }
+
         if ($senior && $senior->password && Hash::check($request->password, $senior->password)) {
             // Seniors use Sanctum too for API access if they have dashboards
             $token = $senior->createToken('senior-token')->plainTextToken;
@@ -89,7 +96,7 @@ class AuthController extends Controller
                     'name' => $senior->full_name,
                     'role' => 'Senior',
                     'barangay' => $senior->barangay,
-                    'idPhoto' => $senior->profile_photo_path ? asset('storage/' . $senior->profile_photo_path) : null,
+                    'idPhoto' => \App\Support\MediaUrls::photo($senior->profile_photo_path),
                     'force_password_change' => (bool) $senior->force_password_change,
                 ],
                 'token' => $token,
@@ -115,6 +122,7 @@ class AuthController extends Controller
                 'email' => $user->email,
                 'role' => $user->role,
                 'barangay' => $user->barangay_assignment,
+                'force_password_change' => (bool) $user->force_password_change,
             ]);
         }
 
@@ -177,9 +185,22 @@ class AuthController extends Controller
             'force_password_change' => false,
         ]);
 
+        // A password change must kill every existing session: any token issued
+        // before this point (including a possibly-compromised one) stops working.
+        $user->tokens()->delete();
+
+        ActivityLog::create([
+            'user_id' => $user instanceof \App\Models\User ? $user->id : null,
+            'action' => 'CHANGED_PASSWORD',
+            'target_type' => $user instanceof \App\Models\User ? 'User' : 'Senior',
+            'target_id' => $user->id,
+            'ip_address' => $request->ip(),
+        ]);
+
         return response()->json([
             'success' => true,
-            'message' => 'Password changed successfully.',
+            'message' => 'Password changed successfully. Please sign in again.',
+            'reauthenticate' => true,
         ]);
     }
 }

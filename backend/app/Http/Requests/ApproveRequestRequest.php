@@ -13,6 +13,9 @@ class ApproveRequestRequest extends FormRequest
         return [
             'osca_id' => 'nullable|string|max:50',
             'reason' => 'nullable|string|max:500',
+            // Optional initial password for accounts that have none (e.g. imported
+            // records). The owner must still change it on first sign-in.
+            'password' => 'nullable|string|min:8|max:255',
         ];
     }
 }

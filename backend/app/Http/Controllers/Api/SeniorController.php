@@ -18,6 +18,7 @@ use Illuminate\Support\Str;
 use App\Http\Requests\SeniorStoreRequest;
 use App\Http\Requests\SeniorUpdateRequest;
 use App\Http\Resources\SeniorResource;
+use App\Support\MediaUrls;
 use App\Services\Senior\SeniorService;
 use App\Services\Senior\DocumentService;
 
@@ -233,7 +234,7 @@ class SeniorController extends Controller
             'pensionStatus' => $senior->pension_status,
             'barangay' => $senior->barangay,
             'idConfig' => $senior->id_config,
-            'idPhoto' => $senior->profile_photo_path ? '/api/storage/profiles/' . basename($senior->profile_photo_path) : null,
+            'idPhoto' => $senior->profile_photo_path ? MediaUrls::photo($senior->profile_photo_path) : null,
             'dateOfBirth' => $senior->date_of_birth?->format('Y-m-d'),
             'firstName' => $senior->first_name,
             'middleName' => $senior->middle_name,
@@ -330,10 +331,24 @@ class SeniorController extends Controller
         $senior = Senior::with(['familyMembers', 'documents' => function($query) {
                             $query->select(['id', 'senior_id', 'document_type', 'file_path', 'file_name', 'mime_type', 'file_size']);
                         }])
-                        ->whereNotNull('osca_id')
-                        ->whereRaw("TRIM(osca_id) <> ''")
-                        ->where('osca_id', $id)
-                        ->firstOrFail();
+                        ->where(function($q) use ($id) {
+                            $q->where('osca_id', $id);
+                            if (is_numeric($id)) {
+                                $q->orWhere('id', $id);
+                            }
+                        })
+                        ->first();
+
+        if (!$senior) {
+            abort(404, 'Senior not found.');
+        }
+
+        $authUser = request()->user();
+        if ($authUser instanceof Senior) {
+            if ((string)$authUser->id !== (string)$senior->id && (string)$authUser->osca_id !== (string)$senior->osca_id) {
+                return response()->json(['message' => 'Forbidden. You do not have permission to view this record.'], 403);
+            }
+        }
 
         return response()->json([
             'id' => $senior->osca_id ?? $senior->id,
@@ -360,7 +375,7 @@ class SeniorController extends Controller
             'familyMembersCount' => $senior->familyMembers->count(),
             'joinedDate' => $senior->created_at->format('M d, Y'),
             'idConfig' => $senior->id_config,
-            'idPhoto' => $senior->profile_photo_path ? '/api/storage/profiles/' . basename($senior->profile_photo_path) : null,
+            'idPhoto' => $senior->profile_photo_path ? MediaUrls::photo($senior->profile_photo_path) : null,
             'familyMembers' => $senior->familyMembers,
             'documents' => $senior->documents->map(function($doc) use ($senior) {
                 return [
@@ -368,19 +383,31 @@ class SeniorController extends Controller
                     'type' => $doc->document_type,
                     'fileName' => $doc->file_name,
                     'mimeType' => $doc->mime_type,
-                    'url' => "/api/seniors/{$senior->osca_id}/documents/{$doc->id}",
+                    'url' => MediaUrls::document($senior->osca_id ?? $senior->id, $doc->id),
                 ];
             }),
         ]);
     }
 
     /**
-     * Get profile photo directly (bypassing public link issues)
+     * Serve a profile photo to either (a) a request with a valid short-lived
+     * signature (browser <img>/print flows, no Authorization header needed)
+     * or (b) an authenticated Sanctum session. Anything else is rejected —
+     * photos are citizen PII and must not be enumerable public files.
      */
-    public function getProfilePhoto($filename)
+    public function getProfilePhoto(Request $request, $filename)
     {
+        if (!$request->hasValidSignature() && !auth('sanctum')->check()) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $filename = basename($filename);
+        if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*\.(png|jpe?g|webp|gif)$/i', $filename)) {
+            abort(404);
+        }
+
         $path = storage_path('app/public/profile_photos/' . $filename);
-        
+
         if (!file_exists($path)) {
             abort(404);
         }
@@ -556,6 +583,13 @@ class SeniorController extends Controller
     {
         $senior = $this->findSeniorByIdentifier($id);
 
+        $authUser = $request->user();
+        if ($authUser instanceof Senior) {
+            if ((string)$authUser->id !== (string)$senior->id && (string)$authUser->osca_id !== (string)$senior->osca_id) {
+                return response()->json(['message' => 'Forbidden. You do not have permission to upload documents for this record.'], 403);
+            }
+        }
+
         $request->validate([
             'document' => 'required|file|max:10240', // 10MB max
             'documentType' => 'required|string|in:birthCert,cedula,brgyCert,idPicture',
@@ -603,7 +637,7 @@ class SeniorController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Document uploaded successfully',
-                'path' => $request->documentType === 'idPicture' ? '/api/storage/profiles/' . basename($path) : null,
+                'path' => $request->documentType === 'idPicture' ? MediaUrls::photo($path) : null,
             ]);
 
         } catch (\Illuminate\Database\QueryException $e) {
@@ -682,7 +716,7 @@ class SeniorController extends Controller
                 'success' => true,
                 'message' => 'Profile photo updated successfully',
                 'path' => $path,
-                'url' => '/api/storage/profiles/' . $filename
+                'url' => MediaUrls::photo($path)
             ]);
 
         } catch (\Illuminate\Database\QueryException $e) {
@@ -704,22 +738,18 @@ class SeniorController extends Controller
      */
     public function getDocument(Request $request, $seniorId, $documentId)
     {
-        // Optional manual token check if middleware didn't catch it
-        // This helps when opening in a new tab via ?token=
-        if (!auth('sanctum')->check() && $request->has('token')) {
-            $token = \Laravel\Sanctum\PersonalAccessToken::findToken($request->query('token'));
-            if ($token && $token->tokenable) {
-                // Manually authenticate the user for this request
-                auth()->setUser($token->tokenable);
-                $request->setUserResolver(fn() => $token->tokenable);
-            }
-        }
-
-        if (!auth('sanctum')->check() && !auth()->check()) {
+        if (!$request->hasValidSignature() && !auth('sanctum')->check()) {
             return response()->json(['message' => 'Unauthenticated.'], 401);
         }
 
         $senior = $this->findSeniorByIdentifier($seniorId);
+
+        $authUser = $request->user() ?: auth('sanctum')->user() ?: auth()->user();
+        if ($authUser instanceof Senior) {
+            if ((string)$authUser->id !== (string)$senior->id && (string)$authUser->osca_id !== (string)$senior->osca_id) {
+                return response()->json(['message' => 'Forbidden. You do not have permission to view this document.'], 403);
+            }
+        }
 
         $document = SeniorDocument::where('id', $documentId)
                                   ->where('senior_id', $senior->id)
@@ -741,6 +771,13 @@ class SeniorController extends Controller
     public function deleteDocument($seniorId, $documentId)
     {
         $senior = $this->findSeniorByIdentifier($seniorId);
+
+        $authUser = request()->user();
+        if ($authUser instanceof Senior) {
+            if ((string)$authUser->id !== (string)$senior->id && (string)$authUser->osca_id !== (string)$senior->osca_id) {
+                return response()->json(['message' => 'Forbidden. You do not have permission to delete this document.'], 403);
+            }
+        }
 
         $document = SeniorDocument::where('id', $documentId)
                                   ->where('senior_id', $senior->id)
@@ -904,7 +941,7 @@ class SeniorController extends Controller
         }
 
         $mapped = $seniors->map(function ($s) {
-            $photoUrl = $s->profile_photo_path ? '/api/storage/profiles/' . basename($s->profile_photo_path) : null;
+            $photoUrl = MediaUrls::photo($s->profile_photo_path);
             return [
                 'id' => $s->id,
                 'oscaId' => $s->osca_id,
