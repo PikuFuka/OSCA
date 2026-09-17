@@ -659,7 +659,21 @@ class SeniorController extends Controller
 
         try {
             $photoData = $request->photo;
-            $filename = 'profile_' . $senior->osca_id . '_' . time() . '.png';
+
+            // Sniff the mime from the data URL (2.3: frontend uploads
+            // downscaled JPEGs now). Only web-safe photo formats accepted —
+            // anything else (gif/svg/...) is rejected, never stored.
+            $mime = null;
+            $ext = null;
+            if (preg_match('#^data:(image/(png|jpeg));base64,#', $photoData, $m)) {
+                $mime = $m[1];
+                $ext = $m[2] === 'jpeg' ? 'jpg' : $m[2];
+            }
+            if ($mime === null) {
+                return response()->json(['success' => false, 'message' => 'Invalid photo format. Only PNG or JPEG images are accepted.'], 422);
+            }
+
+            $filename = 'profile_' . $senior->osca_id . '_' . time() . '.' . $ext;
             $image = null;
             $path = null;
 
@@ -683,7 +697,7 @@ class SeniorController extends Controller
             $senior->update(['profile_photo_path' => $path]);
 
             // Also save to documents as idPicture — filesystem first
-            app(DocumentService::class)->storeFromBinary($senior->id, 'idPicture', $binaryImage, $filename, 'image/png');
+            app(DocumentService::class)->storeFromBinary($senior->id, 'idPicture', $binaryImage, $filename, $mime);
 
             return response()->json([
                 'success' => true,
