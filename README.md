@@ -36,7 +36,7 @@
 * **Application Approval Workflow**: Review and manage pending registrations, document submissions, and profile change requests before committing to the official registry.
 * **Audited Reporting & Excel Exports**: One-click generation of audited masterlists, centenarians roster, deceased records, and newly registered seniors.
 * **Account Management & RBAC**: Role-based access control for Admins, Staff, and Senior Citizen self-service portal accounts.
-* **Automated Audit Logs & Backups**: Complete audit trails for every record change, ID print, or deletion, with one-click database export and import tools.
+* **Automated Audit Logs & Backups**: Audit trail for every record change, ID print, or deletion, retained 90 days by default (`AUDIT_LOG_RETENTION_DAYS` in `backend/.env`, `0` keeps everything). Manual clearing always leaves a `CLEARED_LOGS` tombstone. Database export/import tools included; every import takes a restorable pre-import snapshot first.
 
 ---
 
