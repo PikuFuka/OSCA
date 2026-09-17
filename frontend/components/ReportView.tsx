@@ -35,74 +35,77 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
   const [activeSection, setActiveSection] = useState<'masterlist' | 'centenarians' | 'deceased' | 'newly-registered'>(initialSection);
   const itemsPerPage = 15;
 
-  // Fetch report data from API with pagination and filtering
+  // Each tab loads only what it shows, on demand (2.2). Previously every
+  // page turn re-fetched the paginated masterlist PLUS the full table
+  // (per_page:-1) PLUS all deceased — MBs per click for data most tabs
+  // never display.
+  const brgyParam = selectedBrgy === 'All Barangays' ? undefined : selectedBrgy;
+
+  const asList = (response: any): any[] => {
+    if (response?.data) return response.data;
+    return Array.isArray(response) ? response : [];
+  };
+
+  const runFetch = async (task: () => Promise<void>) => {
+    setLoading(true);
+    try {
+      await task();
+    } catch (error) {
+      console.error('Failed to load report data:', error);
+      notify('Unable to load report data right now. Please try again.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Masterlist tab: server-paginated, the only tab that pages server-side.
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        const [masterlistResponse, allActiveResponse, deceasedResponse] = await Promise.all([
-          seniorsAPI.getAll({
-            barangay: selectedBrgy === 'All Barangays' ? undefined : selectedBrgy,
-            page,
-            per_page: itemsPerPage,
-          }),
-          seniorsAPI.getAll({
-            barangay: selectedBrgy === 'All Barangays' ? undefined : selectedBrgy,
-            per_page: -1,
-          }),
-          seniorsAPI.getDeceased(),
-        ]);
+    if (activeSection !== 'masterlist') return;
+    runFetch(async () => {
+      const res = await seniorsAPI.getAll({ barangay: brgyParam, page, per_page: itemsPerPage });
+      const rows = asList(res);
+      setSeniorsData(rows);
+      setTotalPages(res?.meta?.last_page || res?.last_page || 1);
+      setTotalCount(res?.meta?.total ?? res?.total ?? rows.length);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBrgy, page, activeSection]);
 
-        const masterlistData = masterlistResponse?.data
-          ? masterlistResponse.data
-          : Array.isArray(masterlistResponse)
-            ? masterlistResponse
-            : [];
+  // Centenarians tab: server filters age >= 100 (indexed) instead of
+  // downloading the registry and filtering client-side.
+  useEffect(() => {
+    if (activeSection !== 'centenarians') return;
+    runFetch(async () => {
+      const res = await seniorsAPI.getAll({ barangay: brgyParam, min_age: 100, per_page: 500 });
+      setCentenariansData(asList(res));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBrgy, activeSection]);
 
-        const allActiveData = allActiveResponse?.data
-          ? allActiveResponse.data
-          : Array.isArray(allActiveResponse)
-            ? allActiveResponse
-            : [];
+  // Deceased tab: small list, fetched only when visited.
+  useEffect(() => {
+    if (activeSection !== 'deceased') return;
+    runFetch(async () => {
+      const rows = asList(await seniorsAPI.getDeceased());
+      setDeceasedData(
+        selectedBrgy === 'All Barangays' ? rows : rows.filter((item: any) => item.barangay === selectedBrgy)
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBrgy, activeSection]);
 
-        const allDeceasedData = deceasedResponse?.data
-          ? deceasedResponse.data
-          : Array.isArray(deceasedResponse)
-            ? deceasedResponse
-            : [];
-
-        setSeniorsData(masterlistData);
-        setTotalPages(masterlistResponse?.meta?.last_page || masterlistResponse?.last_page || 1);
-        setTotalCount(masterlistResponse?.meta?.total ?? masterlistResponse?.total ?? masterlistData.length);
-        setCentenariansData(allActiveData.filter((item: any) => Number(item.age || 0) >= 100));
-        setDeceasedData(
-          selectedBrgy === 'All Barangays'
-            ? allDeceasedData
-            : allDeceasedData.filter((item: any) => item.barangay === selectedBrgy)
-        );
-
-        const recentSeniors = [...allActiveData]
-          .sort((a: any, b: any) => {
-            const dateA = new Date(a.joinedDate || a.created_at || a.updatedAt || 0).getTime();
-            const dateB = new Date(b.joinedDate || b.created_at || b.updatedAt || 0).getTime();
-            return dateB - dateA || (Number(b.id || 0) - Number(a.id || 0));
-          })
-          .slice(0, 30);
-
-        setNewlyRegisteredData(
-          selectedBrgy === 'All Barangays'
-            ? recentSeniors
-            : recentSeniors.filter((item: any) => item.barangay === selectedBrgy)
-        );
-      } catch (error) {
-        console.error('Failed to load report data:', error);
-        notify('Unable to load report data right now. Please try again.', 'error');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [selectedBrgy, page]);
+  // Newly-registered tab: server returns the 30 newest (created_at desc)
+  // instead of downloading everything to sort client-side.
+  useEffect(() => {
+    if (activeSection !== 'newly-registered') return;
+    runFetch(async () => {
+      const res = await seniorsAPI.getAll({
+        barangay: brgyParam, sort: 'created_at', order: 'desc', per_page: 30,
+      });
+      setNewlyRegisteredData(asList(res));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedBrgy, activeSection]);
 
   useEffect(() => {
     scrollMainToTop();

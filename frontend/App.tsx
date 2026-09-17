@@ -1,5 +1,8 @@
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
+// App shell stays eager (login, nav, toasts). Views below are route-split
+// (2.1): each loads on first navigation instead of bloating first paint.
+// Dashboard (recharts) and MemberRegistry (ML) are the heaviest wins.
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import LoginView from './components/LoginView';
@@ -8,17 +11,27 @@ import Toast, { ToastType } from './components/Toast';
 
 import { ViewType } from './types';
 
-import Dashboard from './components/Dashboard';
-import AddMemberForm from './components/AddMemberForm';
-import MemberRegistry from './components/MemberRegistry';
-import Account from './components/Account';
-import HistoryLogView from './components/HistoryLogView';
-import ReportView from './components/ReportView';
-import BackupView from './components/BackupView';
-import ApprovalView from './components/ApprovalView';
-import BatchPrint from './components/BatchPrint';
-import UserDashboard from './components/UserDashboard';
-import UserReview from './components/UserReview';
+const Dashboard = lazy(() => import('./components/Dashboard'));
+const AddMemberForm = lazy(() => import('./components/AddMemberForm'));
+const MemberRegistry = lazy(() => import('./components/MemberRegistry'));
+const Account = lazy(() => import('./components/Account'));
+const HistoryLogView = lazy(() => import('./components/HistoryLogView'));
+const ReportView = lazy(() => import('./components/ReportView'));
+const BackupView = lazy(() => import('./components/BackupView'));
+const ApprovalView = lazy(() => import('./components/ApprovalView'));
+const BatchPrint = lazy(() => import('./components/BatchPrint'));
+const UserDashboard = lazy(() => import('./components/UserDashboard'));
+const UserReview = lazy(() => import('./components/UserReview'));
+
+// Shown while a split view chunk loads (first navigation only, cached after).
+const ViewFallback: React.FC = () => (
+  <div className="flex items-center justify-center py-24" role="status" aria-label="Loading view">
+    <div className="flex flex-col items-center gap-3">
+      <div className="w-10 h-10 border-4 border-blue-900/10 border-t-blue-900 rounded-full animate-spin" />
+      <p className="text-sm font-semibold text-slate-500">Loading…</p>
+    </div>
+  </div>
+);
 
 import { 
   ArrowLeft, 
@@ -198,6 +211,12 @@ const App: React.FC = () => {
   const renderView = () => {
     if (!currentUser) return null;
 
+    return <Suspense fallback={<ViewFallback />}>{renderViewInner()}</Suspense>;
+  };
+
+  const renderViewInner = () => {
+    if (!currentUser) return null;
+
     switch (currentView) {
       // Admin / Staff Views
       case ViewType.DASHBOARD:
@@ -315,13 +334,15 @@ const App: React.FC = () => {
           </div>
 
           <div className="ios-card p-6 md:p-10 shadow-ios-lg signup-entry-card">
-            <AddMemberForm 
-              notify={notify}
-              onSuccess={() => {
-                setIsRegistering(false);
-              }} 
-              onCancel={() => setIsRegistering(false)}
-            />
+            <Suspense fallback={<ViewFallback />}>
+              <AddMemberForm
+                notify={notify}
+                onSuccess={() => {
+                  setIsRegistering(false);
+                }}
+                onCancel={() => setIsRegistering(false)}
+              />
+            </Suspense>
           </div>
         </div>
       </div>

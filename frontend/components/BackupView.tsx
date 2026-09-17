@@ -1,10 +1,11 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Download, Upload, AlertTriangle, CheckCircle2, RefreshCw, FileDown, FileUp, ShieldCheck, LogOut, Calendar, Archive as ArchiveIcon } from 'lucide-react';
+import { Download, Upload, AlertTriangle, CheckCircle2, RefreshCw, FileDown, FileUp, ShieldCheck, LogOut, Archive as ArchiveIcon } from 'lucide-react';
 import { backupAPI } from '../services/api';
 import ConfirmModal from './ConfirmModal';
 import ArchiveView from './ArchiveView';
+import { BackupClock } from './LiveClock';
 
 interface BackupViewProps {
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
@@ -17,18 +18,12 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [confirmImport, setConfirmImport] = useState(false);
   const [isRefreshRequired, setIsRefreshRequired] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [activeSection, setActiveSection] = useState<'backup' | 'archive'>(initialSection);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setActiveSection(initialSection);
   }, [initialSection]);
-
-  useEffect(() => {
-    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   const handleExport = async () => {
     setIsExporting(true);
@@ -139,30 +134,8 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
 
           <div className="flex-1 flex flex-col items-center justify-center py-6 select-none">
             <div className="text-center">
-              <div className="flex items-baseline justify-center gap-2">
-                <h4 className="text-5xl font-black text-slate-900 tracking-tighter">
-                  {currentTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }).split(' ')[0]}
-                </h4>
-                <div className="flex flex-col items-start text-left">
-                  <span className="text-blue-600 font-black text-xl leading-none">
-                    {currentTime.getSeconds().toString().padStart(2, '0')}
-                  </span>
-                  <span className="text-slate-400 font-black text-[10px] uppercase leading-none mt-1">
-                    {currentTime.getHours() >= 12 ? 'PM' : 'AM'}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-4 flex items-center justify-center gap-3">
-                <div className="h-px w-6 bg-gradient-to-r from-transparent to-slate-200" />
-                <div className="flex items-center gap-2 text-slate-500">
-                  <Calendar size={12} className="text-slate-300" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">
-                    {currentTime.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                  </span>
-                </div>
-                <div className="h-px w-6 bg-gradient-to-l from-transparent to-slate-200" />
-              </div>
+              {/* 2.5: self-contained clock — BackupView no longer re-renders every second */}
+              <BackupClock />
             </div>
           </div>
 

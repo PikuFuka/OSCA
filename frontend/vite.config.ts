@@ -31,9 +31,10 @@ export default defineConfig(({ mode }) => {
               // explicit chunking here produces an empty chunk warning.
               charts: ['recharts'],
               icons: ['lucide-react'],
-              // Heavy ML libs — loaded only when ID photo editor opens
-              mediapipe: ['@mediapipe/selfie_segmentation', '@mediapipe/tasks-vision'],
-              imaging: ['@imgly/background-removal', 'onnxruntime-web'],
+              // Heavy ML lib — dynamic-imported only when ID photo editor opens.
+              // (@imgly/onnxruntime/tasks-vision/camera_utils were removed 2.1:
+              // installed but never imported anywhere.)
+              mediapipe: ['@mediapipe/selfie_segmentation'],
             },
           },
         },

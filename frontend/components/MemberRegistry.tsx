@@ -1,6 +1,7 @@
 
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useSeniorStream } from '../core/api/realtime';
+import { preparePhotoForUpload } from '../core/media/photo';
 import TransitionWrapper from './TransitionWrapper';
 import Skeleton from './Skeleton';
 import { RegistrySkeleton } from './skeletons';
@@ -926,7 +927,15 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     if (!idPhoto || !idGenerationSenior) return;
     try {
       setLoading(true);
-      await seniorsAPI.updatePhoto(idGenerationSenior.id, idPhoto);
+      // Shrink + JPEG-encode before upload (2.3); fall back to the original
+      // bytes on any processing failure so saves never break.
+      let payload = idPhoto;
+      try {
+        payload = await preparePhotoForUpload(idPhoto);
+      } catch {
+        payload = idPhoto;
+      }
+      await seniorsAPI.updatePhoto(idGenerationSenior.id, payload);
       notify("Profile photo updated successfully in registry.", "success");
       // Update local state for the senior list
       setSeniors(prev => prev.map(s => s.id === idGenerationSenior.id ? { ...s, idPhoto: idPhoto } : s));
@@ -1526,7 +1535,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
               {/* BACK CARD (PRINT) - Left side */}
               <div className="print-card">
                 <div className="print-content">
-                  <img src="img/BACK.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
+                  <img src="img/BACK.jpg" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
                 </div>
               </div>
 
@@ -1534,7 +1543,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
               <div className="print-card">
                  <div className="print-content">
                     {/* Background Image Tag for better print reliability */}
-                    <img src="img/FRONT.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
+                    <img src="img/FRONT.jpg" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
                     
                     <div className="absolute inset-0 z-10">
                         <div className="absolute [left:12px] [top:139px] [width:125px] [height:127px] overflow-hidden flex items-center justify-center">

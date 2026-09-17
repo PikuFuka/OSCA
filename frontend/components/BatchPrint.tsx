@@ -56,7 +56,10 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
     const timeout = setTimeout(async () => {
       setSearching(true);
       try {
-        const response = await seniorsAPI.getAll({ search: searchTerm, per_page: 10, fresh: true });
+        // No fresh:true (2.4): debounce + shared cache is enough — every
+        // mutation busts the cache, so results are at most seconds stale
+        // while keystrokes stop hammering the server.
+        const response = await seniorsAPI.getAll({ search: searchTerm, per_page: 10 });
         const data = response?.data || response || [];
         // We no longer filter out selected IDs so they appear checked in the table
         setSearchResults(Array.isArray(data) ? data : []);
@@ -123,7 +126,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
 
     return (
       <div className="relative w-full h-full overflow-hidden bg-white select-none">
-        <img src="img/FRONT.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="Front ID template" />
+        <img src="img/FRONT.jpg" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover z-0" alt="Front ID template" />
         <div className="absolute inset-0 z-10">
           <div className="absolute" style={{ left: '12px', top: '139px', width: '125px', height: '127px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {senior.idPhoto ? (
@@ -287,7 +290,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
                   {/* Back Card (Left) */}
                   <div className="w-full rounded-lg border border-slate-300 overflow-hidden bg-white">
                     <div className="relative w-full" style={{ aspectRatio: `${CARD_WIDTH} / ${CARD_HEIGHT}` }}>
-                      <img src="img/BACK.jpg" className="absolute inset-0 w-full h-full object-cover" alt="Back ID template" />
+                      <img src="img/BACK.jpg" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover" alt="Back ID template" />
                     </div>
                   </div>
 
@@ -359,7 +362,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
                 {/* Back card */}
                 <div className="batch-card">
                   <div className="batch-card-content">
-                    <img src="img/BACK.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
+                    <img src="img/BACK.jpg" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
                   </div>
                 </div>
                 {/* Front card */}

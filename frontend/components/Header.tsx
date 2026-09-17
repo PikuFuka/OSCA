@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import { CurrentUser, BARANGAYS, ViewType } from '../types';
 import { requestsAPI, activityLogsAPI, seniorsAPI } from '../services/api';
+import { HeaderClock } from './LiveClock';
+import { useSeniorStream } from '../core/api/realtime';
 
 interface NotificationItem {
   id: string;
@@ -70,7 +72,7 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
   
   const menuRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
-  const [dateTime, setDateTime] = useState(new Date());
+
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
@@ -94,17 +96,24 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
     { id: 'action-backup', category: 'action', label: 'Backup Database', sublabel: 'Create database backup', icon: <DatabaseBackup size={14} />, iconBg: 'bg-cyan-50 text-cyan-600', data: ViewType.BACKUP },
   ], []);
 
-  // Search Debounce Effect
+  // Search Debounce Effect (2.4: aborts the previous in-flight search so
+  // fast typing can't stack overlapping requests).
+  const searchAbortRef = useRef<AbortController | null>(null);
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
       if (searchQuery.length > 1) {
         setIsSearching(true);
+        searchAbortRef.current?.abort();
+        const controller = new AbortController();
+        searchAbortRef.current = controller;
         try {
-          const res = await seniorsAPI.getAll({ search: searchQuery });
+          const res = await seniorsAPI.getAll({ search: searchQuery, signal: controller.signal as any });
           const items = res.data || res || [];
           setSearchResults(items.slice(0, 6));
-        } catch (e) {
-          console.error("Search failed", e);
+        } catch (e: any) {
+          if (e?.name !== 'CanceledError' && e?.name !== 'AbortError' && e?.code !== 'ERR_CANCELED') {
+            console.error("Search failed", e);
+          }
         } finally {
           setIsSearching(false);
         }
@@ -244,6 +253,9 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  // Latest notification fetcher, callable from the realtime stream below.
+  const notificationsFetchRef = useRef<(() => void) | null>(null);
+
   // Fetch real notifications data
   useEffect(() => {
     const fetchNotifications = async () => {
@@ -297,11 +309,22 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
     };
     
     fetchNotifications();
-    
+    notificationsFetchRef.current = fetchNotifications;
+
     // Optional polling every 2 minutes
     const interval = setInterval(fetchNotifications, 120000);
     return () => clearInterval(interval);
   }, [currentUser]);
+
+  // Realtime nudge (2.5): senior changes anywhere refresh notifications
+  // immediately; the 2-minute poll above stays as the offline fallback.
+  // Staff/Admin only — Senior-role users have no notification feed.
+  useSeniorStream(
+    useCallback(() => {
+      notificationsFetchRef.current?.();
+    }, []),
+    { enabled: currentUser?.role === 'Admin' || currentUser?.role === 'Staff' },
+  );
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 
@@ -315,11 +338,7 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
 
   const { title, subtitle } = getHeaderContent(viewTitle);
 
-  // Real-time clock
-  useEffect(() => {
-    const timer = setInterval(() => setDateTime(new Date()), 1000);
-    return () => clearInterval(timer);
-  }, []);
+
 
   // Password Change State
   const [passwordForm, setPasswordForm] = useState({
@@ -614,17 +633,8 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
       {/* Right Section: Utilities & Profile */}
       <div className="flex items-center gap-4 shrink-0" ref={menuRef}>
         
-        {/* Date & Time */}
-        <div className="hidden xl:flex items-center gap-4 pr-5 border-r border-slate-200">
-           <div className="flex flex-col items-end justify-center h-full">
-              <p className="text-[13px] font-bold text-slate-800 tracking-tight leading-none mb-1">
-                {dateTime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-none">
-                {dateTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
-              </p>
-           </div>
-        </div>
+        {/* Date & Time (2.5: self-contained clock — Header no longer re-renders every second) */}
+        <HeaderClock />
 
         {/* Utilities */}
         <div className="flex items-center gap-1.5">
