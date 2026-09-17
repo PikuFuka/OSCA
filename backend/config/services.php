@@ -28,6 +28,15 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Optional second factor for admin API routes (see
+    // App\Http\Middleware\EnsureCloudflareAccess). Empty = LAN-only mode,
+    // middleware passes through. Team is the full issuer origin, e.g.
+    // https://<team>.cloudflareaccess.com ; aud is the Access application AUD tag.
+    'cloudflare_access' => [
+        'team' => env('CLOUDFLARE_ACCESS_TEAM'),
+        'aud' => env('CLOUDFLARE_ACCESS_AUD'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

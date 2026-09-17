@@ -81,9 +81,11 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
     });
 
     // ----------------------------------------------------------------------
-    // Admin-Only Routes (Strictly Admin only)
+    // Admin-Only Routes (Strictly Admin only + Cloudflare Access second
+    // factor when CLOUDFLARE_ACCESS_TEAM/_AUD are configured; the middleware
+    // passes through otherwise so LAN operation is unaffected).
     // ----------------------------------------------------------------------
-    Route::middleware('role:Admin')->group(function () {
+    Route::middleware(['role:Admin', 'cloudflare.access'])->group(function () {
         // Critical Senior Actions (Deletion / Restores)
         Route::delete('/seniors/{id}', [SeniorController::class, 'destroy']);
         Route::post('/seniors/{id}/restore', [SeniorController::class, 'restore']);

@@ -71,5 +71,32 @@ Restart the OSCA stack afterwards so workers pick up the change
   `php artisan backup:restore` on the server.
 - Optional: add `X-Frame-Options` / CSP via Transform Rules (origin already
   sends nosniff + SAMEORIGIN + Referrer-Policy).
-- Optional: put `/api/backup/*` and `/api/users*` behind Cloudflare Access
-  as a second authentication factor for admin endpoints.
+- Optional but recommended: put the whole hostname behind a Cloudflare
+  Access application so staff sign in with SSO before reaching OSCA at all.
+
+## 7. Second factor for admin endpoints (Cloudflare Access + origin check)
+
+Even with an Access policy at the edge, the API additionally verifies the
+Access JWT at the origin for `/api/backup/*`, `/api/users*` and
+activity-log clearing — direct-to-origin requests without a valid session
+get 403. LAN operation is unaffected (the check only activates when the two
+variables below are set).
+
+1. Cloudflare Zero Trust → Access → Applications → Add self-hosted app for
+   `osca.example.gov.ph`, create an Allow policy (e.g. specific emails).
+2. Copy the application's **AUD tag** (Overview page).
+3. In `backend/.env`:
+   ```dotenv
+   CLOUDFLARE_ACCESS_TEAM=https://<your-team>.cloudflareaccess.com
+   CLOUDFLARE_ACCESS_AUD=<aud-tag-from-step-2>
+   ```
+4. Rebuild config and restart the stack:
+   ```powershell
+   cd backend
+   php artisan config:cache
+   powershell -ExecutionPolicy Bypass -File backend/deploy/nginx/stop-server.ps1
+   powershell -ExecutionPolicy Bypass -File backend/deploy/nginx/start-server.ps1
+   ```
+5. Verify: browser access prompts Access login; API calls without the
+   `CF-Access-JWT-Assertion` session get 403 on admin routes while normal
+   staff routes keep working.

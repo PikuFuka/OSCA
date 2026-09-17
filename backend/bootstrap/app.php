@@ -20,6 +20,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\EnsureUserHasRole::class,
             'password.changed' => \App\Http\Middleware\EnsurePasswordChanged::class,
+            // Optional Cloudflare Access second factor (no-op unless
+            // CLOUDFLARE_ACCESS_TEAM + _AUD are configured).
+            'cloudflare.access' => \App\Http\Middleware\EnsureCloudflareAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
