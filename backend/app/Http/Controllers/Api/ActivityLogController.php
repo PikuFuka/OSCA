@@ -15,8 +15,11 @@ class ActivityLogController extends Controller
      */
     public function index(Request $request)
     {
-        // Auto-delete logs older than 24 hours
-        ActivityLog::where('created_at', '<', now()->subHours(24))->delete();
+        // Prune logs older than the configured retention window (0 = keep all).
+        $retentionDays = (int) config('audit.retention_days', 90);
+        if ($retentionDays > 0) {
+            ActivityLog::where('created_at', '<', now()->subDays($retentionDays))->delete();
+        }
 
         $query = ActivityLog::with('user');
 
