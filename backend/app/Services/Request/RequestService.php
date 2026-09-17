@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\DB;
 
 class RequestService
 {
-    public function approve(SeniorRequest $req, ?string $oscaId, $actor): SeniorRequest
+    public function approve(SeniorRequest $req, ?string $oscaId, $actor, ?string $password = null): SeniorRequest
     {
         $senior = $req->senior;
         if ($oscaId) {
@@ -18,7 +18,7 @@ class RequestService
             if ($exists) abort(response()->json(['success'=>false,'message'=>'The provided OSCA ID is already in use by another member.'], 422));
         }
 
-        return DB::transaction(function() use ($req, $senior, $oscaId, $actor) {
+        return DB::transaction(function() use ($req, $senior, $oscaId, $actor, $password) {
             if ($req->type === 'Information Update' && $req->pending_data) {
                 $data = $req->pending_data;
                 $senior->update([
@@ -54,6 +54,11 @@ class RequestService
             } else {
                 $updateData = ['status'=>'Active'];
                 if ($oscaId) $updateData['osca_id']=$oscaId;
+                if ($password !== null && $password !== '') {
+                    // 'password' cast (hashed) on the model hashes this automatically.
+                    $updateData['password'] = $password;
+                    $updateData['force_password_change'] = true;
+                }
                 $senior->update($updateData);
             }
 
