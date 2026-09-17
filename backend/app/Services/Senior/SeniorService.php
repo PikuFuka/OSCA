@@ -32,11 +32,15 @@ class SeniorService
     public function register(array $validated, HttpRequest $httpRequest, $user = null): Senior
     {
         return DB::transaction(function () use ($validated, $httpRequest, $user) {
-            // Duplicate check via Repository (uses osca_id_trim + FULLTEXT index awareness)
-            $duplicateQuery = Senior::where('first_name', $validated['firstName'])
+            // Duplicate check across ALL live records (including Pending ones
+            // without an OSCA ID yet). Scoping to valid osca_id here would let
+            // identical pending applications through, creating duplicate
+            // approvals. Soft-deleted records stay excludable for re-entry.
+            $duplicateExists = Senior::where('first_name', $validated['firstName'])
                 ->where('last_name', $validated['lastName'])
-                ->where('date_of_birth', $validated['dateOfBirth']);
-            if ($this->repo->applyValidOscaScope($duplicateQuery)->exists()) {
+                ->whereDate('date_of_birth', $validated['dateOfBirth'])
+                ->exists();
+            if ($duplicateExists) {
                 abort(response()->json([
                     'success' => false,
                     'message' => 'A senior with the same name and date of birth already exists. Please use the "Existing Member" option to update their record instead.',
