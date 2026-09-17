@@ -26,7 +26,7 @@ function Test-Endpoint([string]$url, [string]$name) {
 if (-not (Test-Endpoint "$BaseUrl/up" "Laravel health (/up)")) { $failures += "/up" }
 if (-not (Test-Endpoint "$BaseUrl/api/seniors/next-id" "API route")) { $failures += "api" }
 
-foreach ($port in @(3306, 9000, 9001, 9002, 9003)) {
+foreach ($port in @(3306, 9000, 9001, 9002, 9003, 9004, 9005, 9006, 9007)) {
     try {
         $conn = New-Object System.Net.Sockets.TcpClient("127.0.0.1", $port)
         $conn.Close()

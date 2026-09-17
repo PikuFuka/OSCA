@@ -31,9 +31,12 @@ if (-not $mysqlPortOpen) {
     Write-Host "  [OK] MySQL Database is already active." -ForegroundColor Green
 }
 
-# 2. Start PHP FastCGI Workers Pool (Ports 9000 to 9003)
-$workerPorts = @(9000, 9001, 9002, 9003)
-Write-Host "  [+] Verifying PHP FastCGI worker pool (Ports 9000-9003)..." -ForegroundColor Yellow
+# 2. Start PHP FastCGI Workers Pool (Ports 9000 to 9007)
+# 8 workers: each open realtime SSE stream pins one worker for up to
+# realtime.max_duration_seconds, so 4 are no longer enough once browsers
+# hold streams open. ~40 MB RAM per worker is fine on this host.
+$workerPorts = @(9000, 9001, 9002, 9003, 9004, 9005, 9006, 9007)
+Write-Host "  [+] Verifying PHP FastCGI worker pool (Ports 9000-9007)..." -ForegroundColor Yellow
 
 Get-Process php-cgi -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
 Start-Sleep -Milliseconds 300
@@ -46,7 +49,7 @@ foreach ($port in $workerPorts) {
     $cmd = "`"$PhpCgiExe`" -b 127.0.0.1:$port $phpIniOverrides"
     ([wmiclass]"Win32_Process").Create($cmd, $null, $startup) | Out-Null
 }
-Write-Host "  [OK] PHP FastCGI pool active (4 concurrent workers, hidden)." -ForegroundColor Green
+Write-Host "  [OK] PHP FastCGI pool active (8 concurrent workers, hidden)." -ForegroundColor Green
 
 # 3. Start Laravel Background Queue Worker
 Write-Host "  [+] Verifying Laravel Background Queue Worker..." -ForegroundColor Yellow

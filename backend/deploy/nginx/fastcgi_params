@@ -20,15 +20,23 @@ fastcgi_param  REMOTE_PORT        $remote_port;
 fastcgi_param  SERVER_ADDR        $server_addr;
 fastcgi_param  SERVER_PORT        $server_port;
 fastcgi_param  SERVER_NAME        $server_name;
+# Stock nginx fastcgi_params omits this, leaving PHP with an empty request
+# host — which breaks ALL Laravel signed-URL validation (media
+# photos/documents AND the realtime stream return 403). $http_host (NOT
+# $host) preserves the port, so signatures minted for APP_URL validate.
+fastcgi_param  HTTP_HOST          $http_host;
 
 # PHP only, required if PHP was built with --enable-force-cgi-redirect
 fastcgi_param  REDIRECT_STATUS    200;
 
-# Forward Cloudflare and reverse proxy headers to Laravel
-fastcgi_param  HTTP_X_FORWARDED_FOR   $http_x_forwarded_for;
-fastcgi_param  HTTP_X_FORWARDED_PROTO $http_x_forwarded_proto;
-fastcgi_param  HTTP_X_FORWARDED_HOST  $http_x_forwarded_host;
-fastcgi_param  HTTP_X_FORWARDED_PORT  $http_x_forwarded_port;
+# Forward proxy headers to Laravel ONLY when the client sent them. An
+# always-empty X-Forwarded-Host makes Symfony prefer "" over the real Host
+# (the app trusts proxies for the future Cloudflare tunnel), which empties
+# $request->url() and fails ALL signed-URL validation with 403.
+fastcgi_param  HTTP_X_FORWARDED_FOR   $http_x_forwarded_for if_not_empty;
+fastcgi_param  HTTP_X_FORWARDED_PROTO $http_x_forwarded_proto if_not_empty;
+fastcgi_param  HTTP_X_FORWARDED_HOST  $http_x_forwarded_host if_not_empty;
+fastcgi_param  HTTP_X_FORWARDED_PORT  $http_x_forwarded_port if_not_empty;
 fastcgi_param  HTTP_CF_CONNECTING_IP  $http_cf_connecting_ip;
 fastcgi_param  HTTP_CF_RAY            $http_cf_ray;
 fastcgi_param  HTTP_CF_IPCOUNTRY      $http_cf_ipcountry;
