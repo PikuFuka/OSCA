@@ -13,8 +13,11 @@ return new class extends Migration
             $table->json('pending_data')->nullable()->after('status');
         });
 
-        // Expand the type ENUM to include 'Information Update' if not present
-        DB::statement("ALTER TABLE requests MODIFY COLUMN type ENUM('New Application', 'Information Update') DEFAULT 'New Application'");
+        // Expand the type ENUM to include 'Information Update' if not present.
+        // MySQL-only: other drivers do not enforce ENUM membership.
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE requests MODIFY COLUMN type ENUM('New Application', 'Information Update') DEFAULT 'New Application'");
+        }
     }
 
     public function down(): void

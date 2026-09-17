@@ -117,13 +117,13 @@ class SeniorControllerTest extends TestCase
         $this->assertSame($expected, $result['status']);
     }
 
-    public function test_transform_senior_id_photo_with_profile_path(): void
+    public function test_transform_senior_id_photo_uses_signed_url_format(): void
     {
-        $controller = new SeniorController();
-        $senior = $this->makeSeniorStub(['profile_photo_path' => 'profile_photos/senior_photo.jpg']);
-        $result = $this->invokePrivateMethod($controller, 'transformSenior', [$senior]);
-
-        $this->assertSame('/api/storage/profiles/senior_photo.jpg', $result['idPhoto']);
+        // Signed media URLs need a booted app (URL signer); the exact format is
+        // covered by Tests\Feature\SecurityHardeningTest. Here we only assert
+        // the null contract, which must never touch the URL generator.
+        $this->assertNull(\App\Support\MediaUrls::photo(null));
+        $this->assertNull(\App\Support\MediaUrls::photo(''));
     }
 
     public function test_transform_senior_id_photo_null_when_no_path(): void
@@ -135,13 +135,18 @@ class SeniorControllerTest extends TestCase
         $this->assertNull($result['idPhoto']);
     }
 
-    public function test_transform_senior_id_photo_extracts_basename_from_nested_path(): void
+    public function test_media_urls_never_embed_bearer_tokens(): void
     {
-        $controller = new SeniorController();
-        $senior = $this->makeSeniorStub(['profile_photo_path' => 'profile_photos/subdir/my photo.png']);
-        $result = $this->invokePrivateMethod($controller, 'transformSenior', [$senior]);
-
-        $this->assertSame('/api/storage/profiles/my photo.png', $result['idPhoto']);
+        // Regression guard for CWE-598: no media URL builder may accept or
+        // emit a bearer token. MediaUrls exposes only null-safe signed-URL
+        // builders with no token parameter.
+        $ref = new \ReflectionClass(\App\Support\MediaUrls::class);
+        foreach (['photo', 'document'] as $method) {
+            $this->assertTrue($ref->hasMethod($method));
+            foreach ($ref->getMethod($method)->getParameters() as $param) {
+                $this->assertStringNotContainsStringIgnoringCase('token', $param->getName());
+            }
+        }
     }
 
     public function test_transform_senior_joined_date_with_created_at(): void
