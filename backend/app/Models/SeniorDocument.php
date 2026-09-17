@@ -35,7 +35,19 @@ class SeniorDocument extends Model
         if ($this->file_path && \Illuminate\Support\Facades\Storage::disk('local')->exists($this->file_path)) {
             return \Illuminate\Support\Facades\Storage::disk('local')->get($this->file_path);
         }
-        return $this->file_content;
+        return $this->file_content ?: null;
+    }
+
+    /**
+     * Cheap existence check (no file bytes loaded) for 404 decisions.
+     * file_content is '' (not null) for disk-backed rows on every driver.
+     */
+    public function hasFile(): bool
+    {
+        if ($this->file_path && \Illuminate\Support\Facades\Storage::disk('local')->exists($this->file_path)) {
+            return true;
+        }
+        return !empty($this->file_content);
     }
 
     protected static function booted(): void

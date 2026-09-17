@@ -11,25 +11,27 @@ class DocumentService
 {
     /**
      * Stores file to local disk (storage/app/private/documents) and creates DB row.
-     * Keeps DB light (file_content = null) — file_path is source of truth.
+     * Keeps DB light (file_content stays empty) — file_path is source of truth.
+     * storeAs streams the upload straight to disk: no file_get_contents +
+     * put double-buffer in PHP memory.
      */
     public function store(int $seniorId, string $type, UploadedFile $file): SeniorDocument
     {
-        $binary = file_get_contents($file->getRealPath());
         $fileName = $file->getClientOriginalName();
         $safe = Str::slug(pathinfo($fileName, PATHINFO_FILENAME)) ?: 'document';
         $ext = pathinfo($fileName, PATHINFO_EXTENSION) ?: 'bin';
-        $path = "documents/{$seniorId}/" . time() . "_{$type}_{$safe}.{$ext}";
-        Storage::disk('local')->put($path, $binary);
+        $name = time() . "_{$type}_{$safe}.{$ext}";
+        $path = $file->storeAs("documents/{$seniorId}", $name, 'local');
 
-        // Clean previous of same type (unique senior_id+type)
+        // Clean previous of same type (unique senior_id+type) — after the
+        // new file lands, so a failed write never loses the old one.
         if ($prev = SeniorDocument::where('senior_id',$seniorId)->where('document_type',$type)->first()) {
-            if ($prev->file_path) Storage::disk('local')->delete($prev->file_path);
+            if ($prev->file_path && $prev->file_path !== $path) Storage::disk('local')->delete($prev->file_path);
         }
 
         return SeniorDocument::updateOrCreate(
             ['senior_id'=>$seniorId,'document_type'=>$type],
-            ['file_content'=>null,'file_path'=>$path,'file_name'=>$fileName,'mime_type'=>$file->getMimeType(),'file_size'=>$file->getSize()]
+            ['file_content'=>'','file_path'=>$path,'file_name'=>$fileName,'mime_type'=>$file->getMimeType(),'file_size'=>$file->getSize()]
         );
     }
 
@@ -40,19 +42,23 @@ class DocumentService
         $path = "documents/{$seniorId}/" . time() . "_{$type}_{$safe}.{$ext}";
         Storage::disk('local')->put($path, $binary);
         if ($prev = SeniorDocument::where('senior_id',$seniorId)->where('document_type',$type)->first()) {
-            if ($prev->file_path) Storage::disk('local')->delete($prev->file_path);
+            if ($prev->file_path && $prev->file_path !== $path) Storage::disk('local')->delete($prev->file_path);
         }
         return SeniorDocument::updateOrCreate(
             ['senior_id'=>$seniorId,'document_type'=>$type],
-            ['file_content'=>null,'file_path'=>$path,'file_name'=>$fileName,'mime_type'=>$mime,'file_size'=>strlen($binary)]
+            ['file_content'=>'','file_path'=>$path,'file_name'=>$fileName,'mime_type'=>$mime,'file_size'=>strlen($binary)]
         );
     }
 
-    public function stream(SeniorDocument $doc): \Symfony\Component\HttpFoundation\StreamedResponse
+    public function stream(SeniorDocument $doc): \Symfony\Component\HttpFoundation\Response
     {
-        // Prefer streaming from disk; fallback to DB BLOB for not-yet-migrated rows
+        // True disk streaming (kernel sendfile): the file is never loaded
+        // into PHP memory. Storage::response() would buffer via get().
         if ($doc->file_path && Storage::disk('local')->exists($doc->file_path)) {
-            return Storage::disk('local')->response($doc->file_path, $doc->file_name, ['Content-Type'=>$doc->mime_type]);
+            return response()->file(
+                Storage::disk('local')->path($doc->file_path),
+                ['Content-Type' => $doc->mime_type]
+            )->setContentDisposition('inline', $doc->file_name);
         }
         $binary = $doc->file_content;
         return response()->streamDownload(function() use ($binary) { echo $binary; }, $doc->file_name, ['Content-Type'=>$doc->mime_type]);
