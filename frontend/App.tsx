@@ -11,17 +11,31 @@ import Toast, { ToastType } from './components/Toast';
 
 import { ViewType } from './types';
 
-const Dashboard = lazy(() => import('./components/Dashboard'));
-const AddMemberForm = lazy(() => import('./components/AddMemberForm'));
-const MemberRegistry = lazy(() => import('./components/MemberRegistry'));
-const Account = lazy(() => import('./components/Account'));
-const HistoryLogView = lazy(() => import('./components/HistoryLogView'));
-const ReportView = lazy(() => import('./components/ReportView'));
-const BackupView = lazy(() => import('./components/BackupView'));
-const ApprovalView = lazy(() => import('./components/ApprovalView'));
-const BatchPrint = lazy(() => import('./components/BatchPrint'));
-const UserDashboard = lazy(() => import('./components/UserDashboard'));
-const UserReview = lazy(() => import('./components/UserReview'));
+const viewLoaders = {
+  Dashboard: () => import('./components/Dashboard'),
+  AddMemberForm: () => import('./components/AddMemberForm'),
+  MemberRegistry: () => import('./components/MemberRegistry'),
+  Account: () => import('./components/Account'),
+  HistoryLogView: () => import('./components/HistoryLogView'),
+  ReportView: () => import('./components/ReportView'),
+  BackupView: () => import('./components/BackupView'),
+  ApprovalView: () => import('./components/ApprovalView'),
+  BatchPrint: () => import('./components/BatchPrint'),
+  UserDashboard: () => import('./components/UserDashboard'),
+  UserReview: () => import('./components/UserReview'),
+};
+
+const Dashboard = lazy(viewLoaders.Dashboard);
+const AddMemberForm = lazy(viewLoaders.AddMemberForm);
+const MemberRegistry = lazy(viewLoaders.MemberRegistry);
+const Account = lazy(viewLoaders.Account);
+const HistoryLogView = lazy(viewLoaders.HistoryLogView);
+const ReportView = lazy(viewLoaders.ReportView);
+const BackupView = lazy(viewLoaders.BackupView);
+const ApprovalView = lazy(viewLoaders.ApprovalView);
+const BatchPrint = lazy(viewLoaders.BatchPrint);
+const UserDashboard = lazy(viewLoaders.UserDashboard);
+const UserReview = lazy(viewLoaders.UserReview);
 
 // Shown while a split view chunk loads (first navigation only, cached after).
 const ViewFallback: React.FC = () => (
@@ -98,6 +112,31 @@ const App: React.FC = () => {
   useEffect(() => {
     (window as any).isAuthenticated = isAuthenticated;
   }, [isAuthenticated]);
+
+  // Warm split-view chunks during idle time after login. First paint stays
+  // lean (2.1), but by the time the user clicks anything the chunk is
+  // already cached — so the Suspense fallback effectively never flashes on
+  // LAN. Slow networks still fall back to it instead of hanging.
+  useEffect(() => {
+    if (!currentUser) return;
+    const loaders = Object.values(viewLoaders);
+    let cancelled = false;
+    const idle = (fn: () => void) => {
+      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+        (window as any).requestIdleCallback(fn, { timeout: 2500 });
+      } else {
+        setTimeout(fn, 400);
+      }
+    };
+    const run = (index: number) => {
+      if (cancelled || index >= loaders.length) return;
+      loaders[index]().catch(() => {}).finally(() => idle(() => run(index + 1)));
+    };
+    idle(() => run(0));
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUser]);
 
 
 
