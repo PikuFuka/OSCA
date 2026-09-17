@@ -1,4 +1,4 @@
-import { api, API_BASE_URL } from '../../../core/api/client';
+import { api } from '../../../core/api/client';
 import { withCache, clearCache, getCache } from '../../../core/api/cache';
 
 export const seniorsAPI = {
@@ -141,11 +141,24 @@ export const seniorsAPI = {
     return response.data;
   },
 
-  getDocumentUrl: (seniorId: number | string, documentId: number | string): string => {
-    const base = API_BASE_URL.startsWith('http') ? API_BASE_URL : `${window.location.origin}${API_BASE_URL}`;
-    const token = localStorage.getItem('auth_token');
-    const url = `${base}/seniors/${seniorId}/documents/${documentId}`;
-    return token ? `${url}?token=${token}` : url;
+  /**
+   * Open a document in a new tab.
+   *
+   * Documents carry a short-lived server-signed `url` (no bearer token in the
+   * address bar, history or logs). As a fallback for stale cached records
+   * without one, the file is fetched with the Authorization header and opened
+   * as a blob URL.
+   */
+  openDocument: async (doc: any, seniorId: string | number): Promise<void> => {
+    const signedUrl: string | undefined = doc?.url;
+    if (signedUrl) {
+      window.open(signedUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    const blob = await seniorsAPI.viewDocument(seniorId, doc.id);
+    const url = URL.createObjectURL(blob);
+    window.open(url, '_blank', 'noopener,noreferrer');
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   },
 
   getNextOscaId: async () => {

@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { ViewType, BARANGAYS } from '../types';
 import { seniorsAPI, requestsAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { TableAvatar } from './Table';
 
 interface DashboardProps {
@@ -108,7 +109,7 @@ const KPICard = ({
       </div>
       
       <div className="w-full h-10 mt-2 relative z-10 min-w-0" style={{ minWidth: 0 }}>
-        <ResponsiveContainer width="100%" height="100%" style={{ width: '100%', height: '100%' }} minWidth={0} minHeight={0}>
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <LineChart data={data}>
             <Line
               type="monotone"
@@ -146,6 +147,7 @@ const KPICard = ({
 
 
 const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
+  const { isAuthenticated } = useAuth();
   const [selectedBarangay, setSelectedBarangay] = useState('All Barangays');
   const [selectedYear, setSelectedYear] = useState('All Years');
   const [stats, setStats] = useState<any>(null);
@@ -164,14 +166,19 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   }, []);
 
   const fetchStats = async () => {
-    if (!(window as any).isAuthenticated) return;
+    // Prevent unauthenticated state from getting permanently stuck in loading skeleton
+    const hasToken = typeof window !== 'undefined' && Boolean(localStorage.getItem('auth_token'));
+    if (!isAuthenticated && !hasToken) {
+      setLoading(false);
+      return;
+    }
+
     setError(null);
     setLoading(true);
     try {
       const [data, pendingData, birthdayRes] = await Promise.all([
         seniorsAPI.getStatistics(selectedBarangay, selectedYear),
-        // Use same perPage as Approvals (15) and bypass cache for accurate count — fixes 1 vs 2 mismatch
-        requestsAPI.getPending(1, 15, { fresh: true }),
+        requestsAPI.getPending(1, 15, { fresh: true }).catch(() => ({ total: 0, data: [] })),
         seniorsAPI.getBirthdays().catch(() => ({ count: 0, date: '', seniors: [] }))
       ]);
       
@@ -181,7 +188,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
       setStats(data);
       setBirthdaysData(birthdayRes);
     } catch (err: any) {
-      if (err.status !== 401) {
+      if (err?.status !== 401) {
         setError('Failed to load analytical data.');
       }
     } finally {
@@ -191,7 +198,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
 
   useEffect(() => {
     fetchStats();
-  }, [selectedBarangay, selectedYear]);
+  }, [isAuthenticated, selectedBarangay, selectedYear]);
 
   const celebrants = useMemo(() => {
     if (!birthdaysData?.seniors) return [];
@@ -478,7 +485,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                   <span className="text-xs font-semibold">Zero Variance</span>
                </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} style={{ width: '100%', height: '100%' }}>
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <LineChart data={data.monthlyStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} dy={10} />

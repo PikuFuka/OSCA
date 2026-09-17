@@ -47,7 +47,7 @@ const toUserFriendlyMessage = (message: string, type: ToastType) => {
 };
 
 const App: React.FC = () => {
-  const { user: currentUser, loading, logout, isAuthenticated, checkAuth } = useAuth();
+  const { user: currentUser, loading, logout, isAuthenticated } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>(ViewType.DASHBOARD);
 
   const changeView = useCallback((view: ViewType) => {
@@ -79,6 +79,9 @@ const App: React.FC = () => {
   );
   
   // Track auth globally for background API prevention
+  if (typeof window !== 'undefined') {
+    (window as any).isAuthenticated = isAuthenticated || Boolean(localStorage.getItem('auth_token'));
+  }
   useEffect(() => {
     (window as any).isAuthenticated = isAuthenticated;
   }, [isAuthenticated]);
@@ -365,9 +368,10 @@ const App: React.FC = () => {
       setPwLoading(true);
       try {
         await authAPI.changePassword(pwForm.current, pwForm.newPw, pwForm.confirm);
-        notify('Password changed successfully!', 'success');
         setPwForm({ current: '', newPw: '', confirm: '' });
-        await checkAuth();
+        // All sessions were revoked server-side: land on the login screen.
+        await logout();
+        notify('Password changed successfully! Please sign in again.', 'success');
       } catch (error: any) {
         console.error('Failed to change password:', error);
         notify('Unable to change password right now. Please try again.', 'error');

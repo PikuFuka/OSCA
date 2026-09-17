@@ -77,7 +77,9 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
           barangay: r.senior?.barangay || 'N/A',
           rrn: r.senior?.rrn || '',
           emergency: r.senior?.emergency_name || '',
-          profilePicture: r.senior?.profile_photo_path ? `${import.meta.env.VITE_API_URL || '/api'}/../storage/${r.senior.profile_photo_path}` : '',
+          // Server-signed, short-lived photo URL (RequestResource.details).
+          // Never build public /storage links here: ID photos are private.
+          profilePicture: r.details?.profilePicture || '',
           documents: (r.senior?.documents || []).map((d: any) => ({
             id: d.id,
             name: d.document_type || 'Document',

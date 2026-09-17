@@ -65,6 +65,7 @@ api.interceptors.response.use(
     const enhancedError = new Error(errorMessage);
     (enhancedError as any).status = status;
     (enhancedError as any).data = error.response?.data;
+    (enhancedError as any).response = error.response;
 
     if (error.response?.status === 401) {
       const isLoginRequest = error.config?.url?.includes('/login');

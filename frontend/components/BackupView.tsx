@@ -58,6 +58,14 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
     const ext = file.name.split('.').pop()?.toLowerCase();
     if (ext !== 'sql') {
       notify('Only .sql backup files are accepted.', 'error');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+    // Matches BackupService::HTTP_MAX_KB (100 MB, the Cloudflare edge limit).
+    // Larger dumps must be restored on the server: php artisan backup:restore.
+    if (file.size > 100 * 1024 * 1024) {
+      notify('File size exceeds the 100 MB browser limit. For larger files, restore directly on the server (php artisan backup:restore).', 'error');
+      if (fileInputRef.current) fileInputRef.current.value = '';
       return;
     }
     setSelectedFile(file);
@@ -203,7 +211,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
               <>
                 <Upload size={28} className="mx-auto text-slate-300 mb-2" />
                 <p className="text-sm font-bold text-slate-600">Click to select .sql file</p>
-                <p className="text-[10px] text-slate-400 mt-1">Max file size: 500 MB</p>
+                <p className="text-[10px] text-slate-400 mt-1">Max file size: 100 MB (larger: restore on server)</p>
               </>
             )}
           </div>

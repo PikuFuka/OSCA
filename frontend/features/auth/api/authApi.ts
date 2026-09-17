@@ -43,7 +43,11 @@ export const authAPI = {
       new_password: newPassword,
       new_password_confirmation: newPasswordConfirmation,
     });
-    deleteCache('user-me');
+    // The server revokes ALL tokens on password change, so the current token
+    // is dead as of this response: drop local auth state and force sign-in.
+    localStorage.removeItem('auth_token');
+    clearCache();
+    window.dispatchEvent(new Event('auth-unauthorized'));
     return response.data;
   },
 

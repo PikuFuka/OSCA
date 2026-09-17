@@ -2189,11 +2189,10 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                     {selectedSeniorForView.documents && selectedSeniorForView.documents.length > 0 ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {selectedSeniorForView.documents.map((doc: any) => (
-                          <a 
+                          <button
                             key={doc.id}
-                            href={seniorsAPI.getDocumentUrl(selectedSeniorForView.oscaId, doc.id)}
-                            target="_blank"
-                            rel="noopener noreferrer"
+                            type="button"
+                            onClick={() => seniorsAPI.openDocument(doc, selectedSeniorForView.oscaId)}
                             className="flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-50 hover:border-blue-100 hover:bg-blue-50/30 transition-all group w-full text-left"
                           >
                             <div className="w-12 h-12 rounded-xl bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center text-slate-400 group-hover:text-blue-600 transition-colors">
@@ -2206,7 +2205,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                             <div className="w-10 h-10 rounded-full flex items-center justify-center text-slate-300 group-hover:text-blue-500">
                               <Eye size={20} />
                             </div>
-                          </a>
+                          </button>
                         ))}
                       </div>
                     ) : (

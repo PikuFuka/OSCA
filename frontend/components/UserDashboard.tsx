@@ -318,14 +318,13 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
                        </div>
                      ) : req.doc ? (
                        <>
-                         <a 
-                           href={seniorsAPI.getDocumentUrl(currentUser.id, req.doc.id)} 
-                           target="_blank" 
-                           rel="noreferrer"
-                           className="flex items-center justify-center gap-2 py-2.5 bg-systemBlue text-white rounded-xl font-black text-xs hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/10 sm:flex-1"
-                         >
-                           <Eye size={16} /> VIEW
-                         </a>
+                          <button
+                            type="button"
+                            onClick={() => seniorsAPI.openDocument(req.doc, currentUser.id).catch(() => notify && notify('Could not open the document.', 'error'))}
+                            className="flex items-center justify-center gap-2 py-2.5 bg-systemBlue text-white rounded-xl font-black text-xs hover:bg-blue-800 transition-all shadow-lg shadow-blue-900/10 sm:flex-1"
+                          >
+                            <Eye size={16} /> VIEW
+                          </button>
                          <button 
                            onClick={() => handleDeleteDocument(req.doc.id, req.type, req.label)}
                            className="flex items-center justify-center gap-2 py-2.5 bg-white text-rose-600 border-2 border-rose-50 rounded-xl font-black text-xs hover:bg-rose-50 hover:border-rose-100 transition-all sm:flex-1"

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Lock, UserPlus, Eye, EyeOff, LogIn } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -13,16 +13,77 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [cooldownSeconds, setCooldownSeconds] = useState<number>(() => {
+    const storedUntil = sessionStorage.getItem('osca_login_cooldown_until');
+    if (storedUntil) {
+      const remaining = Math.ceil((parseInt(storedUntil, 10) - Date.now()) / 1000);
+      return remaining > 0 ? remaining : 0;
+    }
+    return 0;
+  });
   const { login } = useAuth();
+
+  useEffect(() => {
+    if (cooldownSeconds <= 0) {
+      sessionStorage.removeItem('osca_login_cooldown_until');
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setCooldownSeconds((prev) => {
+        if (prev <= 1) {
+          sessionStorage.removeItem('osca_login_cooldown_until');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [cooldownSeconds]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (cooldownSeconds > 0) {
+      notify(`Too many login attempts. Please wait ${cooldownSeconds} seconds before trying again.`, 'warning');
+      return;
+    }
+
     setLoading(true);
     try {
       await login(identifier, password);
     } catch (error: any) {
       console.error(error);
-      notify('Invalid credentials. Please check your ID/Email and password.', 'error');
+      const serverMessage = error?.response?.data?.message || error?.data?.message || error?.message || '';
+      const isRateLimited =
+        error?.response?.status === 429 ||
+        error?.status === 429 ||
+        (typeof serverMessage === 'string' && (
+          serverMessage.toLowerCase().includes('too many login attempts') ||
+          serverMessage.toLowerCase().includes('too many requests') ||
+          serverMessage.toLowerCase().includes('rate limit')
+        ));
+      
+      if (isRateLimited) {
+        let seconds = 60;
+        const retryHeader = error?.response?.headers?.['retry-after'];
+        if (retryHeader) {
+          seconds = parseInt(retryHeader, 10) || 60;
+        } else if (serverMessage) {
+          const match = serverMessage.match(/(\d+)\s*second/i);
+          if (match && match[1]) {
+            seconds = parseInt(match[1], 10) || 60;
+          }
+        }
+        setCooldownSeconds(seconds);
+        sessionStorage.setItem('osca_login_cooldown_until', (Date.now() + seconds * 1000).toString());
+        notify(serverMessage || `Too many login attempts. Please wait ${seconds} seconds before trying again.`, 'error');
+      } else {
+        const msg = serverMessage && !serverMessage.toLowerCase().includes('sql') && !serverMessage.toLowerCase().includes('server')
+          ? serverMessage
+          : 'Invalid credentials. Please check your ID/Email and password.';
+        notify(msg, 'error');
+      }
     } finally {
       setLoading(false);
     }
@@ -105,7 +166,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
                         placeholder="example@osca.gov.ph or 0001"
                         autoComplete="username"
                         required
-                        className="w-full rounded-[14px] border border-slate-200 bg-[#FCFCFD] py-[12.5px] pl-[42px] pr-4 text-[14px] font-medium text-slate-900 placeholder:text-slate-400 placeholder:font-normal outline-none transition-all duration-200 focus:bg-white focus:border-[#E87722]/30 focus:ring-[4px] focus:ring-[#FFF1E6] hover:border-slate-300 hover:bg-white"
+                        disabled={loading || cooldownSeconds > 0}
+                        className="w-full rounded-[14px] border border-slate-200 bg-[#FCFCFD] py-[12.5px] pl-[42px] pr-4 text-[14px] font-medium text-slate-900 placeholder:text-slate-400 placeholder:font-normal outline-none transition-all duration-200 focus:bg-white focus:border-[#E87722]/30 focus:ring-[4px] focus:ring-[#FFF1E6] hover:border-slate-300 hover:bg-white disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
                       />
                     </div>
                   </div>
@@ -126,7 +188,8 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
                         placeholder="Password"
                         autoComplete="current-password"
                         required
-                        className="w-full rounded-[14px] border border-slate-200 bg-[#FCFCFD] py-[12.5px] pl-[42px] pr-[46px] text-[14px] font-medium text-slate-900 placeholder:text-slate-400 placeholder:font-normal outline-none transition-all duration-200 focus:bg-white focus:border-[#E87722]/30 focus:ring-[4px] focus:ring-[#FFF1E6] hover:border-slate-300 hover:bg-white"
+                        disabled={loading || cooldownSeconds > 0}
+                        className="w-full rounded-[14px] border border-slate-200 bg-[#FCFCFD] py-[12.5px] pl-[42px] pr-[46px] text-[14px] font-medium text-slate-900 placeholder:text-slate-400 placeholder:font-normal outline-none transition-all duration-200 focus:bg-white focus:border-[#E87722]/30 focus:ring-[4px] focus:ring-[#FFF1E6] hover:border-slate-300 hover:bg-white disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed"
                       />
                       <button
                         type="button"
@@ -154,13 +217,18 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
 
                   <button
                     type="submit"
-                    disabled={loading}
-                    className="w-full inline-flex items-center justify-center gap-2 rounded-[14px] bg-[#E87722] px-5 py-[13.5px] text-[12px] font-extrabold tracking-[0.08em] text-white uppercase shadow-[0_10px_22px_-12px_rgba(232,119,34,0.95)] hover:bg-[#D86918] hover:shadow-[0_14px_28px_-14px_rgba(232,119,34,0.9)] hover:-translate-y-[0.5px] active:translate-y-[0.5px] active:shadow-[0_6px_14px_-10px_rgba(232,119,34,0.9)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FFE8D3] animate-[fadeIn_500ms_360ms_both]"
+                    disabled={loading || cooldownSeconds > 0}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-[14px] bg-[#E87722] px-5 py-[13.5px] text-[12px] font-extrabold tracking-[0.08em] text-white uppercase shadow-[0_10px_22px_-12px_rgba(232,119,34,0.95)] hover:bg-[#D86918] hover:shadow-[0_14px_28px_-14px_rgba(232,119,34,0.9)] hover:-translate-y-[0.5px] active:translate-y-[0.5px] active:shadow-[0_6px_14px_-10px_rgba(232,119,34,0.9)] disabled:opacity-50 disabled:bg-slate-400 disabled:shadow-none disabled:cursor-not-allowed disabled:hover:translate-y-0 transition-all duration-200 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FFE8D3] animate-[fadeIn_500ms_360ms_both]"
                   >
                     {loading ? (
                       <span className="inline-flex items-center gap-2">
                         <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                         Authenticating...
+                      </span>
+                    ) : cooldownSeconds > 0 ? (
+                      <span className="inline-flex items-center gap-2">
+                        <Lock size={15} strokeWidth={2.2} />
+                        Locked ({cooldownSeconds}s)
                       </span>
                     ) : (
                       <>
