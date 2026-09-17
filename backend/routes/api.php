@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\StreamController;
 
 /*
 |--------------------------------------------------------------------------
@@ -36,6 +37,13 @@ Route::get('/seniors/next-id', [SeniorController::class, 'getNextId']);
 Route::get('/storage/profiles/{filename}', [SeniorController::class, 'getProfilePhoto'])->name('media.photo');
 Route::get('/seniors/{seniorId}/documents/{documentId}', [SeniorController::class, 'getDocument'])->name('media.document');
 
+// Realtime registry stream. EventSource cannot send Authorization headers,
+// so (like media) this accepts a short-lived signature minted by
+// GET /api/stream/url. Events carry no record data — refetch pings only.
+Route::get('/stream/seniors', [StreamController::class, 'stream'])->name('stream.seniors');
+
+
+
 // ==========================================
 // Authenticated routes (Requires valid token)
 // ==========================================
@@ -46,6 +54,9 @@ Route::middleware(['auth:sanctum', 'password.changed'])->group(function () {
     // ----------------------------------------------------------------------
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/me', [AuthController::class, 'me']);
+    // Mint a signed URL for the realtime registry stream (EventSource
+    // cannot send Authorization headers; events are refetch pings only).
+    Route::get('/stream/url', [StreamController::class, 'url']);
     Route::post('/change-password', [AuthController::class, 'changePassword']);
     Route::post('/requests/update', [RequestController::class, 'storeUpdate']);
 
