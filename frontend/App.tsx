@@ -1,8 +1,7 @@
 
-import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
-// App shell stays eager (login, nav, toasts). Views below are route-split
-// (2.1): each loads on first navigation instead of bloating first paint.
-// Dashboard (recharts) and MemberRegistry (ML) are the heaviest wins.
+import React, { useState, useEffect, useCallback } from 'react';
+// Views are statically imported: navigation is instant with no chunk
+// loading. Each view shows its own data skeleton while fetching.
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import LoginView from './components/LoginView';
@@ -10,63 +9,18 @@ import ConfirmModal from './components/ConfirmModal';
 import Toast, { ToastType } from './components/Toast';
 
 import { ViewType } from './types';
-import {
-  DashboardFallback,
-  RegistryFallback,
-  ApprovalFallback,
-  AccountFallback,
-  HistoryFallback,
-  ReportFallback,
-  GenericFallback,
-} from './shared/skeletons';
 
-const viewLoaders = {
-  Dashboard: () => import('./components/Dashboard'),
-  AddMemberForm: () => import('./components/AddMemberForm'),
-  MemberRegistry: () => import('./components/MemberRegistry'),
-  Account: () => import('./components/Account'),
-  HistoryLogView: () => import('./components/HistoryLogView'),
-  ReportView: () => import('./components/ReportView'),
-  BackupView: () => import('./components/BackupView'),
-  ApprovalView: () => import('./components/ApprovalView'),
-  BatchPrint: () => import('./components/BatchPrint'),
-  UserDashboard: () => import('./components/UserDashboard'),
-  UserReview: () => import('./components/UserReview'),
-};
-
-const Dashboard = lazy(viewLoaders.Dashboard);
-const AddMemberForm = lazy(viewLoaders.AddMemberForm);
-const MemberRegistry = lazy(viewLoaders.MemberRegistry);
-const Account = lazy(viewLoaders.Account);
-const HistoryLogView = lazy(viewLoaders.HistoryLogView);
-const ReportView = lazy(viewLoaders.ReportView);
-const BackupView = lazy(viewLoaders.BackupView);
-const ApprovalView = lazy(viewLoaders.ApprovalView);
-const BatchPrint = lazy(viewLoaders.BatchPrint);
-const UserDashboard = lazy(viewLoaders.UserDashboard);
-const UserReview = lazy(viewLoaders.UserReview);
-
-// Skeleton shown while a split view chunk loads — matched to the target
-// view so the layout is already in place when it arrives (no spinner, no
-// layout shift). These live in the eager bundle by design.
-const fallbackForView = (view: ViewType): React.FC => {
-  switch (view) {
-    case ViewType.DASHBOARD:
-      return DashboardFallback;
-    case ViewType.MEMBER_REGISTRY:
-      return RegistryFallback;
-    case ViewType.APPROVAL:
-      return ApprovalFallback;
-    case ViewType.ACCOUNT:
-      return AccountFallback;
-    case ViewType.HISTORY:
-      return HistoryFallback;
-    case ViewType.FINAL_REPORT:
-      return ReportFallback;
-    default:
-      return GenericFallback;
-  }
-};
+import Dashboard from './components/Dashboard';
+import AddMemberForm from './components/AddMemberForm';
+import MemberRegistry from './components/MemberRegistry';
+import Account from './components/Account';
+import HistoryLogView from './components/HistoryLogView';
+import ReportView from './components/ReportView';
+import BackupView from './components/BackupView';
+import ApprovalView from './components/ApprovalView';
+import BatchPrint from './components/BatchPrint';
+import UserDashboard from './components/UserDashboard';
+import UserReview from './components/UserReview';
 
 import { 
   ArrowLeft, 
@@ -134,30 +88,7 @@ const App: React.FC = () => {
     (window as any).isAuthenticated = isAuthenticated;
   }, [isAuthenticated]);
 
-  // Warm split-view chunks during idle time after login. First paint stays
-  // lean (2.1), but by the time the user clicks anything the chunk is
-  // already cached — so the Suspense fallback effectively never flashes on
-  // LAN. Slow networks still fall back to it instead of hanging.
-  useEffect(() => {
-    if (!currentUser) return;
-    const loaders = Object.values(viewLoaders);
-    let cancelled = false;
-    const idle = (fn: () => void) => {
-      if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-        (window as any).requestIdleCallback(fn, { timeout: 2500 });
-      } else {
-        setTimeout(fn, 400);
-      }
-    };
-    const run = (index: number) => {
-      if (cancelled || index >= loaders.length) return;
-      loaders[index]().catch(() => {}).finally(() => idle(() => run(index + 1)));
-    };
-    idle(() => run(0));
-    return () => {
-      cancelled = true;
-    };
-  }, [currentUser]);
+
 
 
 
@@ -268,15 +199,12 @@ const App: React.FC = () => {
     );
   }
 
+  // Views are statically imported: navigation is instant, no chunk loading.
+  // Each view shows its own data skeleton while fetching (unchanged).
   const renderView = () => {
     if (!currentUser) return null;
 
-    const Fallback = fallbackForView(currentView);
-    return (
-      <Suspense fallback={<Fallback />}>
-        {renderViewInner()}
-      </Suspense>
-    );
+    return renderViewInner();
   };
 
   const renderViewInner = () => {
@@ -399,15 +327,13 @@ const App: React.FC = () => {
           </div>
 
           <div className="ios-card p-6 md:p-10 shadow-ios-lg signup-entry-card">
-            <Suspense fallback={<GenericFallback />}>
-              <AddMemberForm
-                notify={notify}
-                onSuccess={() => {
-                  setIsRegistering(false);
-                }}
-                onCancel={() => setIsRegistering(false)}
-              />
-            </Suspense>
+            <AddMemberForm
+              notify={notify}
+              onSuccess={() => {
+                setIsRegistering(false);
+              }}
+              onCancel={() => setIsRegistering(false)}
+            />
           </div>
         </div>
       </div>
