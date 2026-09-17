@@ -47,7 +47,7 @@ $startup.ShowWindow = 0
 # OPcache is enabled here too (XAMPP ships it commented out): without it
 # every request recompiles all of Laravel. Timestamps stay validated so
 # code deploys take effect without a worker restart (<=2 s delay).
-$phpIniOverrides = "-d upload_max_filesize=150M -d post_max_size=160M -d max_execution_time=600 -d max_input_time=600 -d memory_limit=512M -d zend_extension=C:\xampp\php\ext\php_opcache.dll -d opcache.enable=1 -d opcache.memory_consumption=128 -d opcache.max_accelerated_files=10000 -d opcache.validate_timestamps=1 -d opcache.revalidate_freq=2"
+$phpIniOverrides = "-d upload_max_filesize=150M -d post_max_size=160M -d max_execution_time=300 -d max_input_time=300 -d memory_limit=512M -d zend_extension=C:\xampp\php\ext\php_opcache.dll -d opcache.enable=1 -d opcache.memory_consumption=128 -d opcache.max_accelerated_files=10000 -d opcache.validate_timestamps=1 -d opcache.revalidate_freq=2"
 foreach ($port in $workerPorts) {
     $cmd = "`"$PhpCgiExe`" -b 127.0.0.1:$port $phpIniOverrides"
     ([wmiclass]"Win32_Process").Create($cmd, $null, $startup) | Out-Null
@@ -59,7 +59,8 @@ Write-Host "  [+] Verifying Laravel Background Queue Worker..." -ForegroundColor
 Get-CimInstance Win32_Process | Where-Object { $_.CommandLine -like "*artisan*queue:work*" } | ForEach-Object {
     Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue
 }
-$queueCmd = "`"$PhpCliExe`" `"$Artisan`" queue:work --sleep=3 --tries=3 --timeout=300"
+# --memory/--max-time recycle the worker so a slow leak can't eat the 8 GB box.
+$queueCmd = "`"$PhpCliExe`" `"$Artisan`" queue:work --sleep=3 --tries=3 --timeout=300 --memory=256 --max-time=3600"
 ([wmiclass]"Win32_Process").Create($queueCmd, "$ProjectRoot\backend", $startup) | Out-Null
 Write-Host "  [OK] Laravel Queue Worker active (hidden, background)." -ForegroundColor Green
 
