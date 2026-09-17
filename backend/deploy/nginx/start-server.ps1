@@ -44,7 +44,10 @@ $startup = ([wmiclass]"Win32_ProcessStartup").CreateInstance()
 $startup.ShowWindow = 0
 # -d flags override XAMPP php.ini so the 100 MB backup upload path works
 # without editing global PHP settings (upload/post/timeout/memory).
-$phpIniOverrides = "-d upload_max_filesize=150M -d post_max_size=160M -d max_execution_time=600 -d max_input_time=600 -d memory_limit=512M"
+# OPcache is enabled here too (XAMPP ships it commented out): without it
+# every request recompiles all of Laravel. Timestamps stay validated so
+# code deploys take effect without a worker restart (<=2 s delay).
+$phpIniOverrides = "-d upload_max_filesize=150M -d post_max_size=160M -d max_execution_time=600 -d max_input_time=600 -d memory_limit=512M -d zend_extension=C:\xampp\php\ext\php_opcache.dll -d opcache.enable=1 -d opcache.memory_consumption=128 -d opcache.max_accelerated_files=10000 -d opcache.validate_timestamps=1 -d opcache.revalidate_freq=2"
 foreach ($port in $workerPorts) {
     $cmd = "`"$PhpCgiExe`" -b 127.0.0.1:$port $phpIniOverrides"
     ([wmiclass]"Win32_Process").Create($cmd, $null, $startup) | Out-Null
