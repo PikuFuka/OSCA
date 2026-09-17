@@ -61,20 +61,45 @@ class Senior extends Authenticatable
             if ($senior->date_of_birth) {
                 $senior->age = \Illuminate\Support\Carbon::parse($senior->date_of_birth)->age;
             }
-            // Keep osca_id_trim in sync for fallback regular column (VIRTUAL columns auto-sync)
-            try {
-                if (\Illuminate\Support\Facades\Schema::hasColumn('seniors', 'osca_id_trim')) {
-                    // Only set if column is not VIRTUAL (check via column type)
-                    $colType = \Illuminate\Support\Facades\DB::selectOne(
-                        "SELECT EXTRA FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'seniors' AND column_name = 'osca_id_trim'"
-                    );
-                    if ($colType && stripos($colType->EXTRA ?? '', 'VIRTUAL GENERATED') === false && stripos($colType->EXTRA ?? '', 'STORED GENERATED') === false) {
-                        $senior->setAttribute('osca_id_trim', $senior->osca_id ? trim($senior->osca_id) : null);
-                        if ($senior->osca_id_trim === '') $senior->setAttribute('osca_id_trim', null);
+            // Keep osca_id_trim in sync for fallback regular columns (MySQL
+            // VIRTUAL columns auto-sync and reject writes). The writability
+            // probe (Schema + information_schema) is memoized per process —
+            // it must not run on every save (1.6).
+            static $trimWritable = null;
+            if ($trimWritable === null) {
+                $trimWritable = false;
+                try {
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('seniors', 'osca_id_trim')) {
+                        $driver = \Illuminate\Support\Facades\DB::getDriverName();
+                        if ($driver === 'sqlite') {
+                            // PRAGMA table_xinfo: hidden 2 = VIRTUAL, 3 = STORED.
+                            $trimWritable = true;
+                            foreach (\Illuminate\Support\Facades\DB::select('PRAGMA table_xinfo(seniors)') as $col) {
+                                if (($col->name ?? null) === 'osca_id_trim') {
+                                    $trimWritable = ((int) ($col->hidden ?? 0)) === 0;
+                                    break;
+                                }
+                            }
+                        } elseif ($driver === 'mysql') {
+                            $colType = \Illuminate\Support\Facades\DB::selectOne(
+                                "SELECT EXTRA FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'seniors' AND column_name = 'osca_id_trim'"
+                            );
+                            $extra = $colType->EXTRA ?? '';
+                            $trimWritable = stripos($extra, 'VIRTUAL GENERATED') === false
+                                && stripos($extra, 'STORED GENERATED') === false;
+                        } else {
+                            // Other drivers: migration fallback is a plain column.
+                            $trimWritable = true;
+                        }
                     }
+                } catch (\Throwable $e) {
+                    // Ignore offline/schema errors
+                    $trimWritable = false;
                 }
-            } catch (\Throwable $e) {
-                // Ignore offline/schema errors
+            }
+            if ($trimWritable) {
+                $senior->setAttribute('osca_id_trim', $senior->osca_id ? trim($senior->osca_id) : null);
+                if ($senior->osca_id_trim === '') $senior->setAttribute('osca_id_trim', null);
             }
         });
     }

@@ -72,8 +72,12 @@ class BarangaySheet implements WithTitle, WithEvents
 
                 $sheet->getDefaultRowDimension()->setRowHeight(15);
 
-                // Data
-                $baseQuery = Senior::query()->where('barangay', $this->barangay);
+                // Data — narrow column select (1.5): the section writers
+                // only need scalars, so skip TEXT/JSON/password columns.
+                // Collections are kept (writers make multiple passes), but
+                // each model is now a fraction of its former size.
+                $columns = ['id','osca_id','first_name','middle_name','last_name','extension_name','date_of_birth','age','sex','pension_status','barangay','street_address','contact_number','rrn','national_id','status','created_at','updated_at'];
+                $baseQuery = Senior::query()->select($columns)->where('barangay', $this->barangay);
                 if ($this->year) {
                     $baseQuery->where(function ($q) {
                         $q->whereYear('created_at', $this->year)
@@ -82,7 +86,7 @@ class BarangaySheet implements WithTitle, WithEvents
                 }
                 $registeredInPeriod = (clone $baseQuery)->get();
 
-                $populationQuery = Senior::query()->where('barangay', $this->barangay);
+                $populationQuery = Senior::query()->select($columns)->where('barangay', $this->barangay);
                 if ($this->year) {
                     $populationQuery->where(function ($q) {
                         $q->where('created_at', '<=', Carbon::create($this->year, 12, 31, 23, 59, 59))

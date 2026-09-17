@@ -58,7 +58,9 @@ class MasterlistSheet implements WithTitle, WithEvents
                 $sheet->getSheetView()->setZoomScale(70);
                 $sheet->getDefaultRowDimension()->setRowHeight(15);
 
-                $query = Senior::query();
+                // Narrow select + cursor (1.5): this writer is single-pass,
+                // so rows stream instead of hydrating the whole table at once.
+                $query = Senior::query()->select(['id','osca_id','first_name','middle_name','last_name','extension_name','date_of_birth','age','sex','barangay','street_address','contact_number','rrn','national_id','status','created_at']);
                 if ($this->year) {
                     $query->where(function ($q) {
                         $q->whereYear('created_at', $this->year)
@@ -68,7 +70,7 @@ class MasterlistSheet implements WithTitle, WithEvents
                 if ($this->barangay && $this->barangay !== 'All Barangays') {
                     $query->where('barangay', $this->barangay);
                 }
-                $seniors = $query->orderBy('barangay')->orderBy('last_name')->get();
+                $seniors = $query->orderBy('barangay')->orderBy('last_name')->cursor();
 
                 // Write Header
                 $this->writeHeader($sheet);
