@@ -10,6 +10,15 @@ import ConfirmModal from './components/ConfirmModal';
 import Toast, { ToastType } from './components/Toast';
 
 import { ViewType } from './types';
+import {
+  DashboardFallback,
+  RegistryFallback,
+  ApprovalFallback,
+  AccountFallback,
+  HistoryFallback,
+  ReportFallback,
+  GenericFallback,
+} from './shared/skeletons';
 
 const viewLoaders = {
   Dashboard: () => import('./components/Dashboard'),
@@ -37,15 +46,27 @@ const BatchPrint = lazy(viewLoaders.BatchPrint);
 const UserDashboard = lazy(viewLoaders.UserDashboard);
 const UserReview = lazy(viewLoaders.UserReview);
 
-// Shown while a split view chunk loads (first navigation only, cached after).
-const ViewFallback: React.FC = () => (
-  <div className="flex items-center justify-center py-24" role="status" aria-label="Loading view">
-    <div className="flex flex-col items-center gap-3">
-      <div className="w-10 h-10 border-4 border-blue-900/10 border-t-blue-900 rounded-full animate-spin" />
-      <p className="text-sm font-semibold text-slate-500">Loading…</p>
-    </div>
-  </div>
-);
+// Skeleton shown while a split view chunk loads — matched to the target
+// view so the layout is already in place when it arrives (no spinner, no
+// layout shift). These live in the eager bundle by design.
+const fallbackForView = (view: ViewType): React.FC => {
+  switch (view) {
+    case ViewType.DASHBOARD:
+      return DashboardFallback;
+    case ViewType.MEMBER_REGISTRY:
+      return RegistryFallback;
+    case ViewType.APPROVAL:
+      return ApprovalFallback;
+    case ViewType.ACCOUNT:
+      return AccountFallback;
+    case ViewType.HISTORY:
+      return HistoryFallback;
+    case ViewType.FINAL_REPORT:
+      return ReportFallback;
+    default:
+      return GenericFallback;
+  }
+};
 
 import { 
   ArrowLeft, 
@@ -250,7 +271,12 @@ const App: React.FC = () => {
   const renderView = () => {
     if (!currentUser) return null;
 
-    return <Suspense fallback={<ViewFallback />}>{renderViewInner()}</Suspense>;
+    const Fallback = fallbackForView(currentView);
+    return (
+      <Suspense fallback={<Fallback />}>
+        {renderViewInner()}
+      </Suspense>
+    );
   };
 
   const renderViewInner = () => {
@@ -373,7 +399,7 @@ const App: React.FC = () => {
           </div>
 
           <div className="ios-card p-6 md:p-10 shadow-ios-lg signup-entry-card">
-            <Suspense fallback={<ViewFallback />}>
+            <Suspense fallback={<GenericFallback />}>
               <AddMemberForm
                 notify={notify}
                 onSuccess={() => {
