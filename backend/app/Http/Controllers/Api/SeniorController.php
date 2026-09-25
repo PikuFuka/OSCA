@@ -609,7 +609,8 @@ class SeniorController extends Controller
             SeniorDocument::updateOrCreate(
                 ['senior_id' => $senior->id, 'document_type' => $request->documentType],
                 [
-                    'file_content' => null,
+                    // Empty string (not null): bytes live on disk (file_path).
+                    'file_content' => '',
                     'file_path' => $filePath,
                     'file_name' => $fileName,
                     'mime_type' => $file->getMimeType(),

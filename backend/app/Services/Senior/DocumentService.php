@@ -29,7 +29,9 @@ class DocumentService
 
         return SeniorDocument::updateOrCreate(
             ['senior_id'=>$seniorId,'document_type'=>$type],
-            ['file_content'=>null,'file_path'=>$path,'file_name'=>$fileName,'mime_type'=>$file->getMimeType(),'file_size'=>$file->getSize()]
+            // Empty string (not null): bytes live on disk (file_path). Stays valid
+            // on NOT NULL schemas that predate the nullable migration.
+            ['file_content'=>'','file_path'=>$path,'file_name'=>$fileName,'mime_type'=>$file->getMimeType(),'file_size'=>$file->getSize()]
         );
     }
 
@@ -44,7 +46,7 @@ class DocumentService
         }
         return SeniorDocument::updateOrCreate(
             ['senior_id'=>$seniorId,'document_type'=>$type],
-            ['file_content'=>null,'file_path'=>$path,'file_name'=>$fileName,'mime_type'=>$mime,'file_size'=>strlen($binary)]
+            ['file_content'=>'','file_path'=>$path,'file_name'=>$fileName,'mime_type'=>$mime,'file_size'=>strlen($binary)]
         );
     }
 
