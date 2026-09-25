@@ -15,6 +15,7 @@ import ConfirmModal from './ConfirmModal';
 import TransitionWrapper from './TransitionWrapper';
 import Skeleton from './Skeleton';
 import { FormSkeleton } from './skeletons';
+import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 
 interface FormProps {
   onSuccess: () => void;
@@ -739,7 +740,11 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center text-[10px] font-bold border border-slate-200 overflow-hidden shrink-0">
                               {senior.idPhoto ? (
-                                <img src={senior.idPhoto} alt={senior.name} className="w-full h-full object-cover" />
+                                <ProfilePhoto
+                                  src={senior.idPhoto}
+                                  name={senior.name}
+                                  fallback={<>{senior.name?.split(' ').map((n: string) => n[0]).join('')}</>}
+                                />
                               ) : (
                                 senior.name?.split(' ').map((n: string) => n[0]).join('')
                               )}

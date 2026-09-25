@@ -15,8 +15,35 @@ export const getFriendlyErrorByStatus = (status?: number) => {
   return 'Something went wrong. Please try again.';
 };
 
+/**
+ * Build a browser-usable URL for an authenticated backend resource
+ * (profile photos, documents). <img>/<a> tags cannot send Authorization
+ * headers, so the stored token is appended as ?token= — the same mechanism
+ * the backend explicitly supports for these media routes. data:/blob: URLs
+ * pass through untouched. Returns '' for empty input.
+ */
+export const authedUrl = (url?: string | null): string => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+  // Backend media paths are already root-absolute (they start with /api/).
+  // Resolve those against the page origin exactly like the browser would —
+  // prepending API_BASE_URL again would build /api/api/... URLs that 404.
+  // Bare filenames/relative paths are resolved against the API base instead.
+  const absolute =
+    url.startsWith('http') || url.startsWith('/api/')
+      ? url.startsWith('http')
+        ? url
+        : `${window.location.origin}${url}`
+      : `${API_BASE_URL.startsWith('http') ? API_BASE_URL : `${window.location.origin}${API_BASE_URL}`}${url.startsWith('/') ? url : `/${url}`}`;
+  const token = localStorage.getItem('auth_token');
+  return token ? `${absolute}${absolute.includes('?') ? '&' : '?'}token=${token}` : absolute;
+};
+
 export const api = axios.create({
   baseURL: API_BASE_URL,
+  // No request may hang forever: a hung flight held skeletons on screen
+  // indefinitely (notably under rapid refresh / view switching).
+  timeout: 30000,
   headers: {
     'Accept': 'application/json',
     'Content-Type': 'application/json',

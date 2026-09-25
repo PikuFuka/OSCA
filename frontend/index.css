@@ -239,6 +239,27 @@ main {
   .no-print {
     display: none !important;
   }
+  /* When the report sheet is present, it is the ONLY thing that may print.
+     Stray app-layout boxes (empty cards, section padding, view wrappers)
+     otherwise paginate into blank leading pages. Scoped by :has so ID-card
+     and batch printing (which carry .print-container instead) are untouched. */
+  body:has(.report-a4-sheet) > #root,
+  body:has(.report-a4-sheet) > #modal-root {
+    display: none !important;
+  }
+  /* Stray fullscreen overlays (modal backdrops, dropdown scrims) would print
+     as a dark tint — hide them, unless they carry print output inside
+     (.print-container ID sheets must survive). */
+  div[class*="fixed"][class*="inset-0"]:not(:has(.print-container)),
+  header[class*="sticky"],
+  aside {
+    display: none !important;
+  }
+  * {
+    animation: none !important;
+    transition: none !important;
+    backdrop-filter: none !important;
+  }
 }
 
 .shadow-sm,
@@ -431,6 +452,48 @@ main {
   }
   to {
     transform: scaleX(0);
+  }
+}
+
+/* Search result rows: soft rise-in with per-row stagger.
+   Parent sets --sr-index (0-based) per row; tbody re-mounts per result
+   set (React key) so the animation replays on every new search. */
+.search-row-in {
+  animation: searchRowIn 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(min(var(--sr-index, 0), 14) * 22ms);
+}
+
+@keyframes searchRowIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Search clear button: gentle pop-in */
+.search-clear-in {
+  animation: searchClearIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes searchClearIn {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-row-in,
+  .search-clear-in {
+    animation: none;
   }
 }
 

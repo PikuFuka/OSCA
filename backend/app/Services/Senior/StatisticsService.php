@@ -14,7 +14,7 @@ class StatisticsService
      */
     public function get(string $barangay = null, string $year = null): array
     {
-        $cacheKey = sprintf('stats:v2:%s:%s', $barangay && $barangay !== 'All Barangays' ? $barangay : 'all', $year && $year !== 'All Years' ? $year : 'all');
+        $cacheKey = sprintf('stats:v3:%s:%s', $barangay && $barangay !== 'All Barangays' ? $barangay : 'all', $year && $year !== 'All Years' ? $year : 'all');
 
         return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($barangay, $year) {
             $isAllYears = !$year || $year === 'All Years';
@@ -55,6 +55,18 @@ class StatisticsService
             $max = $heatmap->max('count') ?: 1;
             $heatmap->each(fn($s) => $s->intensity = $s->count / $max);
 
+            // Top 10 single ages by population (powers the Peak Ages leaderboard)
+            $topAges = (clone $populationQuery)
+                ->select('age', DB::raw('count(*) as count'))
+                ->whereNotNull('age')
+                ->groupBy('age')
+                ->orderByDesc('count')
+                ->orderBy('age')
+                ->limit(10)
+                ->get()
+                ->map(fn($r) => ['age' => (int) $r->age, 'count' => (int) $r->count])
+                ->values();
+
             $today = \Illuminate\Support\Carbon::today();
             $birthdaysToday = (clone $populationQuery)
                 ->whereMonth('date_of_birth', $today->month)
@@ -86,6 +98,7 @@ class StatisticsService
                 ],
                 'topBarangays' => $heatmap->take(5),
                 'allBarangayStats' => $heatmap,
+                'topAges' => $topAges,
             ];
         });
     }
@@ -94,6 +107,6 @@ class StatisticsService
     {
         // File driver has no tags; clear known keys pattern would require redis tags.
         // For file driver we rely on TTL; for redis, caller can use Cache::tags(['stats'])->flush()
-        Cache::forget('stats:v2:all:all');
+        Cache::forget('stats:v3:all:all');
     }
 }

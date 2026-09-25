@@ -12,6 +12,11 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // MySQL-only: ENUM modification. SQLite stores this as TEXT and
+        // accepts any value, so there is nothing to change there.
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
         Schema::table('seniors', function (Blueprint $table) {
             DB::statement("ALTER TABLE seniors MODIFY COLUMN pension_status ENUM('Indigent', 'Pensioner', 'National Social Pensioner', 'Local Social Pensioner', 'None') DEFAULT 'Indigent'");
         });
@@ -22,6 +27,9 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::getDriverName() !== 'mysql') {
+            return;
+        }
         Schema::table('seniors', function (Blueprint $table) {
             DB::statement("ALTER TABLE seniors MODIFY COLUMN pension_status ENUM('Indigent', 'Pensioner', 'National Social Pensioner', 'Local Social Pensioner') DEFAULT 'Indigent'");
         });

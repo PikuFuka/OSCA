@@ -13,7 +13,16 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\App\Http\Middleware\AuthenticateWithToken::class);
+        $middleware->alias([
+            'role' => \App\Http\Middleware\EnsureUserHasRole::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // API routes must never 302-redirect to a login page (e.g. for
+        // <img> tags without an Accept header) — always answer JSON 401.
+        $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, \Illuminate\Http\Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json(['message' => 'Unauthenticated.'], 401);
+            }
+        });
     })->create();

@@ -22,6 +22,7 @@ import { PendingRequest, ViewType } from '../types';
 import { requestsAPI, seniorsAPI } from '../services/api';
 import Skeleton from './Skeleton';
 import { ApprovalSkeleton } from './skeletons';
+import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 interface ApprovalViewProps {
     notify: (message: string, type: 'success' | 'error' | 'warning' | 'info') => void;
     setView?: (view: ViewType) => void;
@@ -77,7 +78,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
           barangay: r.senior?.barangay || 'N/A',
           rrn: r.senior?.rrn || '',
           emergency: r.senior?.emergency_name || '',
-          profilePicture: r.senior?.profile_photo_path ? `${import.meta.env.VITE_API_URL || '/api'}/../storage/${r.senior.profile_photo_path}` : '',
+          profilePicture: r.senior?.profile_photo_path ? `/api/storage/profiles/${String(r.senior.profile_photo_path).split('/').pop()}` : '',
           documents: (r.senior?.documents || []).map((d: any) => ({
             id: d.id,
             name: d.document_type || 'Document',
@@ -293,7 +294,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-100 to-slate-50 border border-slate-200/80 flex items-center justify-center overflow-hidden shrink-0">
                             {req.details.profilePicture ? (
-                              <img src={req.details.profilePicture} alt={req.name} className="w-full h-full object-cover" />
+                              <ProfilePhoto src={req.details.profilePicture} name={req.name} />
                             ) : (
                               <TableAvatar name={req.name} />
                             )}
@@ -468,10 +469,9 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
               <div className="flex items-center gap-4 p-4 bg-gradient-to-r from-slate-50 to-blue-50/30 rounded-2xl border border-slate-100/80 mb-6">
                 <div className="w-16 h-16 rounded-2xl bg-white border border-slate-200/80 flex items-center justify-center text-slate-500 overflow-hidden shrink-0 shadow-sm">
                   {selectedRequest.details.profilePicture ? (
-                    <img 
-                      src={selectedRequest.details.profilePicture} 
-                      alt={selectedRequest.name} 
-                      className="w-full h-full object-cover"
+                    <ProfilePhoto
+                      src={selectedRequest.details.profilePicture}
+                      name={selectedRequest.name}
                     />
                   ) : (
                     <span className="text-lg font-extrabold text-slate-400">

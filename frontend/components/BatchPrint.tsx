@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, Printer, X, Loader2, Plus, CheckCircle2, Trash2 } from 'lucide-react';
 import { SeniorCitizen, INITIAL_ID_CONFIG, CurrentUser } from '../types';
 import { seniorsAPI } from '../services/api';
 import Skeleton from './Skeleton';
 import { BatchPrintSkeleton } from './skeletons';
 import TransitionWrapper from './TransitionWrapper';
+import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 
 interface BatchPrintProps {
   currentUser: CurrentUser;
@@ -20,7 +22,7 @@ const StaticLabel = ({ text, config, className = "" }: { text: string, config: {
   </div>
 );
 
-const MAX_CARDS = 4;
+const MAX_CARDS = 12;
 const CARD_WIDTH = 480;
 const CARD_HEIGHT = 300;
 
@@ -106,12 +108,13 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
 
   const renderFrontCard = (senior: SeniorCitizen) => {
     const rawConfig = senior.idConfig || INITIAL_ID_CONFIG;
-    // Normalize dateIssued y coordinate if it was set below the underline (> 235)
+    // Honor the shared config verbatim (same values the registry preview and
+    // UserReview render) — only fall back when a value is missing entirely.
     const config = {
       ...rawConfig,
       dateIssued: {
         ...rawConfig.dateIssued,
-        y: (!rawConfig.dateIssued?.y || rawConfig.dateIssued.y > 235) ? 224 : rawConfig.dateIssued.y
+        y: rawConfig.dateIssued?.y ?? INITIAL_ID_CONFIG.dateIssued.y,
       }
     };
 
@@ -127,7 +130,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
         <div className="absolute inset-0 z-10">
           <div className="absolute" style={{ left: '12px', top: '139px', width: '125px', height: '127px', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {senior.idPhoto ? (
-              <img src={senior.idPhoto} className="w-full h-full object-cover" alt={senior.name} />
+              <ProfilePhoto src={senior.idPhoto} name={senior.name} alt={senior.name} />
             ) : null}
           </div>
           <div className="absolute inset-0 z-20">
@@ -308,7 +311,10 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
         )}
       </div>
 
-      {/* Print-only content */}
+      {/* Print-only content: portaled to <body> so app layout (h-screen,
+          overflow-hidden ancestors) can neither shrink nor clip it. Natural
+          flow paginates ~4 ID rows per A4 page: 12 cards = 3 pages, one job. */}
+      {createPortal(
       <div className="hidden print:block">
         <style>{`
           @media print {
@@ -319,20 +325,19 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
             body * { visibility: hidden; }
             .batch-print-area, .batch-print-area * { visibility: visible; }
             .batch-print-area {
-              position: absolute;
-              left: 0;
-              top: 0;
+              position: static;
               width: 100%;
-              display: flex !important;
-              flex-direction: column !important;
-              align-items: center !important;
+              display: block !important;
               padding: 0;
-              gap: 2mm;
             }
             .batch-row {
               display: flex;
               flex-direction: row;
+              justify-content: center;
               gap: 0;
+              break-inside: avoid;
+              page-break-inside: avoid;
+              margin-bottom: 4mm;
             }
             .batch-card {
               width: 3.5in;
@@ -372,7 +377,9 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
             );
           })}
         </div>
-      </div>
+      </div>,
+      document.body
+      )}
     </div>
   );
 };

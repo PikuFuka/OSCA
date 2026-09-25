@@ -6,3 +6,4 @@ export { default as TransitionWrapper } from '../../components/TransitionWrapper
 export { default as Header } from '../../components/Header';
 export { default as Sidebar } from '../../components/Sidebar';
 export { default as ErrorBoundary } from '../../components/ErrorBoundary';
+export { default as ProfilePhoto } from './ProfilePhoto';

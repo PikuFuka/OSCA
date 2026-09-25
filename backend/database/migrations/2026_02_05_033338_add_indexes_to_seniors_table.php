@@ -57,10 +57,19 @@ return new class extends Migration
 
     private function indexExists(string $table, string $indexName): bool
     {
-        return DB::table('information_schema.statistics')
-            ->where('table_schema', DB::raw('DATABASE()'))
-            ->where('table_name', $table)
-            ->where('index_name', $indexName)
-            ->exists();
+        try {
+            // information_schema is MySQL-only; on other drivers assume the
+            // index is missing so the portable Schema builder creates it.
+            if (DB::getDriverName() !== 'mysql') {
+                return false;
+            }
+            return DB::table('information_schema.statistics')
+                ->where('table_schema', DB::raw('DATABASE()'))
+                ->where('table_name', $table)
+                ->where('index_name', $indexName)
+                ->exists();
+        } catch (\Throwable $e) {
+            return false;
+        }
     }
 };

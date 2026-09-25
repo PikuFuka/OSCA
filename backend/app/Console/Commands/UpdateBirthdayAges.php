@@ -36,7 +36,7 @@ class UpdateBirthdayAges extends Command
         }
 
         if ($updated > 0) {
-            \Illuminate\Support\Facades\Cache::forget('stats:v2:all:all');
+            \Illuminate\Support\Facades\Cache::forget('stats:v3:all:all');
             if (\Illuminate\Support\Facades\Cache::has('seniors:cache_version')) {
                 \Illuminate\Support\Facades\Cache::increment('seniors:cache_version');
             } else {

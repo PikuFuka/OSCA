@@ -110,6 +110,12 @@ export const seniorsAPI = {
     return response.data;
   },
 
+  deletePhoto: async (id: string | number) => {
+    clearCache();
+    const response = await api.delete(`/seniors/${id}/photo`);
+    return response.data;
+  },
+
   uploadDocument: async (seniorId: string | number, file: File, type: string) => {
     clearCache();
     const formData = new FormData();

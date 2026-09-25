@@ -16,6 +16,6 @@ class RequestObserver
         // File driver: forget known index keys; with redis use tags
         Cache::forget('requests:pending:1:15');
         // Optionally flush senior stats if request approval changes senior status
-        Cache::forget('stats:v2:all:all');
+        Cache::forget('stats:v3:all:all');
     }
 }

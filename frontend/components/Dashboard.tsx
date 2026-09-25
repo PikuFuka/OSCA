@@ -1,7 +1,8 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import TransitionWrapper from './TransitionWrapper';
 import Skeleton from './Skeleton';
 import { DashboardSkeleton } from './skeletons';
+import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 import { useCountUp } from '../utils/useCountUp';
 import { 
   BarChart, 
@@ -152,6 +153,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   const [birthdaysData, setBirthdaysData] = useState<{ count: number; date: string; seniors: any[] } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const fetchIdRef = useRef(0);
 
   const years = useMemo(() => {
     const currentYear = new Date().getFullYear();
@@ -164,7 +166,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   }, []);
 
   const fetchStats = async () => {
-    if (!(window as any).isAuthenticated) return;
+    // Generation guard: rapid refreshes / filter changes must not let a
+    // stale flight overwrite fresh data or clear a newer skeleton.
+    const fetchId = ++fetchIdRef.current;
     setError(null);
     setLoading(true);
     try {
@@ -174,18 +178,24 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
         requestsAPI.getPending(1, 15, { fresh: true }),
         seniorsAPI.getBirthdays().catch(() => ({ count: 0, date: '', seniors: [] }))
       ]);
-      
+
+      // A newer fetch started while this one was in flight — drop the stale result.
+      if (fetchId !== fetchIdRef.current) return;
+       
       const accuratePendingCount = pendingData.total ?? pendingData.data?.length ?? 0;
       data.pending = accuratePendingCount;
 
       setStats(data);
       setBirthdaysData(birthdayRes);
     } catch (err: any) {
+      if (fetchId !== fetchIdRef.current) return;
       if (err.status !== 401) {
         setError('Failed to load analytical data.');
       }
     } finally {
-      setLoading(false);
+      if (fetchId === fetchIdRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -216,6 +226,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
       ageRanges: Array.isArray(stats.ageRanges) ? stats.ageRanges : [],
       genders: Array.isArray(stats.genders) ? stats.genders : [],
       topBarangays: Array.isArray(stats.topBarangays) ? stats.topBarangays : [],
+      topAges: Array.isArray(stats.topAges) ? stats.topAges : [],
       allBarangayStats: Array.isArray(stats.allBarangayStats) ? stats.allBarangayStats : []
     };
   }, [stats]);
@@ -230,6 +241,13 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
     data.monthlyStats.forEach((m: any) => { if (m.total > peakMonth.total) peakMonth = m; });
     
     return { avgReg, peakMonth };
+  }, [data]);
+
+  const peakAges = useMemo(() => {
+    if (!data) return [];
+    return [...(data.topAges || [])]
+      .sort((a: any, b: any) => (b.count || 0) - (a.count || 0))
+      .slice(0, 10);
   }, [data]);
 
   if (error && !stats) {
@@ -359,43 +377,32 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           </div>
         </div>
 
-        {/* Population Leaderboard (Supporting) */}
-        <div className="xl:col-span-4 bg-white border border-slate-200 flex flex-col h-[400px]">
-          <div className="p-5 border-b border-slate-100">
-            <h3 className="text-base font-bold text-slate-900">Barangay Concentration</h3>
-            <p className="text-xs text-slate-500 mt-1">Top demographics by volume.</p>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-0">
-            <table className="w-full text-left border-collapse">
-              <thead className="bg-slate-50 sticky top-0">
-                <tr>
-                  <th className="py-2.5 px-5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Rank</th>
-                  <th className="py-2.5 px-5 text-[10px] font-bold uppercase tracking-wider text-slate-500">Barangay</th>
-                  <th className="py-2.5 px-5 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Count</th>
-                  <th className="py-2.5 px-5 text-[10px] font-bold uppercase tracking-wider text-slate-500 w-24">Share</th>
-                </tr>
-              </thead>
-              <tbody>
-                {(data.topBarangays || []).map((b: any, i: number) => {
-                  const pct = data.totalMembers > 0 ? (b.count / data.totalMembers) * 100 : 0;
-                  return (
-                    <tr key={b.name} className="border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                      <td className="py-3 px-5 text-xs font-semibold text-slate-400">{i + 1}</td>
-                      <td className="py-3 px-5 text-xs font-bold text-slate-700">{b.name}</td>
-                      <td className="py-3 px-5 text-xs font-semibold text-slate-900 tabular-nums text-right">{formatNumber(b.count)}</td>
-                      <td className="py-3 px-5">
-                        <div className="flex items-center gap-2">
-                          <div className="w-full h-1.5 bg-slate-100 rounded-none overflow-hidden">
-                            <div className="h-full bg-systemBlue" style={{ width: `${pct}%` }}></div>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+        {/* Peak Ages (Supporting) */}
+        <div className="xl:col-span-4 bg-white border border-slate-200 p-6 flex flex-col h-[400px]">
+          <h3 className="text-base font-bold text-slate-900">Peak Ages</h3>
+          <p className="text-xs text-slate-500 mt-1 mb-6">Most common ages in the registry.</p>
+
+          <div className="flex-1 w-full min-h-0 min-w-0" style={{ minWidth: 0, minHeight: 0, width: '100%', height: '100%' }}>
+            {peakAges.length === 0 ? (
+              <div className="h-full w-full flex flex-col items-center justify-center bg-slate-50 border border-slate-100 text-slate-400">
+                <Users size={24} className="mb-2" />
+                <span className="text-xs font-semibold">No age data yet</span>
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+                <BarChart data={peakAges} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                  <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} />
+                  <YAxis type="category" dataKey="age" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10, fontWeight: 600}} width={30} />
+                  <RechartsTooltip content={<SimpleTooltip />} cursor={{fill: '#f8fafc'}} />
+                  <Bar dataKey="count" name="Members" barSize={14} radius={[0, 4, 4, 0]} isAnimationActive={true} animationDuration={900} animationEasing="ease-out">
+                    {peakAges.map((entry: any, index: number) => (
+                      <Cell key={`peak-${entry.age}`} fill={['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'][index % 5]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>
@@ -632,7 +639,15 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                       <div className="flex items-center gap-3.5 min-w-0 flex-1">
                         {senior.idPhoto || senior.profilePhotoPath ? (
                           <div className="w-12 h-12 rounded-full overflow-hidden shrink-0 border border-slate-200 shadow-2xs">
-                            <img src={senior.idPhoto || senior.profilePhotoPath} alt={displayName} className="w-full h-full object-cover" />
+                            <ProfilePhoto
+                              src={senior.idPhoto || senior.profilePhotoPath}
+                              name={displayName}
+                              fallback={
+                                <div className={`w-full h-full rounded-full flex items-center justify-center font-extrabold text-sm ${avatarColor}`}>
+                                  {initials}
+                                </div>
+                              }
+                            />
                           </div>
                         ) : (
                           <div className={`w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-sm shrink-0 border ${avatarColor} shadow-2xs`}>

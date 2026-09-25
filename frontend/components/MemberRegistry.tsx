@@ -7,6 +7,7 @@ import { createPortal } from 'react-dom';
 import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock, Edit2Icon, ChevronLeft, ChevronRight, Filter, ArrowUpDown } from 'lucide-react';
 import { BARANGAYS, SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } from '../types';
 import { seniorsAPI, activityLogsAPI } from '../services/api';
+import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 import ConfirmModal from './ConfirmModal';
 import {
   TableHeadCell,
@@ -926,6 +927,29 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     }
   };
 
+  const [photoConfirmOpen, setPhotoConfirmOpen] = useState(false);
+  const [isDeletingPhoto, setIsDeletingPhoto] = useState(false);
+
+  const confirmDeletePhoto = async () => {
+    if (!idGenerationSenior) return;
+    try {
+      setIsDeletingPhoto(true);
+      await seniorsAPI.deletePhoto(idGenerationSenior.id);
+      const targetOscaId = getMemberOscaId(idGenerationSenior);
+      setIdPhoto(null);
+      setSeniors(prev => prev.map(s => (getMemberOscaId(s) === targetOscaId ? { ...s, idPhoto: null } : s)));
+      setSelectedSeniorForView(prev =>
+        prev && getMemberOscaId(prev) === targetOscaId ? { ...prev, idPhoto: null } : prev
+      );
+      notify("Profile photo removed.", "success");
+      setPhotoConfirmOpen(false);
+    } catch (error: any) {
+      console.error(error); notify("Failed to remove photo.", "error");
+    } finally {
+      setIsDeletingPhoto(false);
+    }
+  };
+
   const closeIdModal = () => {
     if (isPhotoProcessing) return;
     stopWebcam();
@@ -1075,6 +1099,16 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-systemBlue">
                 <Loader2 size={14} className="animate-spin" />
               </span>
+            )}
+            {!isSearching && searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                aria-label="Clear search"
+                className="search-clear-in absolute right-3 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition-colors"
+              >
+                <X size={14} strokeWidth={2.5} />
+              </button>
             )}
             {!hasInitialLoaded && loading && (
               <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400">
@@ -1280,12 +1314,13 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   <TableHeadCell className="px-6 w-[14%]" align="right">Actions</TableHeadCell>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
-                {displayedSeniors.length > 0 ? displayedSeniors.map((senior) => {
+              <tbody key={`${debouncedSearch}|${filterBarangay}|${filterCategory}|${debouncedAgeMin}|${debouncedAgeMax}|${sortValue}|${page}`} className="divide-y divide-slate-50">
+                {displayedSeniors.length > 0 ? displayedSeniors.map((senior, idx) => {
                   return (
-                  <tr 
-                    key={senior.id} 
-                    className="group hover:bg-slate-50/60 transition-colors cursor-pointer"
+                  <tr
+                    key={senior.id}
+                    style={{ '--sr-index': idx } as React.CSSProperties}
+                    className="search-row-in group hover:bg-slate-50/60 transition-colors cursor-pointer"
                     onClick={() => handleViewDetails(senior)}
                   >
                     {/* Identity */}
@@ -1527,7 +1562,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                     
                     <div className="absolute inset-0 z-10">
                         <div className="absolute [left:12px] [top:139px] [width:125px] [height:127px] overflow-hidden flex items-center justify-center">
-                          {idPhoto && <img src={idPhoto} className="w-full h-full object-cover" />}
+                          {idPhoto && <ProfilePhoto src={idPhoto} name={formatIdDisplayName(idGenerationSenior)} />}
                         </div>
                         
                         <div className="absolute inset-0 z-20">
@@ -1634,7 +1669,12 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                           <canvas ref={canvasRef} className="hidden" width={400} height={400} />
                         </>
                       ) : idPhoto ? (
-                        <img src={idPhoto} alt="Member" className="w-full h-full object-cover" />
+                        <ProfilePhoto
+                          src={idPhoto}
+                          name={idGenerationSenior ? formatIdDisplayName(idGenerationSenior) : 'Member'}
+                          alt="Member"
+                          fallback={<User size={64} className="text-slate-400" />}
+                        />
                       ) : (
                         <User size={64} className="text-slate-400" />
                       )}
@@ -1711,6 +1751,16 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                         </div>
                       )}
                       
+                      {/* Remove existing photo */}
+                      {idPhoto && !isWebcamActive && (
+                        <button
+                          type="button"
+                          onClick={() => setPhotoConfirmOpen(true)}
+                          className="w-full py-3 bg-white border border-rose-200 text-rose-600 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-rose-50 transition-all"
+                        >
+                          <Trash2 size={18} /> Remove Photo
+                        </button>
+                      )}
                       {/* Explicit button to proceed on mobile if photo exists but user navigated back */}
                       {idPhoto && !isWebcamActive && (
                         <div className="space-y-2">
@@ -1761,7 +1811,15 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                                 {/* Photo Area inside the circular watermark box */}
                                 <div className="absolute [left:11px] [top:138px] [width:128px] [height:128px] overflow-hidden flex items-center justify-center">
                                   {idPhoto ? (
-                                    <img src={idPhoto} className="w-full h-full object-cover" />
+                                    <ProfilePhoto
+                                      src={idPhoto}
+                                      name={formatIdDisplayName(idGenerationSenior)}
+                                      fallback={
+                                        <div className="w-full h-full flex flex-col items-center justify-center p-2 opacity-10">
+                                          <User size={48} />
+                                        </div>
+                                      }
+                                    />
                                   ) : (
                                     <div className="w-full h-full flex flex-col items-center justify-center p-2 opacity-10">
                                       <User size={48} />
@@ -1899,7 +1957,17 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
             <div className="overflow-y-auto p-6 md:p-8">
               <div className="flex flex-col md:flex-row gap-8 mb-10 items-start">
                 {selectedSenior.idPhoto ? (
-                  <img src={selectedSenior.idPhoto} alt={selectedSenior.name} loading="lazy" className="w-24 h-24 md:w-32 md:h-32 rounded-2xl object-cover shadow-sm border border-slate-200 mx-auto md:mx-0 bg-slate-50" />
+                  <ProfilePhoto
+                    src={selectedSenior.idPhoto}
+                    name={selectedSenior.name}
+                    alt={selectedSenior.name}
+                    className="w-24 h-24 md:w-32 md:h-32 rounded-2xl object-cover shadow-sm border border-slate-200 mx-auto md:mx-0 bg-slate-50"
+                    fallback={
+                      <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-3xl md:text-4xl font-black shrink-0 border border-slate-200 shadow-sm mx-auto md:mx-0">
+                        {selectedSenior.name.split(' ').map(n => n[0]).join('')}
+                      </div>
+                    }
+                  />
                 ) : (
                   <div className="w-24 h-24 md:w-32 md:h-32 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center text-3xl md:text-4xl font-black shrink-0 border border-slate-200 shadow-sm mx-auto md:mx-0">
                     {selectedSenior.name.split(' ').map(n => n[0]).join('')}
@@ -2082,7 +2150,15 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                     <div className="lg:col-span-1 space-y-6">
                       <div className="aspect-square rounded-2xl bg-slate-50 border border-slate-200 shadow-sm overflow-hidden relative">
                         {selectedSeniorForView.idPhoto ? (
-                          <img src={selectedSeniorForView.idPhoto} alt="" className="w-full h-full object-cover" />
+                          <ProfilePhoto
+                            src={selectedSeniorForView.idPhoto}
+                            name={`${selectedSeniorForView.firstName || ''} ${selectedSeniorForView.lastName || ''}`.trim()}
+                            fallback={
+                              <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400 text-5xl font-black">
+                                {selectedSeniorForView.firstName?.[0]}{selectedSeniorForView.lastName?.[0]}
+                              </div>
+                            }
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center bg-slate-100 text-slate-400 text-5xl font-black">
                             {selectedSeniorForView.firstName?.[0]}{selectedSeniorForView.lastName?.[0]}
@@ -2251,6 +2327,18 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
         onConfirm={handleAction}
         onCancel={() => setConfirmState({ isOpen: false, type: null, senior: null })}
         loading={isProcessing}
+      />
+
+      {/* Confirm Photo Removal Modal */}
+      <ConfirmModal
+        isOpen={photoConfirmOpen}
+        title="Remove Profile Photo?"
+        message={`Are you sure you want to remove the profile photo${idGenerationSenior ? ` for ${formatIdDisplayName(idGenerationSenior)}` : ''}? The member record stays intact.`}
+        variant="danger"
+        confirmLabel="Remove Photo"
+        onConfirm={confirmDeletePhoto}
+        onCancel={() => setPhotoConfirmOpen(false)}
+        loading={isDeletingPhoto}
       />
     </div>
   );

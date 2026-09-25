@@ -54,6 +54,12 @@ backend/storage/app/private/*
 backend/public/storage
 backend/public/hot
 backend/public/build
+backend/public/app
+
+# Agent Tooling & Local-Only Outputs (never push)
+.superpowers/
+.playwright-mcp/
+docs/superpowers/
 
 # Database Exports & Local Data Files (PII Protection)
 *.sql

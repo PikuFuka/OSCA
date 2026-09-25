@@ -21,7 +21,11 @@ class RequestResource extends JsonResource
             'senior_osca_id' => $this->senior?->osca_id,
             'pending_data' => $pendingData,
             'details' => [
-                'profilePicture' => ($pendingData['profile_photo_path'] ?? $this->senior?->profile_photo_path) ? asset('storage/' . ($pendingData['profile_photo_path'] ?? $this->senior->profile_photo_path)) : null,
+                // Served by the authenticated /api/storage/profiles controller
+                // (the public /storage symlink is intentionally blocked).
+                'profilePicture' => ($photoPath = ($pendingData['profile_photo_path'] ?? $this->senior?->profile_photo_path))
+                    ? '/api/storage/profiles/' . basename($photoPath)
+                    : null,
                 'age' => $pendingData['age'] ?? $this->senior?->age,
                 'dateOfBirth' => $pendingData['dateOfBirth'] ?? $this->senior?->date_of_birth?->format('Y-m-d'),
                 'gender' => $pendingData['sex'] ?? $this->senior?->sex,

@@ -12,6 +12,10 @@ class RequestService
 {
     public function approve(SeniorRequest $req, ?string $oscaId, $actor): SeniorRequest
     {
+        if ($req->status !== 'Pending') {
+            abort(response()->json(['success' => false, 'message' => 'Only pending requests can be approved.'], 422));
+        }
+
         $senior = $req->senior;
         if ($oscaId) {
             $exists = Senior::where('osca_id', $oscaId)->whereNotNull('osca_id')->whereRaw("TRIM(osca_id) <> ''")->where('id','!=',$senior->id)->exists();
@@ -65,6 +69,10 @@ class RequestService
 
     public function reject(SeniorRequest $req, ?string $reason, $actor): SeniorRequest
     {
+        if ($req->status !== 'Pending') {
+            abort(response()->json(['success' => false, 'message' => 'Only pending requests can be rejected.'], 422));
+        }
+
         return DB::transaction(function() use ($req, $reason, $actor) {
             $senior = $req->senior;
             $req->update(['status'=>'Rejected','rejection_reason'=>$reason,'action_by'=>$actor->id]);

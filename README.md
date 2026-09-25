@@ -50,9 +50,9 @@ flowchart LR
   BE --> FS[Local Storage Photos & Documents]
 
   subgraph Production LAN Deployment
-    AP[Apache Web Server :80 / XAMPP]
-    AP --> SPA[Serves Built SPA from backend/public/app]
-    AP --> API[Handles API routes via Laravel backend/public]
+    SRV[Laravel on :8000 via php artisan serve --host]
+    SRV --> SPA[Serves Built SPA from backend/public/app]
+    SRV --> API[Handles API routes via Laravel backend/public]
   end
 ```
 
@@ -61,10 +61,11 @@ flowchart LR
   * Frontend Vite Dev Server runs at `http://localhost:3000` (or `3001` if busy).
   * Backend Laravel API runs at `http://127.0.0.1:8000`.
   * Vite proxy automatically routes `/api` calls to Laravel.
-* **Production / Apache Mode**:
-  * Apache serves the compiled single-page application from `backend/public/app`.
-  * Root URL (`/`) automatically redirects to `/app`.
-  * Accessible by other computers across the local office network via LAN IP (e.g. `http://192.168.1.50/app`).
+  * One-click start on Windows: run `APP\start.bat` (checks dependencies, boots `npm run dev`, opens the browser).
+* **Production / LAN Mode (single service)**:
+  * Build once with `npm run build:frontend` — the compiled SPA lands in `backend/public/app` (this folder is **not** committed to git; every fresh clone or transfer must rebuild it).
+  * Serve `backend/` with `php artisan serve --host=0.0.0.0 --port=8000`: one port serves both the SPA (`/app`, with `/` redirecting to it) and the API (`/api`).
+  * Accessible by other computers on the office network via the server's LAN IP (e.g. `http://192.168.1.100:8000/app`).
 
 ---
 
@@ -159,7 +160,9 @@ php artisan storage:link
 ```bash
 cd ../frontend
 npm install
+copy .env.example .env
 ```
+*(On macOS / Linux, use `cp .env.example .env`. Keep the default `VITE_API_URL=http://127.0.0.1:8000/api` for local development.)*
 
 ### Step 7: Launch System
 From the root `OSCA` directory:
@@ -169,6 +172,8 @@ npm run dev
 ```
 
 Open your browser at: **`http://localhost:3000`**
+
+> **Note:** `npm run dev` starts MySQL (via XAMPP's `mysqld.exe`), the Laravel API (`:8000`), and Vite (`:3000`) concurrently. It expects XAMPP at the default `C:\xampp` location — otherwise start MySQL from the XAMPP Control Panel first. On Windows you can also double-click `APP\start.bat` for a guided one-click launch.
 
 ---
 
@@ -183,19 +188,20 @@ When transferring the system to another office PC, laptop, or server, follow one
 Use this method when moving the system to a computer that has limited or no internet connection.
 
 #### Step 1: Clean Up Source Project on the Old Device
-Before copying the project to a USB flash drive, remove transient build folders to save gigabytes of space and prevent symlink corruption:
+Before copying the project to a USB flash drive, remove transient folders to save gigabytes of space and prevent symlink corruption:
 
 Run in PowerShell or Command Prompt from the project root:
 ```bash
-# Remove node_modules and vendor (they will be reinstalled or transferred cleanly)
+# Remove node_modules and vendor (they will be reinstalled cleanly)
 rd /s /q node_modules
 rd /s /q frontend\node_modules
 rd /s /q backend\vendor
 
-# Remove compiled dist and storage symlink
-rd /s /q frontend\dist
+# Remove compiled SPA output (rebuilt with `npm run build:frontend`) and storage symlink
+rd /s /q backend\public\app
 rd /s /q backend\public\storage
 ```
+Do **not** delete `backend/storage/app/public/` (citizen photos/documents) or `backend/.env` (copy its DB credentials manually — `.env` is never committed to git).
 
 #### Step 2: Export Database & Copy Uploaded Citizen Files
 1. **Export Database**:
@@ -206,7 +212,9 @@ rd /s /q backend\public\storage
    * Ensure `backend/storage/app/public/` is copied intact (this folder holds uploaded ID photos and verification documents).
 
 #### Step 3: Copy Folder to New Device
-Copy the entire `OSCA/` folder to the target computer (e.g. `C:\Users\<YourUsername>\Desktop\OSCA` or `C:\xampp\htdocs\OSCA`).
+Copy the entire `OSCA/` folder to the target computer (e.g. `C:\Users\<YourUsername>\Desktop\PROJECTS\OSCA`).
+
+> The compiled SPA (`backend/public/app`) is git-ignored and was removed in Step 1 — it is rebuilt in Step 4 below. `backend/.env` is also never in git: re-enter the DB credentials from the old device's `.env` when you create the new one.
 
 #### Step 4: Install & Initialize on the New Device
 On the new computer (make sure XAMPP, Node.js, and Composer are installed):
@@ -228,6 +236,7 @@ On the new computer (make sure XAMPP, Node.js, and Composer are installed):
    ```bash
    cd ../frontend
    npm install
+   copy .env.example .env
    npm run build
    ```
 5. **Start System**:
@@ -235,6 +244,7 @@ On the new computer (make sure XAMPP, Node.js, and Composer are installed):
    cd ..
    npm run dev
    ```
+   *(Build first: `npm run dev` serves the API on `:8000`, but `/app` only works after `npm run build` creates `backend/public/app`.)*
 
 ---
 
@@ -279,7 +289,11 @@ Use this method if both machines have internet access or are on the same local G
 5. Restore citizen uploaded files:
    * Paste the copied files into `backend/storage/app/public/`.
    * Run `php artisan storage:link`.
-6. Run the application:
+6. Build the frontend bundle (required — `backend/public/app` is git-ignored):
+   ```bash
+   cd ../frontend && npm install && copy .env.example .env && npm run build
+   ```
+7. Run the application:
    ```bash
    cd ..
    npm run dev
@@ -299,45 +313,35 @@ Whenever moving live senior records between machines:
 
 ---
 
-## 6. Production Deployment via Apache / XAMPP (Office LAN)
+## 6. Production Deployment on the Office LAN
 
-To run the system as a permanent office service accessible by multiple computers over LAN:
+To run the system as a permanent office service accessible by multiple computers over LAN (single service, no Apache configuration needed):
 
 ### Step 1: Build the Production Frontend
 From the root directory:
 ```bash
 npm run build:frontend
 ```
-This compiles the React app directly into `backend/public/app`.
+This compiles the React app directly into `backend/public/app` (git-ignored — rebuild after every `git pull` that changes frontend code).
 
 ### Step 2: Configure `backend/.env` for Production
 ```dotenv
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=http://YOUR_SERVER_LAN_IP
+APP_URL=http://YOUR_SERVER_LAN_IP:8000
 ```
-*(Example: `APP_URL=http://192.168.1.100`)*
+*(Example: `APP_URL=http://192.168.1.100:8000`. Keep `DB_*` pointing at the server's MySQL and `SANCTUM_STATEFUL_DOMAINS` including every host:port staff use.)*
 
-### Step 3: Configure Apache DocumentRoot in XAMPP
-Open `C:\xampp\apache\conf\extra\httpd-vhosts.conf` and add:
-```apache
-<VirtualHost *:80>
-    ServerName osca.local
-    DocumentRoot "C:/xampp/htdocs/OSCA/backend/public"
-    <Directory "C:/xampp/htdocs/OSCA/backend/public">
-        Options Indexes FollowSymLinks
-        AllowOverride All
-        Require all granted
-    </Directory>
-</VirtualHost>
-```
-
-### Step 4: Restart Apache & Open Firewall
-1. Restart Apache in the XAMPP Control Panel.
-2. In Windows Firewall &rarr; Allow an app &rarr; Allow Apache HTTP Server on Private Network.
-3. Access the system from any device on the network:
-   * From server: `http://localhost/app`
-   * From other PCs: `http://192.168.1.100/app`
+### Step 3: Serve on the LAN & Open Firewall
+1. From `backend/`, run:
+   ```bash
+   php artisan serve --host=0.0.0.0 --port=8000
+   ```
+   (Keep this window open, or run it as a scheduled task / service. The same port serves `/app` and `/api`.)
+2. In Windows Firewall &rarr; Allow an app &rarr; allow inbound TCP on port `8000` for Private networks.
+3. Access from any device on the network:
+   * From server: `http://localhost:8000/app`
+   * From other PCs: `http://192.168.1.100:8000/app`
 
 ---
 
@@ -359,9 +363,11 @@ When running `php artisan db:seed`, the following accounts are initialized:
 | :--- | :--- | :--- | :--- |
 | **Administrator** | `admin@osca.gov.ph` | `admin123` | Full access (Registry, Approvals, Accounts, System Logs, Database Backup) |
 | **Staff Member** | `staff@osca.gov.ph` | `staff123` | Operations (Registry, Approvals, Registration, Batch Print, Reports) |
+| **Print Station** | `print@osca.gov.ph` | `print123` | Staff role scoped for batch ID printing (opens the Batch Print view on login) |
 | **Senior Citizen** | OSCA ID (e.g. `24-0001`) | Set upon registration | Personal Portal (View Status, Digital ID Review, Update Request) |
 
 > **Important**: Change default administrator and staff passwords immediately after deployment in production.
+> Seeded accounts are created with `force_password_change`, so each one must set a new password on first login. Override the defaults non-interactively via `ADMIN_EMAIL` / `ADMIN_PASSWORD` (and `STAFF_*`, `PRINT_*`) in `backend/.env` before seeding.
 
 ---
 
@@ -370,8 +376,8 @@ When running `php artisan db:seed`, the following accounts are initialized:
 ### Root Workspace Commands
 ```bash
 npm run dev              # Starts MySQL + Laravel API + Vite Dev Server concurrently
-npm run build:frontend   # Compiles frontend SPA into backend/public/app for Apache
-npm run deploy:apache    # Full production build and setup for Apache
+npm run build:frontend   # Compiles frontend SPA into backend/public/app for LAN serving
+npm run deploy:apache    # Alias of build:frontend (kept for backward compatibility)
 ```
 
 ### Backend Commands (`cd backend`)
@@ -412,10 +418,17 @@ npm run test             # Runs Vitest unit tests
 * Vite will automatically assign port `3001` or `3002`. You can also close the competing application or specify a custom port in `frontend/vite.config.ts`.
 
 ### 5. Apache returns 503 / 404 on `/app`
-* The frontend production bundle has not been built yet. Run from project root:
+* The frontend production bundle has not been built yet (it is git-ignored). Run from project root:
   ```bash
   npm run build:frontend
   ```
+
+### 6. App shows stale content after an update
+* Hard-refresh the browser (`Ctrl+F5`). If the UI still looks old, rebuild (`npm run build:frontend`) and hard-refresh again — the bundle filename changes on every build, so a fresh HTML entry point always loads fresh assets.
+
+### 7. API calls fail with 401 after login, or downloads open a login page
+* The auth token in the browser is expired or was revoked: sign out and sign back in.
+* In development, make sure `frontend/.env` has `VITE_API_URL=http://127.0.0.1:8000/api` and `backend/.env` lists the dev origins in `SANCTUM_STATEFUL_DOMAINS`.
 
 ---
 

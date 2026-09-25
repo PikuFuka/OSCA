@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight, Inbox } from 'lucide-react';
+import { authedUrl } from '../core/api/client';
 
 export const scrollMainToTop = () => {
   document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
@@ -66,14 +67,17 @@ export const TableAvatar = ({
   photo?: string;
   className?: string;
 }) => {
-  if (photo) {
+  const [failed, setFailed] = useState(false);
+  const url = authedUrl(photo);
+  if (url && !failed) {
     return (
       <img
-        src={photo}
+        src={url}
         alt={name}
         loading="lazy"
         width={36}
         height={36}
+        onError={() => setFailed(true)}
         className={`w-9 h-9 rounded-xl object-cover border border-slate-200 shadow-sm shrink-0 bg-slate-50 ${className}`}
       />
     );

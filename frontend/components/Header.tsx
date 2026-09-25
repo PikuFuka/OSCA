@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { CurrentUser, BARANGAYS, ViewType } from '../types';
 import { requestsAPI, activityLogsAPI, seniorsAPI } from '../services/api';
+import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 
 interface NotificationItem {
   id: string;
@@ -479,7 +480,12 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
                               isActive ? 'bg-systemBlue/10 text-systemBlue' : 'bg-slate-100 group-hover:bg-systemBlue/10 group-hover:text-systemBlue'
                             }`}>
                               {senior.idPhoto ? (
-                                <img src={senior.idPhoto} alt="" className="w-full h-full rounded-full object-cover" />
+                                <ProfilePhoto
+                                  src={senior.idPhoto}
+                                  name={`${senior.first_name || senior.firstName || ''} ${senior.last_name || senior.lastName || senior.name || ''}`.trim()}
+                                  className="w-full h-full rounded-full object-cover"
+                                  fallback={<User size={14} />}
+                                />
                               ) : (
                                 <User size={14} />
                               )}
@@ -725,10 +731,14 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
             <button onClick={() => toggleDropdown('profile')} className="flex items-center gap-3 cursor-pointer p-1.5 pr-3 rounded-[16px] hover:bg-slate-50 border border-transparent hover:border-slate-200/60 transition-all text-left group">
                 <div className="h-10 w-10 bg-slate-100 border border-slate-200/60 rounded-[12px] flex items-center justify-center relative overflow-hidden shrink-0 shadow-sm group-hover:shadow-md transition-shadow">
                    {currentUser.idPhoto ? (
-                     <img src={currentUser.idPhoto} alt="Profile" className="w-full h-full object-cover" />
-                   ) : (
-                     <User size={18} className="text-slate-600" />
-                   )}
+                     <ProfilePhoto
+                       src={currentUser.idPhoto}
+                       name={currentUser.name}
+                       fallback={<User size={18} className="text-slate-600" />}
+                     />
+                    ) : (
+                      <User size={18} className="text-slate-600" />
+                    )}
                    <div className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></div>
                 </div>
                 <div className="hidden md:flex flex-col">

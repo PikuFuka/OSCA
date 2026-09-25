@@ -6,6 +6,7 @@ import { BARANGAYS } from '../types';
 import { usersAPI, seniorsAPI } from '../services/api';
 import { CurrentUser } from '../types';
 import ConfirmModal from './ConfirmModal';
+import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 import Skeleton from './Skeleton';
 import { AccountSkeleton } from './skeletons';
 import {
@@ -486,7 +487,11 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-100 text-blue-900 rounded-xl flex items-center justify-center overflow-hidden shrink-0">
                   {selectedAccount.type === 'Senior' && selectedAccount.originalData.idPhoto ? (
-                    <img src={selectedAccount.originalData.idPhoto} alt="" className="w-full h-full object-cover" />
+                    <ProfilePhoto
+                      src={selectedAccount.originalData.idPhoto}
+                      name={selectedAccount.id}
+                      fallback={<User size={24} />}
+                    />
                   ) : selectedAccount.type === 'User' ? (
                     <UserCog size={24} /> 
                   ) : (

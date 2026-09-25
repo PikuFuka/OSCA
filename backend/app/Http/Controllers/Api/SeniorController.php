@@ -323,10 +323,16 @@ class SeniorController extends Controller
     }
 
     /**
-     * Get a single senior by ID
+     * Get a single senior by ID.
+     * Senior-citizen tokens may only view their OWN record.
      */
-    public function show($id)
+    public function show(Request $request, $id)
     {
+        $actor = $request->user();
+        if ($actor instanceof Senior && $actor->osca_id !== (string) $id) {
+            abort(403, 'Forbidden.');
+        }
+
         $senior = Senior::with(['familyMembers', 'documents' => function($query) {
                             $query->select(['id', 'senior_id', 'document_type', 'file_path', 'file_name', 'mime_type', 'file_size']);
                         }])
@@ -375,10 +381,32 @@ class SeniorController extends Controller
     }
 
     /**
-     * Get profile photo directly (bypassing public link issues)
+     * Get profile photo. Authentication is required (route-level
+     * auth:sanctum, Bearer header or legacy ?token= for <img> tags).
+     * Senior-citizen tokens may only fetch their OWN photo; the filename
+     * is strictly validated so no path outside profile_photos is reachable.
      */
-    public function getProfilePhoto($filename)
+    public function getProfilePhoto(Request $request, $filename)
     {
+        // Explicit 401 (instead of the default login redirect) so API and
+        // <img> clients get a machine-readable unauthenticated response.
+        if (!auth('sanctum')->check() && !auth()->check()) {
+            return response()->json(['message' => 'Unauthenticated.'], 401);
+        }
+
+        $filename = basename((string) $filename);
+        if (!preg_match('/^[A-Za-z0-9][A-Za-z0-9._-]*\.(png|jpe?g|webp|gif)$/i', $filename)) {
+            abort(404);
+        }
+
+        $actor = $request->user();
+        if ($actor instanceof Senior) {
+            $own = $actor->profile_photo_path ? basename($actor->profile_photo_path) : null;
+            if ($own === null || !hash_equals($own, $filename)) {
+                abort(403, 'Forbidden.');
+            }
+        }
+
         $path = storage_path('app/public/profile_photos/' . $filename);
         
         if (!file_exists($path)) {
@@ -635,28 +663,45 @@ class SeniorController extends Controller
 
         try {
             $photoData = $request->photo;
-            $filename = 'profile_' . $senior->osca_id . '_' . time() . '.png';
             $image = null;
             $path = null;
 
             if (str_starts_with($photoData, 'data:image')) {
                 // Handle Base64
                 $imageParts = explode(";base64,", $photoData);
+                if (count($imageParts) !== 2 || $imageParts[1] === '') {
+                    return response()->json(['success' => false, 'message' => 'Invalid photo format'], 422);
+                }
                 $image = str_replace(' ', '+', $imageParts[1]);
-                $binaryImage = base64_decode($image);
-                
-                // Delete old photo if it exists
-                if ($senior->profile_photo_path) {
-                    \Illuminate\Support\Facades\Storage::disk('public')->delete($senior->profile_photo_path);
+                $binaryImage = base64_decode($image, true);
+                if ($binaryImage === false || $binaryImage === '') {
+                    return response()->json(['success' => false, 'message' => 'Invalid photo data. Please try again.'], 422);
                 }
 
+                // Sniff the real image type (uploads may be JPEG/WebP despite the .png habit)
+                $sniffed = (new \finfo(FILEINFO_MIME_TYPE))->buffer($binaryImage) ?: 'image/png';
+                $allowed = ['image/png' => 'png', 'image/jpeg' => 'jpg', 'image/webp' => 'webp', 'image/gif' => 'gif'];
+                if (!isset($allowed[$sniffed])) {
+                    return response()->json(['success' => false, 'message' => 'Invalid photo format. Only PNG, JPEG, WebP or GIF images are accepted.'], 422);
+                }
+                $filename = 'profile_' . $senior->osca_id . '_' . time() . '.' . $allowed[$sniffed];
+                $mime = $sniffed;
+
+                // Write-then-delete: the new file must exist on disk BEFORE the old
+                // one is removed, so a storage failure can never orphan the record.
                 \Illuminate\Support\Facades\Storage::disk('public')->put('profile_photos/' . $filename, $binaryImage);
                 $path = 'profile_photos/' . $filename;
             } else {
                 return response()->json(['success' => false, 'message' => 'Invalid photo format'], 422);
             }
 
+            $oldPath = $senior->profile_photo_path;
             $senior->update(['profile_photo_path' => $path]);
+
+            // Old file is removed only after the new path is persisted.
+            if ($oldPath && $oldPath !== $path) {
+                \Illuminate\Support\Facades\Storage::disk('public')->delete($oldPath);
+            }
 
             // Also save to documents as idPicture — filesystem first
             $docFilePath = "documents/{$senior->id}/" . time() . "_idPicture_{$filename}";
@@ -670,10 +715,12 @@ class SeniorController extends Controller
             SeniorDocument::updateOrCreate(
                 ['senior_id' => $senior->id, 'document_type' => 'idPicture'],
                 [
-                    'file_content' => null,
+                    // Empty string (not null): the bytes live on disk (file_path).
+                    // Stays valid on NOT NULL schemas that predate the nullable migration.
+                    'file_content' => '',
                     'file_path' => $docFilePath,
                     'file_name' => $filename,
-                    'mime_type' => 'image/png',
+                    'mime_type' => $mime,
                     'file_size' => strlen($binaryImage),
                 ]
             );
@@ -700,6 +747,32 @@ class SeniorController extends Controller
     }
 
     /**
+     * Remove a senior's profile photo (file + DB path + idPicture document copy).
+     * Idempotent: succeeds even when there is no photo to remove.
+     */
+    public function deletePhoto(Request $request, $id)
+    {
+        $senior = Senior::where('osca_id', $id)->firstOrFail();
+
+        if ($senior->profile_photo_path) {
+            \Illuminate\Support\Facades\Storage::disk('public')->delete($senior->profile_photo_path);
+            $senior->update(['profile_photo_path' => null]);
+        }
+
+        $idPicture = SeniorDocument::where('senior_id', $senior->id)
+            ->where('document_type', 'idPicture')
+            ->first();
+        if ($idPicture) {
+            $idPicture->delete(); // deleting hook removes the document file copy
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile photo removed successfully.',
+        ]);
+    }
+
+    /**
      * Get document content
      */
     public function getDocument(Request $request, $seniorId, $documentId)
@@ -720,6 +793,12 @@ class SeniorController extends Controller
         }
 
         $senior = $this->findSeniorByIdentifier($seniorId);
+
+        // Senior-citizen tokens may only open their OWN documents.
+        $actor = $request->user() ?? auth()->user();
+        if ($actor instanceof Senior && $senior->id !== $actor->id) {
+            abort(403, 'Forbidden.');
+        }
 
         $document = SeniorDocument::where('id', $documentId)
                                   ->where('senior_id', $senior->id)
@@ -895,7 +974,7 @@ class SeniorController extends Controller
         }
 
         if ($updated > 0) {
-            Cache::forget('stats:v2:all:all');
+            Cache::forget('stats:v3:all:all');
             if (Cache::has('seniors:cache_version')) {
                 Cache::increment('seniors:cache_version');
             } else {

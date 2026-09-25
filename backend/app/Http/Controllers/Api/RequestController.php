@@ -82,6 +82,12 @@ class RequestController extends Controller
             ], 404);
         }
 
+        // Senior-citizen tokens may only file update requests for themselves.
+        $actor = $request->user();
+        if ($actor instanceof Senior && $senior->id !== $actor->id) {
+            return response()->json(['success' => false, 'message' => 'Forbidden.'], 403);
+        }
+
         // Create an update request with the proposed changes stored as pending_data
         $pendingData = $validated;
 
@@ -152,6 +158,8 @@ class RequestController extends Controller
                 'success' => true,
                 'message' => $seniorRequest->type === 'Information Update' ? 'Update approved – member record has been updated.' : 'New application approved – member is now active.',
             ]);
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return response()->json(['success'=>false,'message'=>'Approval failed: '.$e->getMessage()], 500);
         }
@@ -166,6 +174,8 @@ class RequestController extends Controller
         try {
             $service->reject($seniorRequest, $request->validated()['reason'] ?? null, $request->user());
             return response()->json(['success'=>true,'message'=>'Request rejected']);
+        } catch (\Illuminate\Http\Exceptions\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             return response()->json(['success'=>false,'message'=>'Rejection failed: '.$e->getMessage()], 500);
         }

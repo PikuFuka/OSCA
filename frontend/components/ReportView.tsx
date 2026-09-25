@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import TransitionWrapper from './TransitionWrapper';
+import { createPortal } from 'react-dom';
 import { 
   FileSpreadsheet, 
   ChevronRight, 
@@ -532,13 +533,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               </div>
             </div>
 
-            {/* Print Header for offline printing */}
-            <div className="hidden print:block mb-8 mt-4 text-center">
-              <h2 className="text-2xl font-black uppercase text-slate-900">New Registered Seniors</h2>
-              <p className="text-sm font-bold text-slate-600 mt-1">{selectedBrgy}</p>
-            </div>
-
-            <div className="overflow-x-auto print:overflow-visible">
+            <div className="overflow-x-auto print:hidden">
               <table className="w-full text-left">
                 <thead className="sticky top-0 z-[2] print:static bg-slate-50 border-b border-slate-200">
                   <tr className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
@@ -586,6 +581,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             </div>
 
             {!loading && (
+              <div className="print:hidden">
               <TablePagination
                 page={staticPage}
                 totalPages={Math.max(1, Math.ceil(newlyRegisteredData.length / itemsPerPage))}
@@ -595,6 +591,109 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                 total={newlyRegisteredData.length}
                 noun="seniors"
               />
+              </div>
+            )}
+
+            {/* Print-only report: portaled to <body> so no screen-layout
+                ancestor (max-width, padding, overflow) can shrink or clip it.
+                A4 sheet, natural page flow, repeating header. */}
+            {createPortal(
+            <div className="hidden print:block report-a4-sheet w-full">
+              <style>{`
+                @page report-a4 {
+                  size: A4;
+                  margin: 0 0 0.4in 0;
+                  @bottom-right {
+                    content: 'Page ' counter(page) ' of ' counter(pages);
+                    font-size: 9px;
+                    color: #64748b;
+                    font-weight: 600;
+                  }
+                }
+                .report-a4-sheet { page: report-a4; }
+              `}</style>
+              {(() => {
+                const generated = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+                return (
+                  <>
+                    {/* Branded header band (first page) */}
+                    <div className="relative overflow-hidden bg-[#dbe9fb] px-6 pt-8 pb-6 text-center">
+                      <div className="absolute -left-16 -top-24 h-48 w-72 rounded-full bg-white/50" />
+                      <div className="absolute -right-20 -top-28 h-56 w-80 rounded-full bg-white/40" />
+                      <div className="absolute -left-10 top-6 h-40 w-64 rounded-full bg-[#bcd6f5]/60" />
+                      <div className="absolute -right-16 top-2 h-44 w-72 rounded-full bg-[#bcd6f5]/50" />
+                      <div className="relative">
+                        <h2 className="text-[26px] font-black uppercase tracking-tight text-[#0b2a5b]">
+                          New Registered Seniors
+                        </h2>
+                        <p className="text-base font-extrabold text-[#0b2a5b] mt-1">{selectedBrgy}</p>
+                        <p className="text-xs font-semibold text-slate-600 mt-1">
+                          Total: {newlyRegisteredData.length} member{newlyRegisteredData.length === 1 ? '' : 's'} · Generated {generated}
+                        </p>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 h-1.5 bg-[#2b60c4]" />
+                    </div>
+
+                    <div className="px-4 pb-2">
+                    <table className="w-full text-left border-collapse">
+                      <thead className="print:table-header-group">
+                        <tr className="bg-[#2b60c4] text-[10px] font-black tracking-wider text-white uppercase">
+                          <th className="px-2 py-2.5 text-center w-8 border border-[#2b60c4]">#</th>
+                          <th className="px-2 py-2.5 text-left border border-[#2b60c4]">Full Name</th>
+                          <th className="px-2 py-2.5 text-left w-[26%] border border-[#2b60c4]">Address</th>
+                          <th className="px-2 py-2.5 text-center border border-[#2b60c4]">Sex</th>
+                          <th className="px-2 py-2.5 text-center border border-[#2b60c4]">Birthday</th>
+                          <th className="px-2 py-2.5 text-center border border-[#2b60c4]">Age</th>
+                          <th className="px-2 py-2.5 text-center border border-[#2b60c4]">OSCA ID</th>
+                          <th className="px-2 py-2.5 text-center border border-[#2b60c4]">RRN No</th>
+                          <th className="px-2 py-2.5 text-center border border-[#2b60c4]">Pension</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {newlyRegisteredData.length > 0 ? (
+                          newlyRegisteredData.map((item, idx) => {
+                            const rowNo = idx + 1;
+                            const zebra = rowNo % 2 === 0 ? 'bg-[#eaf2fd]' : 'bg-white';
+                            return (
+                              <tr key={`print-new-${item.id}`} className={`${zebra} break-inside-avoid`}>
+                                <td className="px-2 py-2 text-center text-[11px] font-semibold text-slate-700 tabular-nums border border-slate-200">{rowNo}</td>
+                                <td className="px-2 py-2 border border-slate-200">
+                                  <p className="text-[10px] font-extrabold text-slate-900 uppercase leading-tight">{item.name}</p>
+                                  <p className="text-[8px] font-semibold text-slate-500 uppercase tracking-wider">{item.barangay || '-'}</p>
+                                </td>
+                                <td className="px-2 py-2 text-[9px] font-medium text-slate-700 uppercase leading-snug border border-slate-200">{item.streetAddress || '-'}</td>
+                                <td className="px-2 py-2 text-center text-[10px] font-medium text-slate-700 border border-slate-200">{(item as any).sex || item.gender || '-'}</td>
+                                <td className="px-2 py-2 text-center text-[10px] font-medium text-slate-700 tabular-nums whitespace-nowrap border border-slate-200">{formatDate(item.dateOfBirth)}</td>
+                                <td className="px-2 py-2 text-center text-[11px] font-black text-slate-900 tabular-nums border border-slate-200">{item.age ?? '-'}</td>
+                                <td className="px-2 py-2 text-center text-[9px] font-semibold text-slate-700 font-mono tabular-nums whitespace-nowrap border border-slate-200">{item.osca_id || item.oscaId || '-'}</td>
+                                <td className="px-2 py-2 text-center text-[9px] font-medium text-slate-600 tabular-nums border border-slate-200">{item.rrn || '-'}</td>
+                                <td className="px-2 py-2 text-center text-[9px] font-bold text-slate-700 uppercase whitespace-nowrap border border-slate-200">{item.pensionStatus || 'None'}</td>
+                              </tr>
+                            );
+                          })
+                        ) : (
+                          <tr>
+                            <td colSpan={9} className="px-2 py-8 text-center text-xs font-semibold text-slate-500">
+                              No newly registered records found for this filter.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+
+                    <div className="mt-6 flex items-end justify-between text-[10px] font-semibold text-slate-600 break-inside-avoid">
+                      <p>Total: {newlyRegisteredData.length} member{newlyRegisteredData.length === 1 ? '' : 's'}</p>
+                      <div className="text-right">
+                        <div className="border-t border-slate-900 w-48 ml-auto mb-1" />
+                        <p>Authorized Signature</p>
+                      </div>
+                    </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>,
+            document.body
             )}
           </div>
           )}

@@ -10,6 +10,7 @@ import { Loader2 } from 'lucide-react';
 import Skeleton from './Skeleton';
 import { UserReviewSkeleton } from './skeletons';
 import TransitionWrapper from './TransitionWrapper';
+import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 
 interface UserReviewProps {
   currentUser: CurrentUser;
@@ -153,7 +154,15 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
                       {/* Photo Area inside the circular watermark box */}
                       <div className="absolute [left:13px] [top:139px] [width:125px] [height:127px] overflow-hidden flex items-center justify-center">
                         {memberData.idPhoto ? (
-                          <img src={memberData.idPhoto} className="w-full h-full object-cover" />
+                          <ProfilePhoto
+                            src={memberData.idPhoto}
+                            name={memberData.name}
+                            fallback={
+                              <div className="w-full h-full flex flex-col items-center justify-center p-2 opacity-10 bg-slate-200">
+                                <User size={48} />
+                              </div>
+                            }
+                          />
                         ) : (
                           <div className="w-full h-full flex flex-col items-center justify-center p-2 opacity-10 bg-slate-200">
                             <User size={48} />
@@ -244,7 +253,12 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
           <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm flex flex-col md:flex-row items-center gap-8">
             <div className="w-32 h-32 rounded-[2rem] bg-slate-100 text-slate-400 flex items-center justify-center text-4xl font-black shrink-0 border-4 border-white shadow-lg shadow-slate-200 overflow-hidden">
                 {memberData.idPhoto ? (
-                  <img src={memberData.idPhoto} alt={memberData.name} className="w-full h-full object-cover" />
+                  <ProfilePhoto
+                    src={memberData.idPhoto}
+                    name={memberData.name}
+                    alt={memberData.name}
+                    fallback={<>{memberData.name.charAt(0)}</>}
+                  />
                 ) : (
                   memberData.name.charAt(0)
                 )}

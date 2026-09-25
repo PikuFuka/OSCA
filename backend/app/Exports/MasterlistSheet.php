@@ -44,6 +44,10 @@ class MasterlistSheet implements WithTitle, WithEvents
 
     public function title(): string
     {
+        if ($this->barangay && $this->barangay !== 'All Barangays') {
+            $name = substr('Masterlist - ' . $this->barangay, 0, 31);
+            return preg_replace('/[\\\\\/\?\*\[\]\:]/', '', $name);
+        }
         return 'Masterlist of Pagsanjan';
     }
 
@@ -105,6 +109,7 @@ class MasterlistSheet implements WithTitle, WithEvents
         $sheet->mergeCells('A5:T5');
         $title = 'SENIOR CITIZENS MASTERLIST';
         if ($this->year) $title .= ' - ' . $this->year;
+        if ($this->barangay && $this->barangay !== 'All Barangays') $title .= ' - ' . mb_strtoupper($this->barangay);
         $sheet->setCellValue('A5', $title);
         $sheet->getStyle('A5')->getFont()->setBold(true)->setSize(14);
         $sheet->getStyle('A5')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);

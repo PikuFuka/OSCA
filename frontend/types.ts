@@ -53,7 +53,7 @@ export const INITIAL_ID_CONFIG: IdConfig = {
   age: { x: 420, y: 174.2, fontSize: 14 },
   dob: { x: 245, y: 195.2, fontSize: 14 },
   gender: { x: 405, y: 195.2, fontSize: 14 },
-  dateIssued: { x: 164, y: 254, fontSize: 14 },
+  dateIssued: { x: 165, y: 254, fontSize: 14 },
   id: { x: 70, y: 273.5, fontSize: 16 }
 };
 

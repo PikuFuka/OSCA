@@ -89,7 +89,7 @@ class AuthController extends Controller
                     'name' => $senior->full_name,
                     'role' => 'Senior',
                     'barangay' => $senior->barangay,
-                    'idPhoto' => $senior->profile_photo_path ? asset('storage/' . $senior->profile_photo_path) : null,
+                    'idPhoto' => $senior->profile_photo_path ? '/api/storage/profiles/' . basename($senior->profile_photo_path) : null,
                     'force_password_change' => (bool) $senior->force_password_change,
                 ],
                 'token' => $token,
