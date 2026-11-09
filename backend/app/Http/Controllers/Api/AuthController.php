@@ -32,10 +32,9 @@ class AuthController extends Controller
             ]);
         }
 
-        // Try to find admin/staff user by email or ID
-        $user = User::where('email', $identifier)
-                    ->orWhere('id', $identifier)
-                    ->first();
+        // Try to find admin/staff user by email only. Numeric user IDs are
+        // never accepted as identifiers (account enumeration hardening).
+        $user = User::where('email', $identifier)->first();
 
         if ($user && Hash::check($request->password, $user->password)) {
             // Update last active

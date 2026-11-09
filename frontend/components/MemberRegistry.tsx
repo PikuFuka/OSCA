@@ -89,7 +89,7 @@ const getSelfieSegmentationInstance = async () => {
   if (!selfieSegmentationLoader) {
     selfieSegmentationLoader = import('@mediapipe/selfie_segmentation').then(async mod => {
       const selfieSegmentation = new mod.SelfieSegmentation({
-        locateFile: (file) => `/mediapipe/selfie_segmentation/${file}`
+        locateFile: (file) => `${import.meta.env.BASE_URL}mediapipe/selfie_segmentation/${file}`
       });
 
       selfieSegmentation.setOptions({
@@ -865,7 +865,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   const processPhotoWithWhiteBackground = async (source: string): Promise<string> => {
     try {
       const optimizedSource = await resizeImageForProcessing(source, PHOTO_PROCESS_MAX_DIMENSION);
-      return compositeWithWhiteUsingMask(optimizedSource);
+      return await compositeWithWhiteUsingMask(optimizedSource);
     } catch (error) {
       return flattenImageOnWhite(source);
     }

@@ -11,6 +11,7 @@ export const getFriendlyErrorByStatus = (status?: number) => {
   if (status === 403) return 'You do not have permission to do that action.';
   if (status === 404) return 'The requested record was not found.';
   if (status === 422) return 'Some information is invalid. Please review and try again.';
+  if (status === 429) return 'Too many attempts. Please wait a minute and try again.';
   if (status === 500) return 'Server is temporarily unavailable. Please try again in a moment.';
   return 'Something went wrong. Please try again.';
 };

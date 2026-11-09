@@ -19,7 +19,7 @@ use App\Http\Controllers\Api\ReportController;
 Route::get('/login', function() {
     return response()->json(['message' => 'Unauthenticated.'], 401);
 })->name('login');
-Route::post('/login', [AuthController::class, 'login']);
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
 Route::post('/register', [SeniorController::class, 'store']);
 // Public endpoint to fetch the next available OSCA ID for registration
 Route::get('/seniors/next-id', [SeniorController::class, 'getNextId']);

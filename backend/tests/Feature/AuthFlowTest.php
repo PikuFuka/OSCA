@@ -93,6 +93,37 @@ class AuthFlowTest extends TestCase
         $response->assertJsonStructure(['token']);
     }
 
+    public function test_login_by_numeric_user_id_is_rejected(): void
+    {
+        $staff = $this->makeStaff();
+
+        // Numeric IDs must never work as login identifiers (enumeration +
+        // trivially guessable usernames) — email only for staff accounts.
+        $response = $this->postJson('/api/login', [
+            'identifier' => (string) $staff->id,
+            'password' => 'password123',
+        ]);
+
+        $response->assertStatus(422);
+    }
+
+    public function test_login_is_throttled_after_repeated_failures(): void
+    {
+        $staff = $this->makeStaff();
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->postJson('/api/login', [
+                'email' => $staff->email,
+                'password' => 'wrong-password',
+            ])->assertStatus(422);
+        }
+
+        $this->postJson('/api/login', [
+            'email' => $staff->email,
+            'password' => 'wrong-password',
+        ])->assertStatus(429);
+    }
+
     public function test_me_returns_staff_profile(): void
     {
         $staff = $this->makeStaff();

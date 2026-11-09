@@ -8,6 +8,7 @@ describe('getFriendlyErrorByStatus', () => {
     expect(getFriendlyErrorByStatus(403)).toBe('You do not have permission to do that action.');
     expect(getFriendlyErrorByStatus(404)).toBe('The requested record was not found.');
     expect(getFriendlyErrorByStatus(422)).toBe('Some information is invalid. Please review and try again.');
+    expect(getFriendlyErrorByStatus(429)).toBe('Too many attempts. Please wait a minute and try again.');
     expect(getFriendlyErrorByStatus(500)).toBe('Server is temporarily unavailable. Please try again in a moment.');
   });
 
