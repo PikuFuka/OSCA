@@ -20,7 +20,7 @@
    - [Method A: Transfer via USB Flash Drive / ZIP (Offline / Air-Gapped)](#method-a-transfer-via-usb-flash-drive--zip-offline--air-gapped)
    - [Method B: Transfer via Git Repository](#method-b-transfer-via-git-repository)
    - [Migrating Existing Database & Uploaded Citizen Files](#migrating-existing-database--uploaded-citizen-files)
-6. [Production Deployment via Apache / XAMPP (Office LAN)](#6-production-deployment-via-apache--xampp-office-lan)
+6. [Production Deployment on the Office LAN](#6-production-deployment-on-the-office-lan)
 7. [100% Offline Operation Architecture](#7-100-offline-operation-architecture)
 8. [Seeded Accounts & Roles](#8-seeded-accounts--roles)
 9. [Available CLI Commands](#9-available-cli-commands)
@@ -77,35 +77,80 @@ flowchart LR
 * **Storage**: 2 GB free disk space
 
 ### Software:
-1. **Operating System**: Windows 10 / 11, macOS, or Linux
-2. **XAMPP**: Version 8.2 or higher (includes Apache, MySQL/MariaDB, PHP 8.2+)
+1. **Operating System**: Windows 10 / 11 is recommended (the `APP\start.bat` launcher and the automatic MySQL helper are Windows-only). macOS and Linux are supported when using the manual commands in [section 4](#4-fresh-local-development-setup).
+2. **XAMPP with PHP 8.2 – 8.4**: XAMPP 8.2.x is the recommended version (it bundles PHP 8.2, MySQL/MariaDB and Apache).
    * [Download XAMPP](https://www.apachefriends.org/download.html)
-3. **Node.js**: Version 18 LTS, 20 LTS, or 22+ (includes npm)
+   * Laravel 12 requires PHP `^8.2`, while the locked Excel library (`phpoffice/phpspreadsheet 1.30.x`) does **not** support PHP 8.5 yet. Use PHP 8.2, 8.3 or 8.4.
+3. **Node.js 20.19+ or 22.12+**: Node 22 LTS is recommended (Node 24 also works). The current Vite/React toolchain no longer supports Node 18.
    * [Download Node.js](https://nodejs.org/)
 4. **Composer**: Version 2.x (PHP Dependency Manager)
    * [Download Composer](https://getcomposer.org/download/)
-5. **Git** (Optional for Git-based deployment):
+5. **Git** (Optional, only for cloning the repository or Git-based transfers):
    * [Download Git](https://git-scm.com/downloads)
+6. **Web browser**: A current version of Chrome, Edge or Firefox. Camera capture requires a secure context — it works on `localhost` or over HTTPS. When the app is opened over plain HTTP from another computer on the office LAN, use the photo upload button instead of the live camera.
+
+### Verify the Tools Are Installed
+Run these commands in a new terminal:
+```bash
+php -v          # Must report PHP 8.2.x, 8.3.x or 8.4.x
+node -v         # Must report v20.19+ or v22.12+ (v22 LTS recommended)
+npm -v
+composer -V     # Must report Composer 2.x
+```
 
 ### Required PHP Extensions in `php.ini`:
-Ensure these are enabled in your XAMPP `php.ini` (remove the leading `;` if commented):
+The backend needs the standard Laravel extensions plus the ones used by the Excel exporter. In XAMPP most of these are already enabled; ensure these lines are not commented out in `C:\xampp\php\php.ini`:
 ```ini
-extension=pdo_mysql
-extension=pdo_sqlite
-extension=mbstring
-extension=openssl
+extension=curl
 extension=fileinfo
 extension=gd
+extension=mbstring
+extension=openssl
+extension=pdo_mysql
+extension=pdo_sqlite
 extension=zip
-extension=xml
-extension=curl
 ```
+
+The following are compiled into or enabled by default in XAMPP and are also required: `ctype`, `dom`, `iconv`, `libxml`, `simplexml`, `xml`, `xmlreader`, `xmlwriter`, `zlib`.
+
+Confirm all modules are available:
+```bash
+php -m
+```
+If a module from the first group is missing, remove the leading `;` from its line in `php.ini`, save the file, and restart Apache/MySQL from the XAMPP Control Panel.
 
 ---
 
 ## 4. Fresh Local Development Setup
 
+> **Quick Start (TL;DR)** — the condensed version of this section:
+> ```bash
+> git clone https://github.com/PikuFuka/OSCA.git
+> cd OSCA
+> npm install
+> cd backend
+> composer install
+> copy .env.example .env
+> php artisan key:generate
+> cd ..
+> cd frontend
+> npm install
+> copy .env.example .env
+> cd ..
+> ```
+> Before running the migrations, create the `osca_db` database (Step 4) or switch `DB_CONNECTION=sqlite`. Then finish with:
+> ```bash
+> cd backend
+> php artisan migrate --seed
+> php artisan storage:link
+> cd ..
+> npm run dev
+> ```
+> On macOS/Linux, replace every `copy` with `cp`. Each step is explained in detail below.
+
 Follow these steps when setting up the project for the first time from Git:
+
+> **Internet access:** the first setup downloads Composer and npm packages. After `vendor/` and `node_modules/` exist and the frontend is built, the system runs completely offline (see [section 7](#7-100-offline-operation-architecture)).
 
 ### Step 1: Clone Repository
 ```bash
@@ -125,14 +170,19 @@ composer install
 copy .env.example .env
 php artisan key:generate
 ```
-*(On macOS / Linux, use `cp .env.example .env`)*
+*(On macOS / Linux, use `cp .env.example .env`.)*
+
+> `composer install` must run on PHP 8.2 – 8.4. If Composer reports that `phpoffice/phpspreadsheet` requires `php <8.5`, switch XAMPP to a PHP 8.2/8.3/8.4 build before continuing.
 
 ### Step 4: Configure Database in `backend/.env`
 Open `backend/.env` in any text editor and configure your database settings:
 
 **Option A — MySQL (Default with XAMPP):**
 1. Start **Apache** and **MySQL** in the XAMPP Control Panel.
-2. Open `http://localhost/phpmyadmin` and create a database named `osca_db`.
+2. Open `http://localhost/phpmyadmin` and create a database named `osca_db` with collation `utf8mb4_unicode_ci`, or run:
+   ```sql
+   CREATE DATABASE osca_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
 3. In `backend/.env`:
 ```dotenv
 DB_CONNECTION=mysql
@@ -143,17 +193,32 @@ DB_USERNAME=root
 DB_PASSWORD=
 ```
 
-**Option B — SQLite (Zero setup database file):**
+> The values above match a default XAMPP installation (`root` with no password). If your MySQL `root` account has a password, set `DB_PASSWORD` to that password. The same `DB_*` values can also be supplied through a `DB_URL` connection string.
+
+**Option B — SQLite (Zero-setup database file):**
 1. In `backend/.env`:
 ```dotenv
 DB_CONNECTION=sqlite
 ```
-2. Create an empty file at `backend/database/database.sqlite`.
+2. Create an empty file at `backend/database/database.sqlite` from the `backend` directory:
+   ```bash
+   # Windows (cmd)
+   type nul > database/database.sqlite
+   # macOS / Linux
+   touch database/database.sqlite
+   ```
 
 ### Step 5: Run Migrations, Seeds & Link Storage
 ```bash
 php artisan migrate --seed
 php artisan storage:link
+```
+
+`--seed` creates the default Admin, Staff and Print Station accounts listed in [section 8](#8-seeded-accounts--roles). To use different seed credentials, set `ADMIN_PASSWORD`, `STAFF_PASSWORD` and `PRINT_PASSWORD` in `backend/.env` **before** running the command.
+
+On macOS/Linux, also make Laravel's writable folders accessible:
+```bash
+chmod -R 775 storage bootstrap/cache
 ```
 
 ### Step 6: Setup Frontend
@@ -162,7 +227,9 @@ cd ../frontend
 npm install
 copy .env.example .env
 ```
-*(On macOS / Linux, use `cp .env.example .env`. Keep the default `VITE_API_URL=http://127.0.0.1:8000/api` for local development.)*
+*(On macOS / Linux, use `cp .env.example .env`.)*
+
+Keep the default `VITE_API_URL=http://127.0.0.1:8000/api` for local development. For any other backend host or port — including a LAN server — point it at that server's URL without a trailing slash (for example `VITE_API_URL=http://192.168.1.100:8000/api`). The optional `GEMINI_API_KEY` value can be left empty; no internet connection is required at runtime.
 
 ### Step 7: Launch System
 From the root `OSCA` directory:
@@ -171,9 +238,28 @@ cd ..
 npm run dev
 ```
 
+This starts three services concurrently:
+
+| Service | Address |
+| :--- | :--- |
+| Laravel API | `http://127.0.0.1:8000` |
+| Vite dev server (open this) | `http://localhost:3000` |
+| MySQL | `127.0.0.1:3306` (started automatically when XAMPP is at `C:\xampp`) |
+
 Open your browser at: **`http://localhost:3000`**
 
-> **Note:** `npm run dev` starts MySQL (via XAMPP's `mysqld.exe`), the Laravel API (`:8000`), and Vite (`:3000`) concurrently. It expects XAMPP at the default `C:\xampp` location — otherwise start MySQL from the XAMPP Control Panel first. On Windows you can also double-click `APP\start.bat` for a guided one-click launch.
+> **Note:** The automatic MySQL step uses `C:\xampp\mysql\bin\mysqld.exe`; if XAMPP is installed elsewhere, start MySQL from the XAMPP Control Panel first. On Windows you can also double-click `APP\start.bat` for a guided one-click launch that installs root dependencies if needed and opens the browser.
+
+### Step 8: Verify the Installation
+1. Confirm the API is responding: open `http://127.0.0.1:8000/api/seniors/next-id` — it should return JSON rather than a connection error.
+2. Open `http://localhost:3000` and log in with the seeded administrator account `admin@osca.gov.ph` / `admin123`. You will be prompted to set a new password.
+3. Optional smoke tests:
+   ```bash
+   cd backend
+   php artisan test
+   cd ../frontend
+   npm run test
+   ```
 
 ---
 
@@ -203,6 +289,8 @@ rd /s /q backend\public\storage
 ```
 Do **not** delete `backend/storage/app/public/` (citizen photos/documents) or `backend/.env` (copy its DB credentials manually — `.env` is never committed to git).
 
+> **Air-gapped target?** `composer install` and `npm install` download packages from the internet. If the target computer has no connection, skip the `rd` commands above and copy `backend/vendor`, `node_modules` and `frontend/node_modules` along with the project, then skip those install commands in Step 4. Platform-specific binaries (esbuild, onnxruntime) must match the target operating system, so this works best when both computers run Windows.
+
 #### Step 2: Export Database & Copy Uploaded Citizen Files
 1. **Export Database**:
    * Open `http://localhost/phpmyadmin` &rarr; click `osca_db` &rarr; click **Export** &rarr; click **Export** (saves `osca_db.sql`).
@@ -223,7 +311,7 @@ On the new computer (make sure XAMPP, Node.js, and Composer are installed):
 2. **Create Database & Import SQL**:
    * Open `http://localhost/phpmyadmin` &rarr; Create database `osca_db`.
    * Click **Import** &rarr; choose `osca_db.sql` &rarr; click **Import**.
-3. **Open Terminal in `OSCA/backend`**:
+3. **Open a terminal in the `OSCA` project root, then run**:
    ```bash
    cd backend
    composer install
@@ -343,6 +431,13 @@ APP_URL=http://YOUR_SERVER_LAN_IP:8000
    * From server: `http://localhost:8000/app`
    * From other PCs: `http://192.168.1.100:8000/app`
 
+### Optional: Run the Queue Worker
+Async report generation and database backup/import use Laravel's database queue. To process requests that use `?async=1` or `?queue=1`, keep a worker running in a second terminal from `backend/`:
+```bash
+php artisan queue:work
+```
+Normal synchronous Excel downloads and backups work without a worker; only explicitly queued jobs wait in the `jobs` table.
+
 ---
 
 ## 7. 100% Offline Operation Architecture
@@ -376,6 +471,9 @@ When running `php artisan db:seed`, the following accounts are initialized:
 ### Root Workspace Commands
 ```bash
 npm run dev              # Starts MySQL + Laravel API + Vite Dev Server concurrently
+npm run mysql            # Starts XAMPP MySQL only (scripts/mysql-start.cjs)
+npm run backend          # Starts the Laravel API only (php artisan serve)
+npm run frontend         # Starts the Vite dev server only
 npm run build:frontend   # Compiles frontend SPA into backend/public/app for LAN serving
 npm run deploy:apache    # Alias of build:frontend (kept for backward compatibility)
 ```
@@ -384,8 +482,9 @@ npm run deploy:apache    # Alias of build:frontend (kept for backward compatibil
 ```bash
 php artisan serve        # Runs local Laravel dev server at 127.0.0.1:8000
 php artisan migrate      # Runs database migrations
-php artisan db:seed      # Seeds default admin and staff accounts
+php artisan db:seed      # Seeds default admin, staff and print accounts
 php artisan storage:link # Creates public symlink for uploaded citizen documents
+php artisan queue:work   # Processes queued report/backup jobs (optional)
 php artisan test         # Runs automated PHPUnit backend tests
 ```
 
@@ -393,7 +492,8 @@ php artisan test         # Runs automated PHPUnit backend tests
 ```bash
 npm run dev              # Starts Vite dev server at http://localhost:3000
 npm run build            # Builds production assets to ../backend/public/app
-npm run test             # Runs Vitest unit tests
+npm run test             # Runs Vitest unit tests once
+npm run test:watch       # Runs Vitest in watch mode
 ```
 
 ---
@@ -417,7 +517,7 @@ npm run test             # Runs Vitest unit tests
 ### 4. Port 3000 is already in use
 * Vite will automatically assign port `3001` or `3002`. You can also close the competing application or specify a custom port in `frontend/vite.config.ts`.
 
-### 5. Apache returns 503 / 404 on `/app`
+### 5. Browser shows 503 / 404 on `/app`
 * The frontend production bundle has not been built yet (it is git-ignored). Run from project root:
   ```bash
   npm run build:frontend
@@ -429,6 +529,24 @@ npm run test             # Runs Vitest unit tests
 ### 7. API calls fail with 401 after login, or downloads open a login page
 * The auth token in the browser is expired or was revoked: sign out and sign back in.
 * In development, make sure `frontend/.env` has `VITE_API_URL=http://127.0.0.1:8000/api` and `backend/.env` lists the dev origins in `SANCTUM_STATEFUL_DOMAINS`.
+
+### 8. Vite fails with a Node.js version error
+* The current frontend toolchain requires **Node.js 20.19+ or 22.12+** (Node 22 LTS recommended). Node 18 is no longer supported. Install a newer Node.js release, delete `frontend/node_modules`, and run `npm install` again.
+
+### 9. Composer fails with `phpoffice/phpspreadsheet ... requires php < 8.5`
+* The locked Excel library does not support PHP 8.5 yet. Switch XAMPP to a PHP 8.2, 8.3 or 8.4 build, then run `composer install` again.
+
+### 10. Excel export fails with a `ZipArchive` or GD error
+* Enable `extension=zip` and `extension=gd` in `C:\xampp\php\php.ini`, save the file, and restart Apache/MySQL. Confirm both appear in `php -m`.
+
+### 11. Live camera preview is blank when the app is opened from another PC
+* Browsers only allow camera access on `localhost` or HTTPS. Over plain HTTP on the LAN, use the photo upload button in the member form, or publish the app over HTTPS.
+
+### 12. `npm run dev` cannot find MySQL on macOS / Linux or a custom XAMPP path
+* `scripts/mysql-start.cjs` expects XAMPP at `C:\xampp`. Start MySQL manually, then run `npm run backend` and `npm run frontend` in **separate terminals**.
+
+### 13. Database backup reports that `mysqldump` is unavailable
+* Add `C:\xampp\mysql\bin` to your Windows `PATH`, or run the backup from the in-app Backup view — it falls back to a PHP-generated SQL dump when the CLI tool is missing.
 
 ---
 
