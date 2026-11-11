@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Clock, CheckCircle2, AlertCircle, RefreshCcw, User, Loader2, Search, Trash2, Info } from 'lucide-react';
+import { Clock, CheckCircle2, AlertCircle, RefreshCcw, User, Loader2, Search, Trash2 } from 'lucide-react';
 import { activityLogsAPI } from '../services/api';
 import ConfirmModal from './ConfirmModal';
 import Skeleton from './Skeleton';
@@ -133,11 +133,6 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
           <Trash2 size={16} /> 
           <span className="hidden sm:inline">Clear All Logs</span>
         </button>
-      </div>
-
-      <div className="flex items-center gap-3 p-4 bg-blue-50/60 border border-blue-100 rounded-2xl">
-        <Info size={16} className="text-blue-500 shrink-0" />
-        <p className="text-xs text-blue-700 font-bold">Logs older than 24 hours are automatically deleted to keep the system clean.</p>
       </div>
 
       <TransitionWrapper isLoading={loading} skeleton={

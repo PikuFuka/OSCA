@@ -471,6 +471,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const liveCanvasRef = useRef<HTMLCanvasElement>(null);
+  const cameraRequestRef = useRef(0);
   const segmentationLoopRef = useRef<number | null>(null);
   const rawPreviewLoopRef = useRef<number | null>(null);
   const liveMaskCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -629,6 +630,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   };
 
   const startWebcam = async () => {
+    const cameraRequestId = ++cameraRequestRef.current;
     setIsWebcamActive(true);
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -638,6 +640,12 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
           height: { ideal: 720 },
         }
       });
+
+      if (cameraRequestId !== cameraRequestRef.current) {
+        stream.getTracks().forEach(track => track.stop());
+        setIsWebcamActive(false);
+        return;
+      }
 
       setCameraZoom(DEFAULT_CAMERA_ZOOM);
       if (videoRef.current) {
@@ -672,6 +680,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
         const setupSegmentation = async () => {
           const selfieSegmentation = await selfieSegmentationPromise;
+          if (cameraRequestId !== cameraRequestRef.current) return;
 
         selfieSegmentation.onResults((results: any) => {
           if (!liveCanvasRef.current) return;
@@ -912,6 +921,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   };
 
   const stopWebcam = () => {
+    cameraRequestRef.current += 1;
     if (segmentationLoopRef.current) {
       cancelAnimationFrame(segmentationLoopRef.current);
       segmentationLoopRef.current = null;
