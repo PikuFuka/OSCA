@@ -17,6 +17,7 @@
 3. [System Requirements & Prerequisites](#3-system-requirements--prerequisites)
 4. [Fresh Local Development Setup](#4-fresh-local-development-setup)
 5. [Transferring the System to Other Devices](#5-transferring-the-system-to-other-devices)
+   - [Updating an Existing Installation from a Laptop](#updating-an-existing-installation-from-a-laptop)
    - [Method A: Transfer via USB Flash Drive / ZIP (Offline / Air-Gapped)](#method-a-transfer-via-usb-flash-drive--zip-offline--air-gapped)
    - [Method B: Transfer via Git Repository](#method-b-transfer-via-git-repository)
    - [Migrating Existing Database & Uploaded Citizen Files](#migrating-existing-database--uploaded-citizen-files)
@@ -266,6 +267,81 @@ Open your browser at: **`http://localhost:3000`**
 ## 5. Transferring the System to Other Devices
 
 When transferring the system to another office PC, laptop, or server, follow one of the two methods below.
+
+---
+
+### Updating an Existing Installation from a Laptop
+
+Use this procedure when the other device already has OSCA installed and you only want to copy your latest website or code changes from your laptop. These steps update the application without replacing the target device's live database.
+
+#### On Your Laptop (Source Device)
+
+1. Make and test your changes locally.
+2. Build the production website so the latest React files are included:
+   ```bash
+   npm run build:frontend
+   ```
+3. Copy the following to a USB drive or shared folder:
+   * The changed project files, or the complete project folder if you are not using Git.
+   * `backend/public/app` after the build. This is the compiled website used in LAN/production mode.
+   * `backend/storage/app/public/` only if you added or changed uploaded photos/documents.
+
+> Do not copy your laptop's `backend/.env` over the target device's `.env`. The target has its own database address, password, `APP_URL`, and LAN settings.
+
+#### On the Other Device (Target Device)
+
+1. Ask users to sign out, then stop OSCA and any running `php artisan serve`, Vite, or queue-worker windows.
+2. Make a safety backup before replacing files:
+   * Export the database from the OSCA Backup screen or phpMyAdmin.
+   * Make a copy of the target's `backend/.env`.
+   * Make a copy of `backend/storage/app/public/`.
+3. Copy the updated application files from your laptop into the existing OSCA folder, replacing the old code. Keep these target-specific items:
+   * `backend/.env`
+   * The target MySQL database
+   * `backend/storage/app/public/`
+4. If `package.json` or `composer.json` changed, install dependencies from the project root:
+   ```bash
+   npm install
+   cd backend
+   composer install --no-dev --optimize-autoloader
+   cd ..
+   ```
+5. If database migrations were included in the update, run them from `backend`:
+   ```bash
+   php artisan migrate --force
+   php artisan optimize:clear
+   ```
+6. If you did not copy the already-built `backend/public/app`, rebuild it on the target:
+   ```bash
+   npm run build:frontend
+   ```
+7. Start OSCA again. For the normal development launcher, run `APP\start.bat`. For LAN/production mode, from `backend` run:
+   ```bash
+   php artisan serve --host=0.0.0.0 --port=8000
+   ```
+8. On each browser, open the website and press `Ctrl+F5` once to load the new bundle. Other devices should then use the same server URL as before, such as `http://192.168.1.100:8000/app`.
+
+#### Updating Through Git Instead of USB
+
+On the laptop, push the tested changes:
+```bash
+git add .
+git commit -m "Update OSCA website"
+git push origin main
+```
+
+On the target device, from the OSCA folder:
+```bash
+git pull origin main
+npm install
+npm run build:frontend
+cd backend
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan optimize:clear
+```
+
+Review `backend/.env` after the pull and do not replace it with a laptop copy. Git does not transfer the database or uploaded files; migrate those separately using the backup and storage instructions below.
 
 ---
 
