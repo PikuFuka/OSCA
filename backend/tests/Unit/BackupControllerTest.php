@@ -144,6 +144,29 @@ SQL;
         $this->assertStringContainsString('val;ue', $statements[0]);
     }
 
+    public function test_split_sql_statements_supports_delimiter_blocks(): void
+    {
+        $controller = new BackupController();
+        $method = new ReflectionMethod($controller, 'splitSqlStatements');
+        $method->setAccessible(true);
+
+        $sql = <<<'SQL'
+DELIMITER //
+CREATE PROCEDURE refresh_stats()
+BEGIN
+    UPDATE stats SET refreshed_at = NOW();
+END//
+DELIMITER ;
+INSERT INTO users (id, name) VALUES (1, 'Admin');
+SQL;
+
+        $statements = $method->invoke($controller, $sql);
+
+        $this->assertCount(2, $statements);
+        $this->assertStringContainsString('UPDATE stats SET refreshed_at = NOW();', $statements[0]);
+        $this->assertStringContainsString('INSERT INTO users', $statements[1]);
+    }
+
     public function test_split_sql_statements_block_comment_with_semicolon(): void
     {
         $controller = new BackupController();

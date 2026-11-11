@@ -204,6 +204,11 @@ class BackupController extends Controller
      */
     private function splitSqlStatements(string $sql): array
     {
+        // mysqldump uses DELIMITER directives around routines and triggers.
+        // The mysql client handles them, but the PHP fallback must normalize
+        // their terminators before splitting statements.
+        $sql = $this->normalizeDumpDelimiters($sql);
+
         $statements = [];
         $current    = '';
         $len        = strlen($sql);
@@ -273,6 +278,11 @@ class BackupController extends Controller
                 $inLineComment = true; continue;
             }
             if (!$inSingle && !$inDouble && $c === '/' && $next === '*') {
+                if (($sql[$i + 2] ?? '') === '!') {
+                    $current .= '/*';
+                    $i++;
+                    continue;
+                }
                 $inBlockComment = true; $i++; continue;
             }
             if ($c === "'" && !$inDouble) {
@@ -293,7 +303,40 @@ class BackupController extends Controller
             }
         }
         if (trim($current) !== '') $statements[] = $current;
-        return array_values(array_filter($statements));
+        return array_values(array_map(
+            static fn (string $statement): string => str_replace("\x1E", ';', $statement),
+            array_filter($statements)
+        ));
+    }
+
+    private function normalizeDumpDelimiters(string $sql): string
+    {
+        $protectedSemicolon = "\x1E";
+        $delimiter = ';';
+        $lines = preg_split('/\R/', $sql) ?: [];
+        $normalized = [];
+
+        foreach ($lines as $line) {
+            if (preg_match('/^[ \t]*DELIMITER[ \t]+([^\s]+)[ \t]*$/i', $line, $matches)) {
+                $delimiter = $matches[1];
+                continue;
+            }
+
+            if ($delimiter === ';') {
+                $normalized[] = $line;
+                continue;
+            }
+
+            $trimmed = rtrim($line);
+            if (str_ends_with($trimmed, $delimiter)) {
+                $body = substr($trimmed, 0, -strlen($delimiter));
+                $normalized[] = str_replace(';', $protectedSemicolon, $body) . ';';
+            } else {
+                $normalized[] = str_replace(';', $protectedSemicolon, $line);
+            }
+        }
+
+        return implode("\n", $normalized);
     }
 
     /** @var array<string, list<string>> */

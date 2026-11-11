@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Download, Upload, AlertTriangle, CheckCircle2, RefreshCw, FileDown, FileUp, ShieldCheck, LogOut, Calendar, Archive as ArchiveIcon } from 'lucide-react';
 import { backupAPI } from '../services/api';
+import { clearCache } from '../core/api/cache';
 import ConfirmModal from './ConfirmModal';
 import ArchiveView from './ArchiveView';
 
@@ -70,9 +71,13 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
     try {
       const result = await backupAPI.importDB(selectedFile);
       setSelectedFile(null);
+      clearCache();
       setIsRefreshRequired(true);
+      window.setTimeout(() => window.location.reload(), 800);
     } catch (error: any) {
-      console.error(error); notify('Import failed. Please check the file and try again.', 'error');
+      console.error(error);
+      const message = error?.response?.data?.message || 'Import failed. Please check the file and try again.';
+      notify(message, 'error');
     } finally {
       setIsImporting(false);
     }
