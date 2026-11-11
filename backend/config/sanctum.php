@@ -47,7 +47,9 @@ return [
     |
     */
 
-    'expiration' => env('SANCTUM_EXPIRATION', 1440),
+    // Login tokens receive their own expiry so Remember Me can extend only
+    // the session that explicitly requested it.
+    'expiration' => null,
 
     /*
     |--------------------------------------------------------------------------

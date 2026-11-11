@@ -59,6 +59,29 @@ class AuthFlowTest extends TestCase
         $this->assertDatabaseHas('activity_logs', ['action' => 'LOGIN', 'target_type' => 'User']);
     }
 
+    public function test_login_token_expiry_matches_remember_me_choice(): void
+    {
+        $staff = $this->makeStaff();
+
+        $regular = $this->postJson('/api/login', [
+            'email' => $staff->email,
+            'password' => 'password123',
+        ])->assertOk();
+        $remembered = $this->postJson('/api/login', [
+            'email' => $staff->email,
+            'password' => 'password123',
+            'remember_me' => true,
+        ])->assertOk();
+
+        $regularToken = $staff->tokens()->where('name', 'auth-token')->latest('id')->skip(1)->first();
+        $rememberedToken = $staff->tokens()->where('name', 'auth-token')->latest('id')->first();
+
+        $this->assertNotNull($regularToken);
+        $this->assertNotNull($rememberedToken);
+        $this->assertEqualsWithDelta(1440, now()->diffInMinutes($regularToken->expires_at), 1);
+        $this->assertEqualsWithDelta(43200, now()->diffInMinutes($rememberedToken->expires_at), 1);
+    }
+
     public function test_staff_login_with_wrong_password_is_rejected(): void
     {
         $staff = $this->makeStaff();

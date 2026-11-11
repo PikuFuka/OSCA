@@ -22,9 +22,11 @@ class AuthController extends Controller
             'email' => 'nullable|string',
             'osca_id' => 'nullable|string',
             'password' => 'required|string',
+            'remember_me' => 'sometimes|boolean',
         ]);
 
         $identifier = $request->identifier ?? $request->email ?? $request->osca_id;
+        $tokenExpiresAt = now()->addMinutes($request->boolean('remember_me') ? 43200 : 1440);
 
         if (!$identifier) {
             throw ValidationException::withMessages([
@@ -41,7 +43,7 @@ class AuthController extends Controller
             $user->update(['last_active_at' => now()]);
             
             // Create token
-            $token = $user->createToken('auth-token')->plainTextToken;
+            $token = $user->createToken('auth-token', ['*'], $tokenExpiresAt)->plainTextToken;
 
             // Log the activity
             ActivityLog::create([
@@ -70,7 +72,7 @@ class AuthController extends Controller
         
         if ($senior && $senior->password && Hash::check($request->password, $senior->password)) {
             // Seniors use Sanctum too for API access if they have dashboards
-            $token = $senior->createToken('senior-token')->plainTextToken;
+            $token = $senior->createToken('senior-token', ['*'], $tokenExpiresAt)->plainTextToken;
 
             ActivityLog::create([
                 'user_id' => null, // Senior doesn't have a record in `users` table

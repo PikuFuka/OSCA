@@ -1,4 +1,4 @@
-import { api, API_BASE_URL } from '../../../core/api/client';
+import { api, API_BASE_URL, getAuthToken } from '../../../core/api/client';
 import { withCache, clearCache, getCache } from '../../../core/api/cache';
 
 export const seniorsAPI = {
@@ -149,7 +149,7 @@ export const seniorsAPI = {
 
   getDocumentUrl: (seniorId: number | string, documentId: number | string): string => {
     const base = API_BASE_URL.startsWith('http') ? API_BASE_URL : `${window.location.origin}${API_BASE_URL}`;
-    const token = localStorage.getItem('auth_token');
+    const token = getAuthToken();
     const url = `${base}/seniors/${seniorId}/documents/${documentId}`;
     return token ? `${url}?token=${token}` : url;
   },

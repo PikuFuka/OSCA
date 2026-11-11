@@ -3,6 +3,14 @@ import axios from 'axios';
 // Core API client - single axios instance for the whole app (modular: features import from here)
 export const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
+export const getAuthToken = (): string | null =>
+  localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+
+export const clearAuthToken = (): void => {
+  localStorage.removeItem('auth_token');
+  sessionStorage.removeItem('auth_token');
+};
+
 const TECHNICAL_MESSAGE_PATTERN = /(sqlstate|stack trace|exception|typeerror|syntaxerror|referenceerror|undefined|null|token|csrf|axios|network error|http\s*\d{3}|status\s*\d{3})/i;
 
 export const getFriendlyErrorByStatus = (status?: number) => {
@@ -36,7 +44,7 @@ export const authedUrl = (url?: string | null): string => {
         ? url
         : `${window.location.origin}${url}`
       : `${API_BASE_URL.startsWith('http') ? API_BASE_URL : `${window.location.origin}${API_BASE_URL}`}${url.startsWith('/') ? url : `/${url}`}`;
-  const token = localStorage.getItem('auth_token');
+  const token = getAuthToken();
   return token ? `${absolute}${absolute.includes('?') ? '&' : '?'}token=${token}` : absolute;
 };
 
@@ -54,7 +62,7 @@ export const api = axios.create({
 api.defaults.withCredentials = true;
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
+  const token = getAuthToken();
   if (token) {
     config.headers['Authorization'] = `Bearer ${token}`;
   }
@@ -96,10 +104,10 @@ api.interceptors.response.use(
 
     if (error.response?.status === 401) {
       const isLoginRequest = error.config?.url?.includes('/login');
-      const currentToken = localStorage.getItem('auth_token');
+      const currentToken = getAuthToken();
       if (currentToken && !isLoginRequest) {
         console.warn('Unauthorized error (401) detected. Clearing expired token.');
-        localStorage.removeItem('auth_token');
+        clearAuthToken();
         window.dispatchEvent(new Event('auth-unauthorized'));
       }
     }

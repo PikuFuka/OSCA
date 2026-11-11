@@ -42,11 +42,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  const login = async (identifier: string, pass: string) => {
+  const login = async (identifier: string, pass: string, rememberMe = false) => {
     // Keep the login screen mounted while the request is in flight so its
     // own button/error states can animate. Only the initial session check
     // and logout should show the global loading screen.
-    const response = await authAPI.login(identifier, pass);
+    const response = await authAPI.login(identifier, pass, rememberMe);
     if (response.user) {
       setUser(mapUserToCurrentUser(response.user));
     }

@@ -43,12 +43,21 @@ describe('authAPI', () => {
   it('login stores the token on success', async () => {
     vi.mocked(api.post).mockResolvedValue({ data: { token: 'tok123', user: { id: 1 } } });
 
-    const result = await authAPI.login('admin', 'secret');
+    const result = await authAPI.login('admin', 'secret', true);
 
     expect(axios.get).toHaveBeenCalled();
-    expect(api.post).toHaveBeenCalledWith('/login', { identifier: 'admin', password: 'secret' });
+    expect(api.post).toHaveBeenCalledWith('/login', { identifier: 'admin', password: 'secret', remember_me: true });
     expect(localStorage.getItem('auth_token')).toBe('tok123');
     expect(result.token).toBe('tok123');
+  });
+
+  it('stores a non-remembered token in session storage', async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: { token: 'session-token', user: { id: 1 } } });
+
+    await authAPI.login('admin', 'secret');
+
+    expect(sessionStorage.getItem('auth_token')).toBe('session-token');
+    expect(localStorage.getItem('auth_token')).toBeNull();
   });
 
   it('logout clears the token even when the request fails', async () => {
@@ -58,6 +67,7 @@ describe('authAPI', () => {
     await authAPI.logout();
 
     expect(localStorage.getItem('auth_token')).toBeNull();
+    expect(sessionStorage.getItem('auth_token')).toBeNull();
     expect(api.post).toHaveBeenCalledWith('/logout', {}, expect.anything());
   });
 });

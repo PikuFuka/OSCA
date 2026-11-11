@@ -1,10 +1,10 @@
 import axios from 'axios';
-import { api, API_BASE_URL } from '../../../core/api/client';
+import { api, API_BASE_URL, clearAuthToken, getAuthToken } from '../../../core/api/client';
 import { withCache, clearCache, deleteCache } from '../../../core/api/cache';
 
 // Auth — login, logout, me, password, public register
 export const authAPI = {
-  login: async (identifier: string, password: string) => {
+  login: async (identifier: string, password: string, rememberMe = false) => {
     clearCache();
     const baseURL = API_BASE_URL.replace('/api', '');
     try {
@@ -12,15 +12,19 @@ export const authAPI = {
     } catch (e) {
       console.warn('CSRF cookie pre-flight failed', e);
     }
-    const response = await api.post('/login', { identifier, password });
-    if (response.data.token) localStorage.setItem('auth_token', response.data.token);
+    const response = await api.post('/login', { identifier, password, remember_me: rememberMe });
+    if (response.data.token) {
+      clearAuthToken();
+      const storage = rememberMe ? localStorage : sessionStorage;
+      storage.setItem('auth_token', response.data.token);
+    }
     return response.data;
   },
 
   logout: async () => {
     clearCache();
-    const token = localStorage.getItem('auth_token');
-    localStorage.removeItem('auth_token');
+    const token = getAuthToken();
+    clearAuthToken();
     try {
       await api.post('/logout', {}, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},

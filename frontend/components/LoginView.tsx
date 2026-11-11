@@ -27,7 +27,7 @@ const LoginView: React.FC<LoginViewProps> = ({ onRegister, notify }) => {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(identifier, password);
+      await login(identifier, password, rememberMe);
     } catch (error: any) {
       console.error(error);
       notify('Invalid credentials. Please check your ID/Email and password.', 'error');
