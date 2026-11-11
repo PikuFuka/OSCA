@@ -269,6 +269,69 @@
 main {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  scroll-padding-block: 1rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+}
+
+main::-webkit-scrollbar {
+  width: 8px;
+}
+
+main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+main::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.45);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+.form-header-enter {
+  animation: formHeaderEnter 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.form-step-rail {
+  animation: formStepRailEnter 500ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+}
+
+@keyframes formHeaderEnter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes formStepRailEnter {
+  from {
+    opacity: 0;
+    transform: translateX(14px) scaleX(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scaleX(1);
+  }
+}
+
+main::-webkit-scrollbar-thumb:hover {
+  background: rgba(30, 58, 138, 0.65);
+  background-clip: padding-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main,
+  .form-header-enter,
+  .form-step-rail {
+    scroll-behavior: auto;
+    animation: none;
+  }
 }
 
 @media print {

@@ -20,7 +20,7 @@ import {
   Cell
 } from 'recharts';
 import { 
-  Users, TrendingUp, TrendingDown, UserX, IdCard, MapPin, ClipboardList, Award, 
+  Users, UserX, IdCard, MapPin, ClipboardList, Award, 
   Calendar as CalendarIcon, Clock, CheckCircle2, Download, AlertCircle, RefreshCw,
   Cake, Sparkles, PartyPopper, ChevronRight
 } from 'lucide-react';
@@ -80,8 +80,6 @@ const KPICard = ({
   value,
   rawValue, 
   icon: Icon, 
-  trend, 
-  trendLabel, 
   data, 
   dataKey,
   statusLabel,
@@ -125,20 +123,7 @@ const KPICard = ({
         </ResponsiveContainer>
       </div>
 
-      <div className="flex items-center justify-between w-full pt-4 border-t border-slate-100 mt-2">
-         <div className="flex items-center gap-1.5">
-           {trend > 0 ? (
-             <TrendingUp size={14} className="text-systemBlue" strokeWidth={2.5} />
-           ) : trend < 0 ? (
-             <TrendingDown size={14} className="text-slate-400" strokeWidth={2.5} />
-           ) : (
-             <span className="text-slate-400 font-bold text-xs">-</span>
-           )}
-           <span className={`text-xs font-semibold ${trend > 0 ? 'text-systemBlue' : 'text-slate-500'}`}>
-             {Math.abs(trend)}%
-           </span>
-           <span className="text-xs text-slate-400 ml-1">{trendLabel}</span>
-         </div>
+      <div className="flex items-center justify-end w-full pt-4 border-t border-slate-100 mt-2">
          <span className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{statusLabel}</span>
       </div>
     </button>
@@ -297,8 +282,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           value={formatNumber(data.totalMembers)}
           rawValue={data.totalMembers} 
           icon={Users}
-          trend={5.2}
-          trendLabel="vs last month"
           statusLabel="Updated Just Now"
           data={data.monthlyStats}
           dataKey="total"
@@ -309,8 +292,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           value={formatNumber(data.pendingApps)}
           rawValue={data.pendingApps} 
           icon={ClipboardList}
-          trend={-1.4}
-          trendLabel="clearance rate"
           statusLabel="Requires Action"
           data={data.monthlyStats.slice().reverse()}
           dataKey="total"
@@ -322,8 +303,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           title="Centenarians" 
           value={formatNumber(data.centenarians)} 
           icon={Award}
-          trend={0}
-          trendLabel="stable segment"
           statusLabel="Verified DB"
           data={data.monthlyStats.map((d: any, idx: number) => ({ ...d, centenarianTrend: (d.total ? (idx % 3) + 1 : 0) }))}
           dataKey="centenarianTrend"
@@ -335,8 +314,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           title="Mortality Index" 
           value={formatNumber(data.totalDeceased)} 
           icon={UserX}
-          trend={0.8}
-          trendLabel="vs historical"
           statusLabel="Synchronized"
           data={data.monthlyStats}
           dataKey="deceased"

@@ -579,18 +579,26 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   };
 
   // ... (ProgressStep, ReviewField, FileUploadField components remain same, omitting for brevity as they are unchanged)
-  const ProgressStep = ({ num, title, isActive, isCompleted }: any) => (
-    <div className={`flex items-center shrink-0`}>
-      <div className={`w-6 h-6 rounded-full flex items-center justify-center font-bold text-[10px] transition-all shrink-0
-        ${isActive ? 'bg-systemBlue text-white' : 
-          isCompleted ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-400'}`}>
-        {isCompleted ? <CheckCircle size={12} /> : num}
-      </div>
-      <span className={`text-[10px] font-bold uppercase tracking-widest hidden md:block ml-2 whitespace-nowrap transition-colors
-        ${isActive ? 'text-slate-900' : 'text-slate-400'}`}>
-        {title}
+  const ProgressStep = ({ num, title, icon: Icon, isActive, isCompleted }: any) => (
+    <div
+      className={`relative flex h-12 min-w-[112px] flex-1 items-center gap-2 px-3 transition-all first:rounded-l-full last:rounded-r-full ${
+        isActive
+          ? 'z-10 bg-systemBlue text-white shadow-lg shadow-blue-200'
+          : isCompleted
+            ? 'bg-emerald-50 text-emerald-700'
+            : 'bg-slate-50 text-slate-500'
+      }`}
+      style={{ clipPath: num === 1
+        ? 'polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%)'
+        : 'polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%, 16px 50%)' }}
+    >
+      <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black ${
+        isActive ? 'bg-white/15 text-white' : isCompleted ? 'bg-emerald-100 text-emerald-700' : 'bg-white text-slate-400'
+      }`}>
+        {isCompleted ? <CheckCircle size={17} /> : num}
       </span>
-      {title !== 'REVIEW' && <div className="w-3 md:w-4 h-[1px] bg-slate-200 mx-2 md:mx-3 shrink-0"></div>}
+      <Icon size={19} strokeWidth={2.2} className="hidden shrink-0 sm:block" />
+      <span className="whitespace-nowrap text-[10px] font-black uppercase tracking-wider">{title}</span>
     </div>
   );
 
@@ -790,31 +798,31 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   return (
     <TransitionWrapper isLoading={initLoading} skeleton={<FormSkeleton />}>
       {!initLoading && (
-        <div className="w-full space-y-4 stagger-in">
+        <div className="w-full space-y-6 stagger-in">
           {/* Compact Header */}
-      <div className="flex items-center justify-between gap-4 px-1">
+      <div className="form-header-enter mx-auto flex w-[min(980px,94vw)] max-w-full flex-col gap-3 px-0 py-2 md:flex-row md:items-center md:gap-6 md:px-2">
         <div className="flex items-center gap-3">
           {!isPublicUser && !isSeniorRole && (
-            <button onClick={() => setMode('selection')} className="text-slate-300 hover:text-slate-600 transition-colors">
+            <button onClick={() => setMode('selection')} className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-slate-700 transition-colors">
               <ArrowLeft size={18} />
             </button>
           )}
           <div>
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight leading-tight">
+            <h2 className="text-xl font-black text-slate-900 tracking-tight leading-tight">
               {isSeniorRole ? 'Update Profile' : (applicantType === 'new' ? 'New Registration' : 'Update Record')}
             </h2>
-            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">
+            <p className="mt-1 text-slate-400 font-bold text-[10px] uppercase tracking-[0.16em]">
               {step === 5 ? 'Review & Finalize' : `Step ${step} of 5: ${step === 1 ? 'Identity' : step === 2 ? 'Location' : step === 3 ? 'Family' : 'Documents'}`}
             </p>
           </div>
         </div>
         
-        <div className="flex items-center bg-white px-3 py-2 rounded-xl border border-slate-100 shadow-sm w-fit transition-all">
-          <ProgressStep num={1} title="IDENTITY" isActive={step === 1} isCompleted={step > 1} />
-          <ProgressStep num={2} title="LOCATION" isActive={step === 2} isCompleted={step > 2} />
-          <ProgressStep num={3} title="FAMILY" isActive={step === 3} isCompleted={step > 3} />
-          <ProgressStep num={4} title="DOCS" isActive={step === 4} isCompleted={step > 4} />
-          <ProgressStep num={5} title="REVIEW" isActive={step === 5} isCompleted={false} />
+        <div className="form-step-rail flex min-w-0 flex-1 items-center overflow-x-auto rounded-full border border-slate-200 bg-white p-1 shadow-sm">
+          <ProgressStep num={1} title="IDENTITY" icon={User} isActive={step === 1} isCompleted={step > 1} />
+          <ProgressStep num={2} title="LOCATION" icon={MapPin} isActive={step === 2} isCompleted={step > 2} />
+          <ProgressStep num={3} title="FAMILY" icon={Users} isActive={step === 3} isCompleted={step > 3} />
+          <ProgressStep num={4} title="DOCS" icon={FileText} isActive={step === 4} isCompleted={step > 4} />
+          <ProgressStep num={5} title="REVIEW" icon={CheckCircle} isActive={step === 5} isCompleted={false} />
         </div>
       </div>
 
@@ -822,14 +830,14 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
         <div style={getTrackStyle()}>
           
           {/* STEP 1: IDENTITY */}
-          <div style={getCardStyle(1)} className="p-6 bg-white rounded-xl border border-slate-200 overflow-hidden"><div className="space-y-5">
-              <div className="flex items-center justify-between">
+          <div style={getCardStyle(1)} className="p-6 md:p-8 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden"><div className="space-y-6">
+              <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5">
                 <div className="flex items-center gap-3 text-blue-900">
                   <User size={18} />
-                  <h3 className="text-xl font-black">Personal Information</h3>
+                  <h3 className="text-xl md:text-2xl font-black tracking-tight">Personal Information</h3>
                 </div>
                 {(isMatchFound || isSeniorRole) && (
-                  <div className="flex items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-1.5 rounded-xl border border-emerald-100 animate-in zoom-in-95">
+                  <div className="flex shrink-0 items-center gap-2 bg-emerald-50 text-emerald-700 px-3 py-2 rounded-full border border-emerald-100 animate-in zoom-in-95">
                     <SearchCheck size={16} />
                     <span className="text-[10px] font-black uppercase tracking-widest">{isSeniorRole ? 'Linked' : 'Match Found'}</span>
                   </div>
@@ -837,7 +845,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
               </div>
               
               {/* Fields ... (Rest of Step 1 form structure) */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 {(applicantType === 'existing' || isSeniorRole) ? (
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 relative">
                   <label className="text-xs font-semibold text-slate-600 mb-1.5 block">OSCA ID Number</label>
