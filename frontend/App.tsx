@@ -270,7 +270,7 @@ const App: React.FC = () => {
   // If not logged in and registering, show Public Registration View
   if (!currentUser && isRegistering) {
     return (
-      <div className="min-h-screen bg-systemGray-50 p-4 md:p-8 relative">
+      <div className="registration-page min-h-screen p-4 md:p-8 relative">
         <Toast 
           message={toast.message} 
           type={toast.type} 

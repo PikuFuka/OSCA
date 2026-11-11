@@ -472,6 +472,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const liveCanvasRef = useRef<HTMLCanvasElement>(null);
   const segmentationLoopRef = useRef<number | null>(null);
+  const rawPreviewLoopRef = useRef<number | null>(null);
   const liveMaskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const photoMaskCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const temporalMaskRef = useRef<Uint8ClampedArray | null>(null);
@@ -641,10 +642,37 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
       setCameraZoom(DEFAULT_CAMERA_ZOOM);
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
-        
-        // Setup live segmented background
-        const selfieSegmentation = await getSelfieSegmentationInstance();
-        
+        const selfieSegmentationPromise = getSelfieSegmentationInstance();
+        let segmentationReady = false;
+
+        const drawRawPreview = () => {
+          const video = videoRef.current;
+          const canvas = liveCanvasRef.current;
+          if (!video || !canvas || video.paused || video.ended) return;
+
+          if (!segmentationReady) {
+            const width = video.videoWidth || 640;
+            const height = video.videoHeight || 480;
+            if (canvas.width !== width || canvas.height !== height) {
+              canvas.width = width;
+              canvas.height = height;
+            }
+            const context = canvas.getContext('2d');
+            if (context) {
+              context.imageSmoothingEnabled = true;
+              context.imageSmoothingQuality = 'high';
+              context.filter = PHOTO_ENHANCEMENT_FILTER;
+              context.drawImage(video, 0, 0, canvas.width, canvas.height);
+              context.filter = 'none';
+            }
+          }
+
+          rawPreviewLoopRef.current = requestAnimationFrame(drawRawPreview);
+        };
+
+        const setupSegmentation = async () => {
+          const selfieSegmentation = await selfieSegmentationPromise;
+
         selfieSegmentation.onResults((results: any) => {
           if (!liveCanvasRef.current) return;
           const canvas = liveCanvasRef.current;
@@ -693,6 +721,12 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
           }
         });
 
+        segmentationReady = true;
+        if (rawPreviewLoopRef.current) {
+          cancelAnimationFrame(rawPreviewLoopRef.current);
+          rawPreviewLoopRef.current = null;
+        }
+
         // Use requestAnimationFrame for processing video frames
         let lastTime = -1;
         const processStream = async () => {
@@ -710,8 +744,14 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
           segmentationLoopRef.current = requestAnimationFrame(processStream);
         };
         
+        processStream();
+        };
+
         videoRef.current.onloadeddata = () => {
-          processStream();
+          drawRawPreview();
+          setupSegmentation().catch(() => {
+            notify('Camera is ready. Background cleanup is unavailable right now.', 'warning');
+          });
         };
       }
     } catch (err) {
@@ -875,6 +915,10 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     if (segmentationLoopRef.current) {
       cancelAnimationFrame(segmentationLoopRef.current);
       segmentationLoopRef.current = null;
+    }
+    if (rawPreviewLoopRef.current) {
+      cancelAnimationFrame(rawPreviewLoopRef.current);
+      rawPreviewLoopRef.current = null;
     }
     if (videoRef.current && videoRef.current.srcObject) {
       const stream = videoRef.current.srcObject as MediaStream;
@@ -1591,8 +1635,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
             </div>
           </div>
 
-          <div className="bg-white rounded-[2.5rem] w-full max-w-5xl shadow-2xl overflow-hidden modal-panel-in flex flex-col max-h-[90vh] print:hidden">
-             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white z-10">
+           <div className="id-generation-modal bg-white rounded-[2rem] w-full max-w-6xl shadow-2xl shadow-slate-950/20 overflow-hidden modal-panel-in flex flex-col max-h-[92vh] print:hidden">
+             <div className="p-5 md:px-7 md:py-5 border-b border-slate-100 flex items-center justify-between bg-white/95 backdrop-blur z-10">
                <div className="flex items-center gap-3">
                  <div className="p-2 bg-systemBlue text-white rounded-xl">
                    <IdCard size={24} />
@@ -1605,7 +1649,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                <button onClick={closeIdModal} disabled={isPhotoProcessing} className="p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed"><X size={24} /></button>
              </div>
 
-             <div className="flex flex-col lg:flex-row flex-1 overflow-hidden relative">
+             <div className="id-modal-content flex flex-col lg:flex-row flex-1 overflow-hidden relative">
                 {isPhotoProcessing && (
                   <div className="fixed inset-0 z-[120] bg-slate-900/45 backdrop-blur-md flex items-center justify-center p-6 modal-backdrop-in">
                     <div className="w-full max-w-sm bg-[#FFFBF1] rounded-3xl shadow-2xl border border-white/60 px-6 py-7 text-center modal-panel-in">
@@ -1624,7 +1668,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   </div>
                 )}
                 {/* Left Panel: Photo Capture */}
-                <div className={`w-full lg:w-1/3 bg-slate-50 p-6 border-r border-slate-100 overflow-y-auto transition-all ${mobileStep === 'photo' ? 'block' : 'hidden lg:block'}`}>
+                <div className={`id-modal-photo-panel w-full lg:w-1/3 p-6 md:p-7 overflow-y-auto transition-all ${mobileStep === 'photo' ? 'block' : 'hidden lg:block'}`}>
                    <h4 className="text-sm font-black uppercase tracking-widest text-slate-500 mb-4">Member Photo</h4>
                    <div className="aspect-square bg-slate-200 rounded-2xl mb-4 overflow-hidden relative border-2 border-slate-300 flex items-center justify-center">
                       {isWebcamActive ? (
@@ -1637,8 +1681,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                           />
                           <canvas
                             ref={liveCanvasRef}
-                            className="w-full h-full object-cover"
-                            style={{ transform: `scaleX(-1) scale(${cameraZoom})` }}
+                            className="id-camera-preview w-full h-full object-cover"
+                            style={{ transform: `scale(${cameraZoom})` }}
                           />
                           {/* ID Photo Guide Overlay */}
                           <div className="absolute inset-0 pointer-events-none flex items-center justify-center opacity-60">
@@ -1783,7 +1827,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                 </div>
 
                 {/* Right Panel: ID Preview */}
-                <div className={`flex-1 p-6 lg:p-10 flex flex-col items-center justify-start lg:justify-center bg-slate-100 overflow-y-auto ${mobileStep === 'preview' ? 'block' : 'hidden lg:flex'}`}>
+                <div className={`id-modal-preview-panel flex-1 p-6 lg:p-10 flex flex-col items-center justify-start lg:justify-center overflow-y-auto ${mobileStep === 'preview' ? 'block' : 'hidden lg:flex'}`}>
                    {/* Mobile Back Button */}
                    <button 
                       onClick={() => setMobileStep('photo')}
@@ -1796,18 +1840,17 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                       className="origin-top sm:origin-center transition-transform duration-300 mb-8 sm:mb-0 mt-8 sm:mt-0 scale-[0.55] sm:scale-75 md:scale-90 lg:scale-100"
                    >
                       <div 
-                        className="w-[480px] h-[300px] bg-white rounded-xl shadow-2xl relative overflow-hidden flex flex-col shrink-0 print:shadow-none cursor-pointer ring-4 ring-transparent"
+                        className="id-card-flip-shell w-[480px] h-[300px] rounded-xl relative overflow-hidden flex flex-col shrink-0 print:shadow-none cursor-pointer ring-4 ring-transparent"
                         onClick={() => setIsIdFlipped(!isIdFlipped)}
                       >
                           {/* Hint Label */}
                           <div className="absolute top-3 right-3 z-30 bg-black/60 text-white px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-widest pointer-events-none backdrop-blur-sm flex items-center gap-1">
                             <RotateCw size={10} /> {isIdFlipped ? 'Show Front' : 'Show Back'}
                           </div>
-                          
-                          {!isIdFlipped ? (
-                            <>
+
+                          <div className="id-card-flip-stage" style={{ transform: `rotateY(${isIdFlipped ? 180 : 0}deg)` }}>
                               {/* FRONT LAYOUT USING IMAGE TEMPLATE */}
-                              <div className="absolute inset-0 bg-[url('img/FRONT.jpg')] bg-cover bg-no-repeat bg-center z-10">
+                              <div className="id-card-face id-card-face-front absolute inset-0 bg-[url('img/FRONT.jpg')] bg-cover bg-no-repeat bg-center">
                                 {/* Photo Area inside the circular watermark box */}
                                 <div className="absolute [left:11px] [top:138px] [width:128px] [height:128px] overflow-hidden flex items-center justify-center">
                                   {idPhoto ? (
@@ -1912,14 +1955,11 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                                   />
                                 </div>
                               </div>
-                            </>
-                          ) : (
-                            <>
+
                               {/* BACK LAYOUT USING IMAGE TEMPLATE - BLANK */}
-                              <div className="absolute inset-0 bg-[url('img/BACK.jpg')] bg-cover bg-no-repeat bg-center z-10">
+                              <div className="id-card-face id-card-face-back absolute inset-0 bg-[url('img/BACK.jpg')] bg-cover bg-no-repeat bg-center">
                               </div>
-                            </>
-                          )}
+                          </div>
                       </div>
                    </div>
 

@@ -213,6 +213,11 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
     }
   }, [setView, onSelectSenior]);
 
+  const handleQuickAction = (view: ViewType) => {
+    setOpenDropdown(null);
+    setView?.(view);
+  };
+
   // Keyboard navigation for search
   const handleSearchKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (!isSearchFocused || allFlatResults.length === 0) return;
@@ -644,19 +649,19 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
                   <div className="px-4 py-2 border-b border-slate-100 mb-1">
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Quick Actions</span>
                   </div>
-                  <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-systemBlue transition-colors">
+                  <button onClick={() => handleQuickAction(ViewType.ADD_MEMBER)} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-systemBlue transition-colors">
                      <UserPlus size={16} /> Register Senior
                   </button>
-                  <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-systemBlue transition-colors">
+                  <button onClick={() => handleQuickAction(ViewType.APPROVAL)} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-systemBlue transition-colors">
                      <FileCheck size={16} /> Approve Applications
                   </button>
-                  <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-systemBlue transition-colors">
+                  <button onClick={() => handleQuickAction(ViewType.FINAL_REPORT)} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-systemBlue transition-colors">
                      <FileSpreadsheet size={16} /> Generate Report
                   </button>
-                  <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-systemBlue transition-colors">
+                  <button onClick={() => handleQuickAction(ViewType.BATCH_PRINT)} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-systemBlue transition-colors">
                      <Printer size={16} /> Print Batch IDs
                   </button>
-                  <button className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-systemBlue transition-colors">
+                  <button onClick={() => handleQuickAction(ViewType.BACKUP)} className="w-full flex items-center gap-3 px-4 py-2.5 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50 hover:text-systemBlue transition-colors">
                      <DatabaseBackup size={16} /> Backup Database
                   </button>
                </div>

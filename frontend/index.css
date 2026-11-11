@@ -266,6 +266,48 @@
   }
 }
 
+.registration-page {
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle, rgba(59, 130, 246, 0.42) 1.5px, transparent 1.5px) 96% 8% / 22px 22px no-repeat,
+    radial-gradient(circle, rgba(59, 130, 246, 0.3) 1.5px, transparent 1.5px) 4% 92% / 22px 22px no-repeat,
+    radial-gradient(circle at 8% 12%, rgba(147, 197, 253, 0.35), transparent 28%),
+    radial-gradient(circle at 92% 84%, rgba(125, 211, 252, 0.3), transparent 30%),
+    #f4f9ff;
+}
+
+.registration-page::before,
+.registration-page::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  width: min(52vw, 760px);
+  aspect-ratio: 1;
+  border: 26px solid rgba(37, 132, 232, 0.18);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.registration-page::before {
+  top: -34%;
+  left: -24%;
+  transform: rotate(-24deg);
+  box-shadow: 0 0 0 22px rgba(96, 165, 250, 0.11), 0 0 0 52px rgba(191, 219, 254, 0.22);
+}
+
+.registration-page::after {
+  right: -25%;
+  bottom: -38%;
+  transform: rotate(22deg);
+  box-shadow: 0 0 0 22px rgba(96, 165, 250, 0.11), 0 0 0 52px rgba(191, 219, 254, 0.22);
+}
+
+.registration-page > * {
+  position: relative;
+  z-index: 1;
+}
+
 main {
   scroll-behavior: smooth;
   -webkit-overflow-scrolling: touch;
@@ -494,6 +536,70 @@ main::-webkit-scrollbar-thumb:hover {
     will-change: opacity, transform;
     transform: translateZ(0);
     backface-visibility: hidden;
+  }
+
+  .id-card-flip-shell {
+    perspective: 1400px;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .id-card-flip-stage {
+    position: absolute;
+    inset: 0;
+    transform-style: preserve-3d;
+    transform-origin: center center;
+    transition: transform 780ms cubic-bezier(0.2, 0.78, 0.2, 1);
+    will-change: transform;
+  }
+
+  .id-card-face {
+    background-color: #0f172a;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+    transform-style: preserve-3d;
+    transform: translateZ(0.5px);
+  }
+
+  .id-card-face-front {
+    transform: rotateY(0deg);
+  }
+
+  .id-card-face-back {
+    transform: rotateY(180deg);
+  }
+
+  .id-modal-content {
+    background: #e9eef5;
+  }
+
+  .id-modal-photo-panel {
+    background: linear-gradient(180deg, #f8fafc 0%, #eef3f8 100%);
+    border-right: 1px solid #d5deea;
+    box-shadow: 10px 0 24px -24px rgba(15, 23, 42, 0.8);
+  }
+
+  .id-modal-preview-panel {
+    background: radial-gradient(circle at 50% 35%, #ffffff 0%, #f1f5f9 58%, #e5ebf2 100%);
+  }
+
+  .id-camera-preview {
+    transform-origin: center center;
+    backface-visibility: hidden;
+    -webkit-backface-visibility: hidden;
+  }
+
+  @media (max-width: 1023px) {
+    .id-modal-photo-panel {
+      border-right: 0;
+      border-bottom: 1px solid #d5deea;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .id-card-flip-stage {
+      transition: none;
+    }
   }
   
   .stagger-1 { animation-delay: 30ms; }
