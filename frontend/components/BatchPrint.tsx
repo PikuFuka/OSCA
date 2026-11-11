@@ -278,7 +278,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
             Select seniors above to generate the ID preview.
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-6 stagger-in">
             {selectedSeniors.map((senior) => (
               <div key={`preview-${senior.id}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:p-6">
                 <div className="mb-4 flex items-center justify-between gap-4">

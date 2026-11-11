@@ -247,7 +247,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               </div>
             </div>
             
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-clip">
               <table className="w-full text-left">
                 <thead className="sticky top-0 z-[2] bg-slate-50 border-b border-slate-200">
                   <tr className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
@@ -261,7 +261,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <th className="px-8 py-4 text-center">Pension</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 stagger-in">
                   {seniorsData.length > 0 ? (
                     seniorsData.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50 transition-colors">
@@ -341,7 +341,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-clip">
               <table className="w-full text-left">
                 <thead className="sticky top-0 z-[2] bg-slate-50 border-b border-slate-200">
                   <tr className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
@@ -355,7 +355,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <th className="px-8 py-4 text-center">Pension</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 stagger-in">
                   {centenariansData.length > 0 ? (
                     centenariansData.slice((staticPage - 1) * itemsPerPage, staticPage * itemsPerPage).map((item) => (
                       <tr key={`cent-${item.id}`} className="hover:bg-slate-50 transition-colors">
@@ -433,7 +433,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               </div>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-clip">
               <table className="w-full text-left">
                 <thead className="sticky top-0 z-[2] bg-slate-50 border-b border-slate-200">
                   <tr className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
@@ -447,7 +447,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <th className="px-8 py-4 text-center">Pension</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 stagger-in">
                   {deceasedData.length > 0 ? (
                     deceasedData.slice((staticPage - 1) * itemsPerPage, staticPage * itemsPerPage).map((item) => (
                       <tr key={`dec-${item.id}`} className="hover:bg-slate-50 transition-colors">
@@ -533,7 +533,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
               </div>
             </div>
 
-            <div className="overflow-x-auto print:hidden">
+            <div className="overflow-x-auto overflow-y-clip print:hidden">
               <table className="w-full text-left">
                 <thead className="sticky top-0 z-[2] print:static bg-slate-50 border-b border-slate-200">
                   <tr className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">
@@ -547,7 +547,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <th className="px-8 py-4 text-center print:px-2 print:py-2">Pension</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 stagger-in">
                   {newlyRegisteredData.length > 0 ? (
                     newlyRegisteredData.slice((staticPage - 1) * itemsPerPage, staticPage * itemsPerPage).map((item) => (
                       <tr key={`new-${item.id}`} className="print:border-b print:border-slate-200 hover:bg-slate-50 transition-colors">

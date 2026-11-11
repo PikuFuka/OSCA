@@ -265,7 +265,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
         </div>
       }>
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden transition-all duration-300 ease-out">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-clip">
           {!loading && filteredRequests.length > 0 ? (
             <table className="w-full text-left">
               <thead className="bg-slate-50/70">
@@ -279,7 +279,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                   <TableHeadCell className="px-6" align="right">Actions</TableHeadCell>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-slate-50 stagger-in">
                 {filteredRequests.map((req, idx) => {
                   const typeConfig = getTypeConfig(req.type);
                   const reasonConfig = getReasonConfig(req.type);
@@ -441,8 +441,8 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
 
       {/* Detail Modal */}
       {selectedRequest && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl shadow-slate-900/10 overflow-hidden animate-in zoom-in-95 slide-in-from-bottom-2 duration-300 max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm modal-backdrop-in">
+          <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl shadow-slate-900/10 overflow-hidden modal-panel-in max-h-[90vh] flex flex-col">
             
             {/* Modal Header */}
             <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50/80 to-white">

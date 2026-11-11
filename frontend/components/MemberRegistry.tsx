@@ -1300,7 +1300,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
       }>
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden relative">
         {isSearching && <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-orange-400 via-amber-400 to-blue-500 animate-pulse z-10" aria-hidden />}
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto overflow-y-clip">
           {!(loading && seniors.length === 0) && (
             <div className={isSearching ? "opacity-60 transition-opacity duration-200" : "transition-opacity duration-200"}>
             <table className="w-full text-left table-fixed">
@@ -1506,7 +1506,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
       {/* ID Generation Modal */}
       {idModalOpen && idGenerationSenior && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200 overflow-y-auto">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm modal-backdrop-in overflow-y-auto">
           <div className="hidden print:flex flex-col items-center justify-start gap-0 p-0 bg-white w-full">
             <style>{`
               @media print {
@@ -1591,7 +1591,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
             </div>
           </div>
 
-          <div className="bg-white rounded-[2.5rem] w-full max-w-5xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh] print:hidden">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-5xl shadow-2xl overflow-hidden modal-panel-in flex flex-col max-h-[90vh] print:hidden">
              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white z-10">
                <div className="flex items-center gap-3">
                  <div className="p-2 bg-systemBlue text-white rounded-xl">
@@ -1607,8 +1607,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
              <div className="flex flex-col lg:flex-row flex-1 overflow-hidden relative">
                 {isPhotoProcessing && (
-                  <div className="fixed inset-0 z-[120] bg-slate-900/45 backdrop-blur-md flex items-center justify-center p-6">
-                    <div className="w-full max-w-sm bg-[#FFFBF1] rounded-3xl shadow-2xl border border-white/60 px-6 py-7 text-center">
+                  <div className="fixed inset-0 z-[120] bg-slate-900/45 backdrop-blur-md flex items-center justify-center p-6 modal-backdrop-in">
+                    <div className="w-full max-w-sm bg-[#FFFBF1] rounded-3xl shadow-2xl border border-white/60 px-6 py-7 text-center modal-panel-in">
                       <div className="mx-auto mb-4 w-16 h-16 rounded-2xl bg-white/70 border border-slate-200/80 flex items-center justify-center shadow-sm">
                         <img src="img/pjn_logo.png" alt="Pagsanjan Logo" className="w-10 h-10 object-contain" />
                       </div>
@@ -1940,8 +1940,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
       {/* Senior Profile Modal (Edit) */}
       {selectedSenior && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-300 ease-out overflow-y-auto">
-          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 ease-out flex flex-col my-auto max-h-full border border-slate-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm modal-backdrop-in overflow-y-auto">
+          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden modal-panel-in flex flex-col my-auto max-h-full border border-slate-200">
             <div className="p-6 md:px-8 md:py-6 border-b border-slate-100 flex items-center justify-between bg-white z-10">
               <div className="flex items-center gap-4">
                 <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100/50">
@@ -2118,8 +2118,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
       {/* View Information & Documents Modal */}
       {viewModalOpen && createPortal(
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-300 ease-out">
-          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300 ease-out border border-slate-200">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 md:p-6 bg-slate-900/50 backdrop-blur-sm modal-backdrop-in">
+          <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-2xl shadow-2xl overflow-hidden flex flex-col modal-panel-in border border-slate-200">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-white z-10">
               <div className="flex items-center gap-4">
                 <div className="p-2.5 bg-blue-50 text-blue-600 rounded-xl border border-blue-100/50">

@@ -46,7 +46,7 @@ class BackupController extends Controller
         $passwordArg = $password !== null && $password !== ''
             ? "--password=\"{$password}\""
             : '';
-        $command = "mysqldump --user=\"{$username}\" {$passwordArg} --host=\"{$host}\" --port={$port} --single-transaction --routines --triggers \"{$database}\" > \"{$tempPath}\" 2>&1";
+        $command = escapeshellarg($this->resolveMysqlBinary('mysqldump')) . " --user=\"{$username}\" {$passwordArg} --host=\"{$host}\" --port={$port} --single-transaction --routines --triggers \"{$database}\" > \"{$tempPath}\" 2>&1";
 
         exec($command, $output, $returnCode);
 
@@ -130,11 +130,14 @@ class BackupController extends Controller
             $host     = config('database.connections.mysql.host');
             $port     = config('database.connections.mysql.port', 3306);
 
-            // Try mysql CLI first — it handles charsets natively with --default-character-set
+            // Try mysql CLI first — it handles charsets natively with --default-character-set.
+            // Non-strict SQL mode matches mysqldump restores and lets legacy dumps write
+            // values to generated columns (MariaDB warning 1906, ignored, not fatal).
             $passwordArg = $password !== null && $password !== ''
                 ? "--password=\"{$password}\""
                 : '';
-            $command = "mysql --user=\"{$username}\" {$passwordArg} --host=\"{$host}\" --port={$port} --default-character-set=utf8mb4 \"{$database}\" < \"{$tempPath}\" 2>&1";
+            $mysql = escapeshellarg($this->resolveMysqlBinary('mysql'));
+            $command = "{$mysql} --user=\"{$username}\" {$passwordArg} --host=\"{$host}\" --port={$port} --default-character-set=utf8mb4 --init-command=\"SET SESSION sql_mode='NO_AUTO_VALUE_ON_ZERO'\" \"{$database}\" < \"{$tempPath}\" 2>&1";
             exec($command, $output, $returnCode);
 
             if ($returnCode !== 0) {
@@ -143,16 +146,25 @@ class BackupController extends Controller
                 DB::statement('SET CHARACTER SET utf8mb4');
                 DB::statement('SET foreign_key_checks = 0');
 
-                // Split on statement boundaries (semicolons not inside quotes)
-                $statements = $this->splitSqlStatements($raw);
-                foreach ($statements as $stmt) {
-                    $stmt = trim($stmt);
-                    if ($stmt !== '' && !str_starts_with($stmt, '--')) {
-                        DB::unprepared($this->prepareStatementForImport($stmt));
-                    }
-                }
+                // Laravel connections enable STRICT_TRANS_TABLES, which turns MariaDB
+                // warning 1906 into an error when a dump supplies a value for a
+                // generated column. Relax it for the restore, then restore it after.
+                $originalSqlMode = $this->currentSqlMode();
+                $this->applySqlMode($this->withoutStrictModes($originalSqlMode));
 
-                DB::statement('SET foreign_key_checks = 1');
+                try {
+                    // Split on statement boundaries (semicolons not inside quotes)
+                    $statements = $this->splitSqlStatements($raw);
+                    foreach ($statements as $stmt) {
+                        $stmt = trim($stmt);
+                        if ($stmt !== '' && !str_starts_with($stmt, '--')) {
+                            DB::unprepared($this->prepareStatementForImport($stmt));
+                        }
+                    }
+                } finally {
+                    $this->applySqlMode($originalSqlMode);
+                    DB::statement('SET foreign_key_checks = 1');
+                }
             }
 
             $migrationExitCode = Artisan::call('migrate', ['--force' => true]);
@@ -284,6 +296,9 @@ class BackupController extends Controller
         return array_values(array_filter($statements));
     }
 
+    /** @var array<string, list<string>> */
+    private array $generatedColumns = [];
+
     private function prepareStatementForImport(string $statement): string
     {
         if (!preg_match('/^INSERT\s+INTO\s+`?seniors`?/i', ltrim($statement))) {
@@ -299,7 +314,14 @@ class BackupController extends Controller
             $columns = Schema::getColumnListing('seniors');
         }
 
-        $updatableColumns = array_values(array_filter($columns, fn (string $column) => $column !== 'id'));
+        // Generated columns cannot be assigned; including them in ON DUPLICATE KEY
+        // UPDATE makes MariaDB fail with error 1906 even when the INSERT is valid.
+        $generatedColumns = $this->getGeneratedColumns('seniors');
+
+        $updatableColumns = array_values(array_filter(
+            $columns,
+            fn (string $column) => $column !== 'id' && !in_array($column, $generatedColumns, true)
+        ));
         if ($updatableColumns === []) {
             return $statement;
         }
@@ -311,6 +333,105 @@ class BackupController extends Controller
         }, $updatableColumns));
 
         return rtrim($statement, "; \t\n\r\0\x0B") . ' ON DUPLICATE KEY UPDATE ' . $assignments;
+    }
+
+    /**
+     * List generated (virtual/stored) columns for a table.
+     *
+     * Introspection is best-effort: unit tests and non-MySQL connections
+     * simply return no generated columns.
+     *
+     * @return list<string>
+     */
+    protected function getGeneratedColumns(string $table): array
+    {
+        if (array_key_exists($table, $this->generatedColumns)) {
+            return $this->generatedColumns[$table];
+        }
+
+        try {
+            $columns = Schema::getColumns($table);
+        } catch (\Throwable $e) {
+            return $this->generatedColumns[$table] = [];
+        }
+
+        $generated = [];
+        foreach ($columns as $column) {
+            if (!empty($column['generation'])) {
+                $generated[] = $column['name'];
+            }
+        }
+
+        return $this->generatedColumns[$table] = $generated;
+    }
+
+    /**
+     * Current session SQL mode, or null when it cannot be read.
+     */
+    private function currentSqlMode(): ?string
+    {
+        try {
+            $result = DB::selectOne('SELECT @@SESSION.sql_mode AS sql_mode');
+
+            return $result?->sql_mode !== null ? (string) $result->sql_mode : null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Remove strict-mode flags while keeping the rest of the SQL mode intact.
+     */
+    private function withoutStrictModes(?string $sqlMode): ?string
+    {
+        if ($sqlMode === null) {
+            return null;
+        }
+
+        $strictModes = ['STRICT_TRANS_TABLES', 'STRICT_ALL_TABLES'];
+        $modes = array_filter(
+            array_map('trim', explode(',', $sqlMode)),
+            static fn (string $mode) => $mode !== '' && !in_array($mode, $strictModes, true)
+        );
+
+        return implode(',', $modes);
+    }
+
+    private function applySqlMode(?string $sqlMode): void
+    {
+        if ($sqlMode === null) {
+            return;
+        }
+
+        DB::statement('SET SESSION sql_mode = ' . DB::getPdo()->quote($sqlMode));
+    }
+
+    /**
+     * Resolve a MySQL client binary, falling back to common XAMPP/MySQL paths
+     * when the binaries are not on PATH.
+     */
+    private function resolveMysqlBinary(string $binary): string
+    {
+        $candidates = DIRECTORY_SEPARATOR === '\\'
+            ? [
+                "C:\\xampp\\mysql\\bin\\{$binary}.exe",
+                "C:\\Program Files\\MySQL\\MySQL Server 8.0\\bin\\{$binary}.exe",
+                "C:\\Program Files\\MySQL\\MySQL Server 8.4\\bin\\{$binary}.exe",
+            ]
+            : [
+                "/usr/bin/{$binary}",
+                "/usr/local/bin/{$binary}",
+                "/Applications/XAMPP/xamppfiles/bin/{$binary}",
+                "/opt/lampp/bin/{$binary}",
+            ];
+
+        foreach ($candidates as $candidate) {
+            if (is_file($candidate)) {
+                return $candidate;
+            }
+        }
+
+        return $binary;
     }
 
     private function extractInsertColumns(string $statement): array
@@ -476,6 +597,7 @@ class BackupController extends Controller
         $sql .= "-- Database: {$database}\n\n";
         $sql .= "SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;\n";
         $sql .= "SET CHARACTER SET utf8mb4;\n";
+        $sql .= "SET SESSION sql_mode = 'NO_AUTO_VALUE_ON_ZERO';\n";
         $sql .= "SET FOREIGN_KEY_CHECKS=0;\n\n";
 
         $pdo    = DB::getPdo();

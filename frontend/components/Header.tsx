@@ -788,8 +788,8 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
 
       {/* Settings Modal */}
       {isSettingsOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-white rounded-[24px] w-full max-w-lg p-6 md:p-8 animate-in zoom-in-95 slide-in-from-bottom-4 duration-300 shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm modal-backdrop-in">
+          <div className="bg-white rounded-[24px] w-full max-w-lg p-6 md:p-8 modal-panel-in shadow-2xl">
              {/* Modal Header */}
              <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-4">

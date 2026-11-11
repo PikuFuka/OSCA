@@ -170,7 +170,7 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
           <span>Time & User</span>
         </div>
         
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-slate-100 stagger-in">
           {!loading && (
             logs.length === 0 ? (
             <div className="p-12 text-center text-slate-400">

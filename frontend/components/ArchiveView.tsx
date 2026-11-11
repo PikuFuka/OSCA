@@ -187,7 +187,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
           </div>
         </div>
 
-        <div className="overflow-x-auto border-t border-slate-50">
+        <div className="overflow-x-auto overflow-y-clip border-t border-slate-50">
           {!loading && (
             <table className="w-full text-left">
               <thead className="bg-slate-50/70">
@@ -199,7 +199,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
                   <TableHeadCell className="px-8 py-5" align="right">Actions</TableHeadCell>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="stagger-in">
                 {filteredData.length > 0 ? filteredData.slice((page - 1) * archivePerPage, page * archivePerPage).map((senior) => (
                   <tr key={senior.id} className="group hover:bg-slate-50/60 transition-colors">
                     <td className="px-8 py-4">

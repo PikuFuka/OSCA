@@ -80,8 +80,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const styles = getVariantStyles();
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-300 ease-out">
-      <div className="bg-white rounded-2xl w-full max-w-[28rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300 ease-out border border-slate-200 relative">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm modal-backdrop-in">
+      <div className="bg-white rounded-2xl w-full max-w-[28rem] shadow-2xl overflow-hidden modal-panel-in border border-slate-200 relative">
         
         {/* Close Button */}
         <button 

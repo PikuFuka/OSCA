@@ -657,7 +657,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
         </div>
 
         {/* Premium Application Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-in">
           <button 
             onClick={() => handleStart('new')} 
             className="group relative bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 hover:border-systemBlue transition-all text-left shadow-sm hover:shadow-xl hover:shadow-systemBlue/10 hover:-translate-y-1 flex flex-col h-full"

@@ -119,7 +119,7 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
   return (
     <TransitionWrapper isLoading={loading} skeleton={<UserReviewSkeleton />}>
       {!loading && (
-      <div className="space-y-8 pb-12">
+      <div className="space-y-8 pb-12 stagger-in">
       <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div>
           <h2 className="text-3xl font-black text-slate-900 tracking-tight">My Record</h2>

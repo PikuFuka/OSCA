@@ -9,194 +9,227 @@ import Skeleton from './Skeleton';
  * so fallbacks can render before any view chunk arrives.
  */
 
+const AREA_LINE = 'M0 34 L10 27 L20 30 L30 21 L40 25 L50 15 L60 20 L70 11 L80 15 L90 6 L100 11';
+const AREA_FILL = `${AREA_LINE} L100 40 L0 40 Z`;
+
+/**
+ * Quiet chart placeholder: faint guides plus one simple silhouette.
+ * The whole panel carries the wave so the pieces shimmer together.
+ */
+const ChartPlaceholder = ({
+  variant = 'area',
+  compact = false,
+  className = '',
+}: {
+  variant?: 'area' | 'bar' | 'line';
+  compact?: boolean;
+  className?: string;
+}) => (
+  <div
+    className={`relative w-full overflow-hidden rounded-lg bg-slate-50/80 skeleton-wave ${
+      compact ? 'h-10' : 'flex-1 min-h-0'
+    } ${className}`}
+    aria-hidden="true"
+  >
+    {!compact && (
+      <div className="absolute inset-x-4 bottom-4 top-5 flex flex-col justify-between">
+        {[...Array(4)].map((_, i) => (
+          <span key={i} className="h-px w-full bg-slate-200/50" />
+        ))}
+      </div>
+    )}
+
+    {variant === 'bar' ? (
+      <div className="absolute inset-x-5 bottom-4 top-7 flex items-end gap-2.5">
+        {[42, 66, 48, 80, 56, 72, 46, 88].map((height, i) => (
+          <span
+            key={i}
+            className="flex-1 rounded-t-[3px] bg-slate-200/60"
+            style={{ height: `${height}%` }}
+          />
+        ))}
+      </div>
+    ) : (
+      <div className={compact ? 'absolute inset-x-3 inset-y-2' : 'absolute inset-x-4 bottom-4 top-5'}>
+        <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-full w-full">
+          {variant === 'area' && <path d={AREA_FILL} fill="rgba(148, 163, 184, 0.14)" />}
+          <path
+            d={AREA_LINE}
+            fill="none"
+            stroke="rgba(148, 163, 184, 0.5)"
+            strokeWidth="0.8"
+            vectorEffect="non-scaling-stroke"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+    )}
+  </div>
+);
+
 const DashboardSkeleton = () => {
   return (
     <div className="space-y-6 pb-16 bg-[#f8fafc] min-h-screen w-full">
-      {/* Utility / Control Bar Skeleton — right-aligned pills + export */}
+      <span className="sr-only">Loading dashboard data…</span>
+
+      {/* Utility / Control Bar */}
       <div className="flex items-center justify-end gap-3 mb-2">
-        <Skeleton.Rect className="w-28 h-9 rounded-none" />
-        <Skeleton.Rect className="w-40 h-9 rounded-none" />
-        <Skeleton.Rect className="w-24 h-9 rounded-none" />
+        <Skeleton.Rect className="w-28 h-9 rounded-lg" />
+        <Skeleton.Rect className="w-36 h-9 rounded-lg" />
+        <span className="hidden sm:block w-px h-6 bg-slate-200" />
+        <Skeleton.Rect className="w-20 h-9 rounded-lg" />
       </div>
 
       {/* Primary KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white border border-slate-200 p-5 flex flex-col gap-4 w-full relative overflow-hidden">
-            <div className="flex justify-between items-start w-full relative z-10">
-              <div>
-                <Skeleton.Text className="w-24 h-3 mb-1.5" />
-                <Skeleton.Text className="w-28 h-8" />
+          <div key={i} className="bg-white border border-slate-200 p-5 flex flex-col gap-4 w-full min-w-0">
+            <div className="flex justify-between items-start gap-4 w-full">
+              <div className="min-w-0 flex-1">
+                <Skeleton.Text className="w-24 h-2.5" />
+                <Skeleton.Text className="w-20 h-7 mt-3" />
               </div>
               <Skeleton.Rect className="w-10 h-10 rounded-lg shrink-0" />
             </div>
-            <div className="w-full h-10 mt-2 relative z-10">
-              <Skeleton.Primitive className="w-full h-full rounded-none" />
-            </div>
-            <div className="flex items-center justify-between relative z-10">
-              <Skeleton.Text className="w-20 h-2.5" />
+
+            <ChartPlaceholder variant="line" compact />
+
+            <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100">
               <Skeleton.Text className="w-24 h-2.5" />
+              <Skeleton.Text className="w-16 h-2.5" />
             </div>
           </div>
         ))}
       </div>
 
-      {/* Asymmetrical Layout - Tier 1 (Velocity + Peak Ages) */}
+      {/* Tier 1 — Registration Velocity + Peak Ages */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        {/* Registration Velocity */}
         <div className="xl:col-span-8 bg-white border border-slate-200 p-6 flex flex-col h-[400px]">
-          <div className="flex justify-between items-start mb-6">
-            <div>
-              <Skeleton.Text className="w-44 h-5" />
-              <Skeleton.Text className="w-64 h-3 mt-1.5" />
+          <div className="flex justify-between items-start gap-4 mb-6">
+            <div className="min-w-0">
+              <Skeleton.Text className="w-40 h-4" />
+              <Skeleton.Text className="w-64 max-w-full h-2.5 mt-2.5" />
             </div>
-            <Skeleton.Rect className="w-36 h-4 rounded-none shrink-0" />
+            <Skeleton.Text className="w-28 h-2.5 shrink-0" />
           </div>
-          <div className="flex-1 w-full min-h-0">
-            <Skeleton.Primitive className="w-full h-full rounded-none" />
-          </div>
+          <ChartPlaceholder variant="area" />
         </div>
 
-        {/* Peak Ages */}
         <div className="xl:col-span-4 bg-white border border-slate-200 p-6 flex flex-col h-[400px]">
-          <Skeleton.Text className="w-28 h-5" />
-          <Skeleton.Text className="w-44 h-3 mt-1.5 mb-6" />
-          <div className="flex-1 flex flex-col justify-center gap-3 min-h-0">
-            {[...Array(8)].map((_, i) => (
+          <Skeleton.Text className="w-28 h-4" />
+          <Skeleton.Text className="w-44 h-2.5 mt-2.5 mb-6" />
+          <div className="flex-1 flex flex-col justify-center gap-3.5 min-h-0">
+            {[...Array(7)].map((_, i) => (
               <div key={i} className="flex items-center gap-3">
-                <Skeleton.Text className="w-7 h-3.5 shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <Skeleton.Primitive className="h-3.5 rounded-r-md" style={{ width: `${92 - i * 9}%` }} />
-                </div>
+                <Skeleton.Text className="w-6 h-2.5 shrink-0" />
+                <Skeleton.Primitive
+                  className="h-2.5 rounded-full"
+                  style={{ width: `${90 - i * 9}%` }}
+                />
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Asymmetrical Layout - Tier 2 */}
+      {/* Tier 2 — Gender, Age Brackets, Mortality */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        {/* Gender Breakdown */}
-        <div className="xl:col-span-3 bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col h-[320px]">
-          <Skeleton.Text className="w-36 h-5 mb-1.5" />
-          <Skeleton.Text className="w-48 h-3.5 mb-6" />
-          <div className="flex-1 flex items-center gap-5 min-h-0">
-            <div className="relative w-36 h-36 shrink-0">
-              <Skeleton.Circle className="w-full h-full" />
-              <div className="absolute inset-5 bg-white rounded-full" />
-              <div className="absolute inset-0 grid place-items-center">
-                <Skeleton.Text className="w-12 h-5" />
-              </div>
-            </div>
-            <div className="flex-1 min-w-0 flex flex-col gap-5">
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <Skeleton.Text className="w-16 h-3.5" />
+        <div className="xl:col-span-3 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col h-[320px]">
+          <Skeleton.Text className="w-36 h-4" />
+          <Skeleton.Text className="w-44 h-2.5 mt-2.5 mb-6" />
+
+          <div className="flex-1 flex flex-col justify-center gap-6 min-h-0">
+            {[...Array(2)].map((_, i) => (
+              <div key={i}>
+                <div className="flex items-end justify-between gap-3 mb-2">
+                  <Skeleton.Text className="w-14 h-2.5" />
                   <Skeleton.Text className="w-10 h-4" />
                 </div>
-                <Skeleton.Primitive className="w-full h-2 rounded-full" />
-                <Skeleton.Text className="w-8 h-3 ml-auto mt-1" />
+                <Skeleton.Primitive className="w-full h-1.5 rounded-full" />
+                <Skeleton.Text className="w-8 h-2.5 ml-auto mt-2" />
               </div>
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <Skeleton.Text className="w-16 h-3.5" />
-                  <Skeleton.Text className="w-10 h-4" />
-                </div>
-                <Skeleton.Primitive className="w-full h-2 rounded-full" />
-                <Skeleton.Text className="w-8 h-3 ml-auto mt-1" />
-              </div>
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Age Distribution */}
-        <div className="xl:col-span-5 bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col h-[320px]">
-          <Skeleton.Text className="w-52 h-5 mb-1.5" />
-          <Skeleton.Text className="w-44 h-3.5 mb-6" />
-          <div className="flex-1 w-full min-h-0">
-            <Skeleton.Primitive className="w-full h-full rounded-none" />
-          </div>
+        <div className="xl:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col h-[320px]">
+          <Skeleton.Text className="w-48 h-4" />
+          <Skeleton.Text className="w-40 h-2.5 mt-2.5 mb-6" />
+          <ChartPlaceholder variant="bar" />
         </div>
 
-        {/* Mortality Analytics */}
-        <div className="xl:col-span-4 bg-white border border-slate-200 rounded-2xl shadow-sm p-6 flex flex-col h-[320px]">
-          <Skeleton.Text className="w-40 h-5 mb-1.5" />
-          <Skeleton.Text className="w-36 h-3.5 mb-6" />
-          <div className="flex-1 w-full min-h-0">
-            <Skeleton.Primitive className="w-full h-full rounded-none" />
-          </div>
+        <div className="xl:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col h-[320px] min-w-0">
+          <Skeleton.Text className="w-36 h-4" />
+          <Skeleton.Text className="w-32 h-2.5 mt-2.5 mb-6" />
+          <ChartPlaceholder variant="area" />
         </div>
       </div>
 
-       {/* Full Width Grid Bottom (Geographic Heatmap) */}
-       <div className="grid grid-cols-1">
-         <div className="bg-white rounded-2xl border border-slate-200/70 shadow-sm overflow-hidden">
-          <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <Skeleton.Rect className="w-8 h-8 rounded-xl shrink-0" />
-                <Skeleton.Text className="w-44 h-5" />
-              </div>
-              <Skeleton.Text className="w-56 h-3 mt-1" />
-            </div>
-            <div className="shrink-0 flex flex-col items-start sm:items-end gap-1.5">
-              <Skeleton.Text className="w-28 h-2.5" />
-              <Skeleton.Rect className="w-64 h-9 rounded-full" />
-            </div>
+      {/* Geographic Heatmap */}
+      <div className="bg-white rounded-[24px] border border-slate-200/70 overflow-hidden">
+        <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Skeleton.Rect className="w-8 h-8 rounded-xl shrink-0" />
+            <Skeleton.Text className="w-40 h-4" />
+            <Skeleton.Rect className="w-20 h-5 rounded-full shrink-0" />
           </div>
-          <div className="p-4 sm:p-6 bg-slate-50/40">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
-              {[...Array(12)].map((_, i) => (
-                <div key={i} className="rounded-xl border border-slate-200 bg-white p-4 flex flex-col justify-between min-h-[116px]">
-                  <div className="flex items-start justify-between gap-2">
-                    <Skeleton.Rect className="w-8 h-5 rounded-md" />
-                    <Skeleton.Rect className="w-12 h-5 rounded-md" />
-                  </div>
-                  <div className="mt-3">
-                    <Skeleton.Text className="w-3/4 h-3 mb-2" />
-                    <Skeleton.Text className="w-1/2 h-6 mb-1" />
+          <Skeleton.Rect className="w-52 h-8 rounded-full shrink-0" />
+        </div>
+
+        <div className="p-4 sm:p-6 bg-slate-50/40">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+            {[...Array(12)].map((_, i) => (
+              <div
+                key={i}
+                className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-col justify-between min-h-[116px]"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <Skeleton.Rect className="w-8 h-5 rounded-md" />
+                  <Skeleton.Rect className="w-11 h-5 rounded-md" />
+                </div>
+                <div className="mt-4">
+                  <Skeleton.Text className="w-3/4 h-2.5 mb-2.5" />
+                  <Skeleton.Text className="w-1/2 h-5" />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="px-6 sm:px-8 py-3 bg-white border-t border-slate-100 flex items-center justify-end">
+          <Skeleton.Text className="w-44 h-2.5" />
+        </div>
+      </div>
+
+      {/* Birthday Celebrants */}
+      <div className="bg-white rounded-[24px] border border-slate-200/70 overflow-hidden">
+        <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex items-center gap-3">
+          <Skeleton.Rect className="w-8 h-8 rounded-xl shrink-0" />
+          <Skeleton.Text className="w-56 h-4" />
+          <Skeleton.Rect className="w-24 h-5 rounded-full shrink-0" />
+        </div>
+
+        <div className="p-4 sm:p-6 bg-slate-50/40">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+            {[...Array(4)].map((_, i) => (
+              <div
+                key={i}
+                className="bg-white border border-slate-200/90 rounded-2xl px-5 py-4 flex items-center justify-between gap-4"
+              >
+                <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                  <Skeleton.Circle className="w-12 h-12 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <Skeleton.Text className="w-3/4 h-3.5 mb-2" />
                     <Skeleton.Text className="w-1/3 h-2.5" />
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
-          <div className="px-6 sm:px-8 py-3 bg-white border-t border-slate-100 flex items-center justify-end">
-            <Skeleton.Text className="w-48 h-3" />
+                <Skeleton.Rect className="w-16 h-7 rounded-full shrink-0" />
+              </div>
+            ))}
           </div>
         </div>
-       </div>
-
-       {/* Birthday Celebrants Collection */}
-       <div className="grid grid-cols-1">
-         <div className="bg-white rounded-[24px] border border-slate-200/70 shadow-sm overflow-hidden">
-           <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex items-center gap-3">
-             <Skeleton.Rect className="w-8 h-8 rounded-xl shrink-0" />
-             <Skeleton.Text className="w-56 h-5" />
-             <Skeleton.Rect className="w-24 h-6 rounded-full shrink-0" />
-           </div>
-           <div className="p-4 sm:p-6 bg-slate-50/40">
-             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
-               {[...Array(4)].map((_, i) => (
-                 <div key={i} className="bg-white border border-slate-200/90 rounded-2xl px-5 py-4 flex items-center justify-between gap-4">
-                   <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                     <Skeleton.Circle className="w-12 h-12 shrink-0" />
-                     <div className="min-w-0 flex-1">
-                       <Skeleton.Text className="w-3/4 h-3.5 mb-1.5" />
-                       <Skeleton.Text className="w-1/3 h-2.5 mb-1.5" />
-                       <Skeleton.Text className="w-1/2 h-2.5" />
-                     </div>
-                   </div>
-                   <div className="flex items-center gap-2.5 shrink-0">
-                     <Skeleton.Rect className="w-20 h-7 rounded-full" />
-                     <Skeleton.Rect className="w-14 h-7 rounded-full" />
-                   </div>
-                 </div>
-               ))}
-             </div>
-           </div>
-         </div>
-       </div>
+      </div>
     </div>
   );
 };

@@ -113,7 +113,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
       ) : (
         <>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-in">
         {/* Export Card */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 flex flex-col">
           <div className="flex items-center gap-4 mb-6">
@@ -249,8 +249,8 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
 
       {/* Database Restoration Success - Forced Refresh Modal */}
       {isRefreshRequired && createPortal(
-        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-500">
-          <div className="bg-white rounded-[2.5rem] w-full max-w-[30rem] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-500 border-4 border-emerald-100 flex flex-col items-center">
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md modal-backdrop-in">
+          <div className="bg-white rounded-[2.5rem] w-full max-w-[30rem] shadow-2xl overflow-hidden modal-panel-in border-4 border-emerald-100 flex flex-col items-center">
             <div className="p-10 text-center w-full">
                <div className="w-24 h-24 bg-emerald-50 rounded-[2rem] flex items-center justify-center mx-auto mb-8 border-2 border-emerald-100 shadow-inner">
                   <CheckCircle2 size={48} className="text-emerald-500 animate-bounce" />

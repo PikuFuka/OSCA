@@ -1,58 +1,250 @@
-# OSCA Senior Citizen ID System - Download & Installation Guide
+# OSCA Senior Citizen ID System - Requirements & Installation Guide
 
-This document lists all the software you need to download and install to run the OSCA system on your local machine.
+This document lists all software required to install and run the OSCA system, followed by the first-time setup steps.
 
 ## 1. Required Software (Downloads)
 
-### A. XAMPP (For PHP and Database)
-- **Version:** PHP 8.2 or 8.3 recommended.
-- **Download:** [https://www.apachefriends.org/download.html](https://www.apachefriends.org/download.html)
-- **Includes:** Apache (Web Server), MySQL (Database), and PHP.
+### A. XAMPP (PHP + MySQL/MariaDB)
+- **Version:** XAMPP with PHP **8.2, 8.3, or 8.4** (PHP 8.2 recommended).
+- **Important:** Do NOT use PHP 8.5 or newer. The locked Excel export library (`phpoffice/phpspreadsheet 1.30.x`) requires PHP `< 8.5`.
+- **Download:** https://www.apachefriends.org/download.html
+- **Includes:** Apache (web server), MySQL/MariaDB (database), and PHP.
 
-### B. Node.js & npm (For Frontend)
-- **Version:** v22.x (LTS) recommended.
-- **Download:** [https://nodejs.org/](https://nodejs.org/)
+### B. Node.js & npm (Frontend Toolchain)
+- **Version:** Node.js **20.19+ or 22.12+** (Node 22 LTS recommended; Node 24 also works).
+- **Important:** Node.js 18 is NOT supported by the current Vite/React toolchain.
+- **Download:** https://nodejs.org/
 - **Includes:** npm (Node Package Manager).
 
-### C. Composer (For Backend PHP Dependencies)
-- **Version:** v2.x
-- **Download:** [https://getcomposer.org/download/](https://getcomposer.org/download/)
+### C. Composer (Backend PHP Dependencies)
+- **Version:** Composer **2.x**
+- **Download:** https://getcomposer.org/download/
 
-### D. Git (Optional but Recommended)
-- **Download:** [https://git-scm.com/downloads](https://git-scm.com/downloads)
+### D. Git (Optional)
+- Required only for cloning the repository or Git-based transfers.
+- **Download:** https://git-scm.com/downloads
 
-## 2. Initial Setup Instructions
+### E. Web Browser
+- A current version of Chrome, Edge, or Firefox.
+- Camera capture works only on `localhost` or over HTTPS. When the app is opened over plain HTTP from another computer on the LAN, use the photo upload button instead of the live camera.
 
-Once the software above is installed, follow these steps:
+## 2. Minimum Hardware
 
-1.  **Clone/Download the Project:**
-    - Place the `OSCA` folder in your desired directory.
+- **Processor:** Intel Core i3 / AMD Ryzen 3 or higher
+- **RAM:** 4 GB minimum (8 GB recommended)
+- **Storage:** 2 GB free disk space
 
-2.  **Backend Setup:**
-    - Open a terminal in the `backend` folder.
-    - Run: `composer install`
-    - Copy `.env.example` to `.env`.
-    - Run: `php artisan key:generate`
+## 3. Required PHP Extensions
 
-3.  **Frontend Setup:**
-    - Open a terminal in the `frontend` folder.
-    - Run: `npm install`
+Enable these in `C:\xampp\php\php.ini` (remove the leading `;` if commented out):
 
-4.  **Database Setup:**
-    - Open XAMPP Control Panel and start **Apache** and **MySQL**.
-    - Go to [http://localhost/phpmyadmin](http://localhost/phpmyadmin).
-    - Create a new database named `osca_db`.
-    - In your `backend/.env` file, ensure `DB_DATABASE=osca_db` and your credentials (usually `root` and no password) are correct.
+```ini
+extension=curl
+extension=fileinfo
+extension=gd
+extension=mbstring
+extension=openssl
+extension=pdo_mysql
+extension=pdo_sqlite
+extension=zip
+```
 
-5.  **Run Migrations:**
-    - In the `backend` terminal, run: `php artisan migrate`
+The following are compiled into or enabled by default in XAMPP and are also required:
 
-## 3. Running the System
+```
+ctype, dom, iconv, libxml, simplexml, xml, xmlreader, xmlwriter, zlib
+```
 
-In the **Root Folder (OSCA)**, run the following command to start everything:
+Verify all modules are available:
+
 ```bash
+php -m
+```
+
+After changing `php.ini`, restart Apache/MySQL from the XAMPP Control Panel.
+
+## 4. Verify the Tools Are Installed
+
+Run these commands in a new terminal:
+
+```bash
+php -v          # Must report PHP 8.2.x, 8.3.x or 8.4.x
+node -v         # Must report v20.19+ or v22.12+ (v22 LTS recommended)
+npm -v
+composer -V     # Must report Composer 2.x
+```
+
+## 5. First-Time Installation
+
+> The first setup downloads Composer and npm packages, so internet access is needed once. After dependencies are installed, the system runs fully offline.
+
+### Step 1: Clone or Extract the Project
+
+```bash
+git clone https://github.com/PikuFuka/OSCA.git
+cd OSCA
+```
+
+(If you received a ZIP or USB copy, simply open a terminal in the `OSCA` folder.)
+
+### Step 2: Install Root Dependencies
+
+```bash
+npm install
+```
+
+This installs `concurrently`, which is used by `npm run dev` to start all services together.
+
+### Step 3: Set Up the Backend
+
+```bash
+cd backend
+composer install
+copy .env.example .env
+php artisan key:generate
+```
+
+On macOS/Linux, use `cp .env.example .env` instead of `copy`.
+
+> `composer install` must run on PHP 8.2 - 8.4. If Composer reports that `phpoffice/phpspreadsheet` requires `php < 8.5`, switch XAMPP to a PHP 8.2, 8.3, or 8.4 build.
+
+### Step 4: Set Up the Database
+
+**Option A - MySQL (default with XAMPP):**
+
+1. Start **Apache** and **MySQL** in the XAMPP Control Panel.
+2. Open http://localhost/phpmyadmin and create a database named `osca_db` with collation `utf8mb4_unicode_ci`, or run:
+
+   ```sql
+   CREATE DATABASE osca_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+   ```
+
+3. In `backend/.env`, set:
+
+   ```dotenv
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=osca_db
+   DB_USERNAME=root
+   DB_PASSWORD=
+   ```
+
+   These values match a default XAMPP installation (`root` with no password). If your MySQL root account has a password, set `DB_PASSWORD` accordingly.
+
+**Option B - SQLite (zero-setup database file):**
+
+1. In `backend/.env`, set:
+
+   ```dotenv
+   DB_CONNECTION=sqlite
+   ```
+
+2. From the `backend` directory, create an empty database file:
+
+   ```bash
+   # Windows (cmd)
+   type nul > database/database.sqlite
+
+   # macOS / Linux
+   touch database/database.sqlite
+   ```
+
+### Step 5: Run Migrations, Seeds, and Storage Link
+
+From the `backend` directory:
+
+```bash
+php artisan migrate --seed
+php artisan storage:link
+```
+
+`--seed` creates the default accounts:
+
+| Role          | Email                 | Password   |
+| ------------- | --------------------- | ---------- |
+| Administrator | admin@osca.gov.ph     | admin123   |
+| Staff Member  | staff@osca.gov.ph     | staff123   |
+| Print Station | print@osca.gov.ph     | print123   |
+
+To use different seed credentials, set `ADMIN_PASSWORD`, `STAFF_PASSWORD`, and `PRINT_PASSWORD` in `backend/.env` before running the command.
+
+On macOS/Linux, also make Laravel's writable folders accessible:
+
+```bash
+chmod -R 775 storage bootstrap/cache
+```
+
+### Step 6: Set Up the Frontend
+
+```bash
+cd ../frontend
+npm install
+copy .env.example .env
+```
+
+On macOS/Linux, use `cp .env.example .env` instead of `copy`.
+
+Keep the default API URL for local development:
+
+```dotenv
+VITE_API_URL=http://127.0.0.1:8000/api
+```
+
+For a different backend host or port, point it at that server's URL without a trailing slash (for example `http://192.168.1.100:8000/api`). The optional `GEMINI_API_KEY` can be left empty.
+
+### Step 7: Run the System
+
+From the root `OSCA` directory:
+
+```bash
+cd ..
 npm run dev
 ```
 
+This starts:
+
+- Laravel API: http://127.0.0.1:8000
+- Vite dev server: http://localhost:3000 (open this in your browser)
+- MySQL: 127.0.0.1:3306 (started automatically when XAMPP is installed at `C:\xampp`)
+
+Open http://localhost:3000 and log in with `admin@osca.gov.ph` / `admin123`. You will be prompted to set a new password.
+
+> **Windows one-click launch:** double-click `APP\start.bat`. It checks root dependencies, starts `npm run dev`, and opens the browser.
+
+## 6. Quick Command Summary
+
+```bash
+# From the project root
+npm install                  # Root dependency (concurrently)
+npm run dev                  # Start MySQL + Laravel API + Vite
+npm run backend              # Start the Laravel API only
+npm run frontend             # Start the Vite dev server only
+npm run mysql                # Start XAMPP MySQL only (Windows, C:\xampp)
+npm run build:frontend       # Build the SPA into backend/public/app for LAN use
+
+# From backend/
+composer install
+copy .env.example .env
+php artisan key:generate
+php artisan migrate --seed
+php artisan storage:link
+php artisan test             # Run backend tests
+php artisan queue:work       # Process queued report/backup jobs (optional)
+
+# From frontend/
+npm install
+copy .env.example .env
+npm run test                 # Run frontend tests once
+npm run test:watch           # Run frontend tests in watch mode
+```
+
+## 7. Additional Notes
+
+- **Default admin password:** change the seeded passwords immediately after deployment.
+- **Async jobs:** report generation and database backup/import use Laravel's database queue. They work normally without a worker; only requests using `?async=1` or `?queue=1` require `php artisan queue:work`.
+- **Production/LAN mode:** build the frontend with `npm run build:frontend`, then run `php artisan serve --host=0.0.0.0 --port=8000` from `backend/`. See README section 6 for firewall and `APP_URL` details.
+- **Offline operation:** after dependencies are installed and the frontend is built, the system does not require an internet connection at runtime.
+
 ---
-*Last Updated: February 23, 2026*
+*Last Updated: November 9, 2026*

@@ -377,7 +377,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
           </div>
         </div>
 
-        <div className="overflow-x-auto flex-1">
+        <div className="overflow-x-auto overflow-y-clip flex-1">
           <table className="w-full text-left table-fixed">
             <thead className="bg-slate-50/70">
               <tr className="border-b border-slate-100">
@@ -388,7 +388,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
                 <TableHeadCell className="px-6 w-[16%]" align="right">Settings</TableHeadCell>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50">
+            <tbody className="divide-y divide-slate-50 stagger-in">
               {displayedAccounts.length > 0 ? displayedAccounts.map((acc) => (
                 <tr key={acc.id} className="group hover:bg-slate-50/60 transition-colors">
                   <td className="px-6 py-4">
@@ -481,8 +481,8 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
 
       {/* Edit Account Modal */}
       {selectedAccount && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm modal-backdrop-in">
+          <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden modal-panel-in">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-blue-100 text-blue-900 rounded-xl flex items-center justify-center overflow-hidden shrink-0">
@@ -580,8 +580,8 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
 
       {/* Create Account Modal */}
       {isCreateOpen && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm modal-backdrop-in">
+          <div className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden modal-panel-in">
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div className="flex items-center gap-3">
                 <div className="p-2 bg-blue-100 text-blue-900 rounded-xl"><UserPlus size={24} /></div>
