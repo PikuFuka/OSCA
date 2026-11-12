@@ -73,7 +73,9 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   const isSeniorRole = currentUser?.role === 'Senior';
 
   const fetchRecentSeniors = async () => {
-    if (isPublicUser) return;
+    // The recent-accounts rail is a staff registration aid; seniors lack
+    // permission to list the registry, so skip the admin-only request.
+    if (isPublicUser || isSeniorRole) return;
     setLoadingRecent(true);
     try {
       const response = await seniorsAPI.getAll({ per_page: 5, fresh: true, sort: 'created_at', order: 'desc' });
@@ -87,10 +89,10 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   };
 
   useEffect(() => {
-    if (mode === 'selection' && !isPublicUser) {
+    if (mode === 'selection' && !isPublicUser && !isSeniorRole) {
       fetchRecentSeniors();
     }
-  }, [mode, isPublicUser]);
+  }, [mode, isPublicUser, isSeniorRole]);
   
   const [formData, setFormData] = useState({
     oscaId: '',
@@ -665,7 +667,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
         </div>
 
         {/* Premium Application Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-in">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 stagger-sequence">
           <button 
             onClick={() => handleStart('new')} 
             className="group relative bg-white p-6 sm:p-8 rounded-3xl border border-slate-200 hover:border-systemBlue transition-all text-left shadow-sm hover:shadow-xl hover:shadow-systemBlue/10 hover:-translate-y-1 flex flex-col h-full"
@@ -721,7 +723,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
               </button>
             </div>
             
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto overflow-y-hidden no-scrollbar">
               <table className="w-full text-left border-collapse">
                 <thead className="bg-slate-50/50 border-b border-slate-100">
                   <tr>
@@ -731,16 +733,31 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                     <th className="px-6 py-3 text-xs font-semibold text-slate-500 text-right">Date Created</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-slate-100 stagger-sequence">
                   {loadingRecent ? (
-                    <tr>
-                      <td colSpan={4} className="px-6 py-12 text-center">
-                        <div className="flex items-center justify-center gap-2">
-                          <Loader2 className="animate-spin text-systemBlue" size={18} strokeWidth={2.5} />
-                          <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Loading recent entries...</span>
-                        </div>
-                      </td>
-                    </tr>
+                    [...Array(5)].map((_, i) => (
+                      <tr key={`recent-skel-${i}`}>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <Skeleton.Rect className="w-8 h-8 rounded-lg shrink-0" />
+                            <Skeleton.Text className="w-36 h-3.5" />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Skeleton.Text className="w-24 h-3" />
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex justify-center">
+                            <Skeleton.Rect className="w-16 h-5 rounded-md" />
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex justify-end">
+                            <Skeleton.Text className="w-20 h-3" />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
                   ) : recentSeniors.length > 0 ? (
                     recentSeniors.map((senior) => (
                       <tr key={senior.id} className="group hover:bg-slate-50/80 transition-colors">
@@ -796,9 +813,9 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
   }
 
   return (
-    <TransitionWrapper isLoading={initLoading} skeleton={<FormSkeleton />}>
+    <TransitionWrapper isLoading={initLoading} skeleton={<FormSkeleton />} animateContent={false}>
       {!initLoading && (
-        <div className="w-full space-y-6 stagger-in">
+        <div className="w-full space-y-6 stagger-sequence">
           {/* Compact Header */}
       <div className="form-header-enter mx-auto flex w-[min(980px,94vw)] max-w-full flex-col gap-3 px-0 py-2 md:flex-row md:items-center md:gap-6 md:px-2">
         <div className="flex items-center gap-3">

@@ -10,6 +10,9 @@ class RequestResource extends JsonResource
     public function toArray(Request $request): array
     {
         $pendingData = $this->pending_data ?? [];
+        $emergencyName = $pendingData['emergencyName'] ?? $this->senior?->emergency_name;
+        $emergencyContact = $pendingData['emergencyContact'] ?? $this->senior?->emergency_contact;
+        $emergency = trim(($emergencyName ?? '') . ($emergencyContact ? " ({$emergencyContact})" : ''));
         return [
             'id' => $this->id,
             'name' => $this->senior ? $this->senior->full_name : 'Unknown',
@@ -30,6 +33,9 @@ class RequestResource extends JsonResource
                 'dateOfBirth' => $pendingData['dateOfBirth'] ?? $this->senior?->date_of_birth?->format('Y-m-d'),
                 'gender' => $pendingData['sex'] ?? $this->senior?->sex,
                 'barangay' => $pendingData['barangay'] ?? $this->senior?->barangay,
+                'streetAddress' => $pendingData['streetAddress'] ?? $this->senior?->street_address,
+                'rrn' => $pendingData['rrn'] ?? $this->senior?->rrn,
+                'emergency' => $emergency !== '' ? $emergency : null,
                 'status' => $this->status,
             ],
         ];

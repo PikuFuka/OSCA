@@ -143,9 +143,9 @@ const UserDashboard: React.FC<UserDashboardProps> = ({ currentUser, notify }) =>
   const missingCount = requirements.filter(r => !r.doc).length;
 
   return (
-    <TransitionWrapper isLoading={isDataLoading} skeleton={<UserDashboardSkeleton />}>
+    <TransitionWrapper isLoading={isDataLoading} skeleton={<UserDashboardSkeleton />} animateContent={false}>
       {!isDataLoading && (
-        <div className="space-y-8 pb-12 stagger-in">
+        <div className="space-y-8 pb-12 stagger-sequence">
       {/* Welcome Section */}
       <div className="bg-gradient-to-r from-systemBlue to-blue-600 rounded-[2.5rem] p-8 md:p-12 text-white shadow-xl shadow-blue-900/10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -mr-16 -mt-16"></div>

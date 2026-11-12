@@ -1131,7 +1131,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   };
   
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 stagger-sequence">
       {/* Controls Bar */}
       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
           {/* Search Input */}
@@ -1345,7 +1345,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
       )}
       
       {/* Table Container Card */}
-      <TransitionWrapper isLoading={loading && seniors.length === 0} skeleton={
+      <TransitionWrapper isLoading={loading && seniors.length === 0} animateContent={false} skeleton={
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden relative">
           <div className="overflow-x-auto">
             <RegistrySkeleton />
@@ -1368,13 +1368,12 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   <TableHeadCell className="px-6 w-[14%]" align="right">Actions</TableHeadCell>
                 </tr>
               </thead>
-              <tbody key={`${debouncedSearch}|${filterBarangay}|${filterCategory}|${debouncedAgeMin}|${debouncedAgeMax}|${sortValue}|${page}`} className="divide-y divide-slate-50">
+              <tbody key={`${debouncedSearch}|${filterBarangay}|${filterCategory}|${debouncedAgeMin}|${debouncedAgeMax}|${sortValue}|${page}`} className="divide-y divide-slate-50 stagger-sequence">
                 {displayedSeniors.length > 0 ? displayedSeniors.map((senior, idx) => {
                   return (
                   <tr
                     key={senior.id}
-                    style={{ '--sr-index': idx } as React.CSSProperties}
-                    className="search-row-in group hover:bg-slate-50/60 transition-colors cursor-pointer"
+                    className="group hover:bg-slate-50/60 transition-colors cursor-pointer"
                     onClick={() => handleViewDetails(senior)}
                   >
                     {/* Identity */}

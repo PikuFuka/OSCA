@@ -36,6 +36,15 @@ import { authAPI } from './services/api';
 
 type ReportSection = 'masterlist' | 'centenarians' | 'deceased' | 'newly-registered';
 
+// Views a Senior account is allowed to mount. Anything else falls back to the
+// portal dashboard so an admin-only screen can never fire a request with a
+// senior token (which would be rejected with 403).
+const SENIOR_ALLOWED_VIEWS: ViewType[] = [
+  ViewType.USER_DASHBOARD,
+  ViewType.USER_REVIEW,
+  ViewType.ADD_MEMBER,
+];
+
 const TECHNICAL_MESSAGE_PATTERN = /(axios|network error|request failed|sqlstate|exception|trace|stack|typeerror|syntaxerror|referenceerror|unauthorized|forbidden|http\s*\d{3}|status\s*\d{3}|csrf|token|cannot read properties)/i;
 
 const toUserFriendlyMessage = (message: string, type: ToastType) => {
@@ -53,6 +62,14 @@ const App: React.FC = () => {
   const changeView = useCallback((view: ViewType) => {
     setCurrentView(view);
   }, []);
+
+  // Resolve the view actually rendered. `currentView` starts as DASHBOARD and
+  // the role effect below runs after the first render, so without this guard a
+  // senior login briefly mounts the admin Dashboard and triggers 403s.
+  const effectiveView =
+    currentUser?.role === 'Senior' && !SENIOR_ALLOWED_VIEWS.includes(currentView)
+      ? ViewType.USER_DASHBOARD
+      : currentView;
   const [reportSection, setReportSection] = useState<ReportSection | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isGeneratingReport, setIsGeneratingReport] = useState(false);
@@ -195,7 +212,7 @@ const App: React.FC = () => {
   const renderView = () => {
     if (!currentUser) return null;
 
-    switch (currentView) {
+    switch (effectiveView) {
       // Admin / Staff Views
       case ViewType.DASHBOARD:
         return (
@@ -565,7 +582,7 @@ const App: React.FC = () => {
       )}
 
       <Sidebar 
-        currentView={currentView} 
+        currentView={effectiveView} 
         setView={(view) => {
           navigateToView(view);
           if (window.innerWidth < 768) setIsSidebarOpen(false); // Close sidebar on mobile select
@@ -577,7 +594,7 @@ const App: React.FC = () => {
       
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Header 
-          viewTitle={currentView.replace(/USER_/g, '').replace(/_/g, ' ')} 
+          viewTitle={effectiveView.replace(/USER_/g, '').replace(/_/g, ' ')} 
           toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           currentUser={currentUser}
           onLogout={requestLogout}
@@ -592,7 +609,7 @@ const App: React.FC = () => {
         />
         
         <main className="flex-1 overflow-y-auto print:overflow-visible p-4 md:p-6 lg:p-8 no-scrollbar">
-            <div className="max-w-7xl mx-auto view-enter" key={currentView}>
+            <div className="max-w-7xl mx-auto view-enter" key={effectiveView}>
               {renderView()}
             </div>
         </main>

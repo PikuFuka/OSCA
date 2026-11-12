@@ -135,7 +135,7 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
         </button>
       </div>
 
-      <TransitionWrapper isLoading={loading} skeleton={
+      <TransitionWrapper isLoading={loading} animateContent={false} skeleton={
         <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm overflow-hidden">
           <div className="p-6 border-b border-slate-50 bg-slate-50/30">
             <Skeleton.Rect className="w-full md:w-96 h-12 rounded-2xl" />
@@ -165,7 +165,7 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
           <span>Time & User</span>
         </div>
         
-        <div className="divide-y divide-slate-100 stagger-in">
+        <div className="divide-y divide-slate-100 stagger-sequence">
           {!loading && (
             logs.length === 0 ? (
             <div className="p-12 text-center text-slate-400">

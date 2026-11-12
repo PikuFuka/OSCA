@@ -26,13 +26,13 @@ const ChartPlaceholder = ({
   className?: string;
 }) => (
   <div
-    className={`relative w-full overflow-hidden rounded-lg bg-slate-50/80 skeleton-wave ${
+    className={`relative w-full overflow-hidden rounded-xl ${
       compact ? 'h-10' : 'flex-1 min-h-0'
     } ${className}`}
     aria-hidden="true"
   >
     {!compact && (
-      <div className="absolute inset-x-4 bottom-4 top-5 flex flex-col justify-between">
+      <div className="absolute inset-x-0 bottom-3 top-4 flex flex-col justify-between pointer-events-none">
         {[...Array(4)].map((_, i) => (
           <span key={i} className="h-px w-full bg-slate-200/50" />
         ))}
@@ -40,27 +40,38 @@ const ChartPlaceholder = ({
     )}
 
     {variant === 'bar' ? (
-      <div className="absolute inset-x-5 bottom-4 top-7 flex items-end gap-2.5">
+      <div className="absolute inset-x-1 bottom-3 top-6 flex items-end gap-2.5">
         {[42, 66, 48, 80, 56, 72, 46, 88].map((height, i) => (
-          <span
+          <Skeleton.Primitive
             key={i}
-            className="flex-1 rounded-t-[3px] bg-slate-200/60"
+            className="flex-1 rounded-t-[4px] bg-[#E4E6EB]"
             style={{ height: `${height}%` }}
           />
         ))}
       </div>
     ) : (
-      <div className={compact ? 'absolute inset-x-3 inset-y-2' : 'absolute inset-x-4 bottom-4 top-5'}>
-        <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-full w-full">
-          {variant === 'area' && <path d={AREA_FILL} fill="rgba(148, 163, 184, 0.14)" />}
+      <div className={compact ? 'absolute inset-x-1 inset-y-1.5' : 'absolute inset-x-0 bottom-3 top-4'}>
+        <svg viewBox="0 0 100 40" preserveAspectRatio="none" className="h-full w-full overflow-visible">
+          {variant === 'area' && <path d={AREA_FILL} fill="rgba(228, 230, 235, 0.55)" />}
           <path
             d={AREA_LINE}
             fill="none"
-            stroke="rgba(148, 163, 184, 0.5)"
-            strokeWidth="0.8"
+            stroke="#D8DADF"
+            strokeWidth="1.4"
             vectorEffect="non-scaling-stroke"
             strokeLinecap="round"
             strokeLinejoin="round"
+          />
+          <path
+            d={AREA_LINE}
+            fill="none"
+            stroke="rgba(255, 255, 255, 0.75)"
+            strokeWidth="2.2"
+            vectorEffect="non-scaling-stroke"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="skeleton-wave"
+            style={{ opacity: 0.001 }}
           />
         </svg>
       </div>
@@ -74,30 +85,34 @@ const DashboardSkeleton = () => {
       <span className="sr-only">Loading dashboard data…</span>
 
       {/* Utility / Control Bar */}
-      <div className="flex items-center justify-end gap-3 mb-2">
-        <Skeleton.Rect className="w-28 h-9 rounded-lg" />
-        <Skeleton.Rect className="w-36 h-9 rounded-lg" />
+      <div className="flex items-center justify-end gap-3">
+        <Skeleton.Rect className="w-[120px] h-[38px] rounded-lg border border-slate-200/70" />
+        <Skeleton.Rect className="w-[164px] h-[38px] rounded-lg border border-slate-200/70" />
         <span className="hidden sm:block w-px h-6 bg-slate-200" />
-        <Skeleton.Rect className="w-20 h-9 rounded-lg" />
+        <Skeleton.Rect className="w-[88px] h-[38px] rounded-lg border border-slate-200/70" />
       </div>
 
       {/* Primary KPIs */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white border border-slate-200 p-5 flex flex-col gap-4 w-full min-w-0">
-            <div className="flex justify-between items-start gap-4 w-full">
-              <div className="min-w-0 flex-1">
-                <Skeleton.Text className="w-24 h-2.5" />
-                <Skeleton.Text className="w-20 h-7 mt-3" />
+          <div
+            key={i}
+            className="bg-white border border-slate-200 p-5 flex flex-col gap-4 w-full min-w-0 relative overflow-hidden"
+          >
+            <div className="flex justify-between items-start w-full">
+              <div className="space-y-2.5">
+                <Skeleton.Text className="w-28 h-3 rounded" />
+                <Skeleton.Text className="w-20 h-8 rounded-md" />
               </div>
               <Skeleton.Rect className="w-10 h-10 rounded-lg shrink-0" />
             </div>
 
-            <ChartPlaceholder variant="line" compact />
+            <div className="w-full h-10 mt-1">
+              <ChartPlaceholder variant="line" compact className="h-10 rounded-md" />
+            </div>
 
-            <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-100">
+            <div className="flex items-center justify-end w-full pt-4 border-t border-slate-100 mt-1">
               <Skeleton.Text className="w-24 h-2.5" />
-              <Skeleton.Text className="w-16 h-2.5" />
             </div>
           </div>
         ))}
@@ -106,26 +121,33 @@ const DashboardSkeleton = () => {
       {/* Tier 1 — Registration Velocity + Peak Ages */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
         <div className="xl:col-span-8 bg-white border border-slate-200 p-6 flex flex-col h-[400px]">
-          <div className="flex justify-between items-start gap-4 mb-6">
-            <div className="min-w-0">
-              <Skeleton.Text className="w-40 h-4" />
-              <Skeleton.Text className="w-64 max-w-full h-2.5 mt-2.5" />
+          <div className="flex justify-between items-start mb-6 gap-4">
+            <div className="space-y-2">
+              <Skeleton.Text className="w-44 h-4 rounded" />
+              <Skeleton.Text className="w-80 max-w-full h-3" />
             </div>
-            <Skeleton.Text className="w-28 h-2.5 shrink-0" />
+            <div className="flex items-center gap-2 shrink-0 pt-1">
+              <Skeleton.Rect className="w-3 h-[2px] rounded-full" />
+              <Skeleton.Text className="w-28 h-2.5" />
+            </div>
           </div>
-          <ChartPlaceholder variant="area" />
+          <div className="flex-1 min-h-0">
+            <ChartPlaceholder variant="area" className="h-full rounded-lg" />
+          </div>
         </div>
 
         <div className="xl:col-span-4 bg-white border border-slate-200 p-6 flex flex-col h-[400px]">
-          <Skeleton.Text className="w-28 h-4" />
-          <Skeleton.Text className="w-44 h-2.5 mt-2.5 mb-6" />
-          <div className="flex-1 flex flex-col justify-center gap-3.5 min-h-0">
+          <div className="mb-6 space-y-2">
+            <Skeleton.Text className="w-28 h-4 rounded" />
+            <Skeleton.Text className="w-52 h-3" />
+          </div>
+          <div className="flex-1 flex flex-col justify-center gap-4">
             {[...Array(7)].map((_, i) => (
               <div key={i} className="flex items-center gap-3">
-                <Skeleton.Text className="w-6 h-2.5 shrink-0" />
+                <Skeleton.Text className="w-7 h-2.5 shrink-0" />
                 <Skeleton.Primitive
-                  className="h-2.5 rounded-full"
-                  style={{ width: `${90 - i * 9}%` }}
+                  className="h-3.5 rounded-r-md rounded-l-sm"
+                  style={{ width: `${82 - i * 8}%` }}
                 />
               </div>
             ))}
@@ -135,46 +157,61 @@ const DashboardSkeleton = () => {
 
       {/* Tier 2 — Gender, Age Brackets, Mortality */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-5">
-        <div className="xl:col-span-3 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col h-[320px]">
-          <Skeleton.Text className="w-36 h-4" />
-          <Skeleton.Text className="w-44 h-2.5 mt-2.5 mb-6" />
-
-          <div className="flex-1 flex flex-col justify-center gap-6 min-h-0">
+        <div className="xl:col-span-3 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
+          <div className="mb-6 space-y-2">
+            <Skeleton.Text className="w-36 h-4 rounded" />
+            <Skeleton.Text className="w-44 h-3" />
+          </div>
+          <div className="flex-1 flex flex-col justify-center gap-7">
             {[...Array(2)].map((_, i) => (
-              <div key={i}>
-                <div className="flex items-end justify-between gap-3 mb-2">
-                  <Skeleton.Text className="w-14 h-2.5" />
-                  <Skeleton.Text className="w-10 h-4" />
+              <div key={i} className="space-y-2">
+                <div className="flex items-end justify-between">
+                  <Skeleton.Text className={`${i === 0 ? 'w-14' : 'w-10'} h-3`} />
+                  <Skeleton.Text className="w-10 h-5 rounded" />
                 </div>
-                <Skeleton.Primitive className="w-full h-1.5 rounded-full" />
-                <Skeleton.Text className="w-8 h-2.5 ml-auto mt-2" />
+                <Skeleton.Primitive className={`w-full h-2 ${i === 0 ? 'rounded-none' : 'rounded-none'}`} />
+                <div className="flex justify-end">
+                  <Skeleton.Text className="w-8 h-2.5" />
+                </div>
               </div>
             ))}
           </div>
         </div>
 
-        <div className="xl:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col h-[320px]">
-          <Skeleton.Text className="w-48 h-4" />
-          <Skeleton.Text className="w-40 h-2.5 mt-2.5 mb-6" />
-          <ChartPlaceholder variant="bar" />
+        <div className="xl:col-span-5 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
+          <div className="mb-6 space-y-2">
+            <Skeleton.Text className="w-52 h-4 rounded" />
+            <Skeleton.Text className="w-44 h-3" />
+          </div>
+          <div className="flex-1 min-h-0">
+            <ChartPlaceholder variant="bar" className="h-full rounded-lg" />
+          </div>
         </div>
 
-        <div className="xl:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col h-[320px] min-w-0">
-          <Skeleton.Text className="w-36 h-4" />
-          <Skeleton.Text className="w-32 h-2.5 mt-2.5 mb-6" />
-          <ChartPlaceholder variant="area" />
+        <div className="xl:col-span-4 bg-white border border-slate-200 p-6 flex flex-col h-[320px]">
+          <div className="mb-6 space-y-2">
+            <Skeleton.Text className="w-36 h-4 rounded" />
+            <Skeleton.Text className="w-40 h-3" />
+          </div>
+          <div className="flex-1 min-h-0">
+            <ChartPlaceholder variant="line" className="h-full rounded-lg" />
+          </div>
         </div>
       </div>
 
       {/* Geographic Heatmap */}
-      <div className="bg-white rounded-[24px] border border-slate-200/70 overflow-hidden">
+      <div className="bg-white rounded-[24px] border border-slate-200/70 shadow-sm overflow-hidden">
         <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Skeleton.Rect className="w-8 h-8 rounded-xl shrink-0" />
-            <Skeleton.Text className="w-40 h-4" />
-            <Skeleton.Rect className="w-20 h-5 rounded-full shrink-0" />
+            <Skeleton.Text className="w-40 h-4 rounded" />
+            <Skeleton.Rect className="hidden sm:block w-24 h-6 rounded-full" />
           </div>
-          <Skeleton.Rect className="w-52 h-8 rounded-full shrink-0" />
+          <div className="flex items-center gap-3 shrink-0 bg-slate-50/60 border border-slate-200 rounded-full px-3 py-1.5">
+            <Skeleton.Text className="w-6 h-2.5" />
+            <Skeleton.Rect className="h-2 w-28 rounded-full" />
+            <Skeleton.Text className="w-7 h-2.5" />
+          </div>
         </div>
 
         <div className="p-4 sm:p-6 bg-slate-50/40">
@@ -182,15 +219,22 @@ const DashboardSkeleton = () => {
             {[...Array(12)].map((_, i) => (
               <div
                 key={i}
-                className="rounded-2xl border border-slate-200 bg-white p-4 flex flex-col justify-between min-h-[116px]"
+                className="relative rounded-2xl border border-slate-200 bg-white p-4 flex flex-col justify-between min-h-[116px] overflow-hidden"
               >
                 <div className="flex items-start justify-between gap-2">
                   <Skeleton.Rect className="w-8 h-5 rounded-md" />
                   <Skeleton.Rect className="w-11 h-5 rounded-md" />
                 </div>
-                <div className="mt-4">
-                  <Skeleton.Text className="w-3/4 h-2.5 mb-2.5" />
-                  <Skeleton.Text className="w-1/2 h-5" />
+                <div className="mt-3 space-y-2">
+                  <Skeleton.Text className="w-4/5 h-2.5" />
+                  <Skeleton.Text className="w-14 h-6 rounded-md" />
+                  <Skeleton.Text className="w-16 h-2.5" />
+                </div>
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-slate-100">
+                  <Skeleton.Primitive
+                    className="h-full rounded-none"
+                    style={{ width: `${35 + (i % 6) * 10}%` }}
+                  />
                 </div>
               </div>
             ))}
@@ -198,16 +242,18 @@ const DashboardSkeleton = () => {
         </div>
 
         <div className="px-6 sm:px-8 py-3 bg-white border-t border-slate-100 flex items-center justify-end">
-          <Skeleton.Text className="w-44 h-2.5" />
+          <Skeleton.Text className="w-44 h-3" />
         </div>
       </div>
 
       {/* Birthday Celebrants */}
-      <div className="bg-white rounded-[24px] border border-slate-200/70 overflow-hidden">
-        <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex items-center gap-3">
-          <Skeleton.Rect className="w-8 h-8 rounded-xl shrink-0" />
-          <Skeleton.Text className="w-56 h-4" />
-          <Skeleton.Rect className="w-24 h-5 rounded-full shrink-0" />
+      <div className="bg-white rounded-[24px] border border-slate-200/70 shadow-sm overflow-hidden">
+        <div className="px-6 sm:px-8 py-6 border-b border-slate-100 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <Skeleton.Rect className="w-8 h-8 rounded-xl shrink-0" />
+            <Skeleton.Text className="w-56 h-4 rounded" />
+            <Skeleton.Rect className="w-28 h-6 rounded-full shrink-0" />
+          </div>
         </div>
 
         <div className="p-4 sm:p-6 bg-slate-50/40">
@@ -215,16 +261,20 @@ const DashboardSkeleton = () => {
             {[...Array(4)].map((_, i) => (
               <div
                 key={i}
-                className="bg-white border border-slate-200/90 rounded-2xl px-5 py-4 flex items-center justify-between gap-4"
+                className="bg-white border border-slate-200/90 rounded-2xl px-5 py-4 flex items-center justify-between gap-4 min-w-0"
               >
                 <div className="flex items-center gap-3.5 min-w-0 flex-1">
                   <Skeleton.Circle className="w-12 h-12 shrink-0" />
-                  <div className="min-w-0 flex-1">
-                    <Skeleton.Text className="w-3/4 h-3.5 mb-2" />
-                    <Skeleton.Text className="w-1/3 h-2.5" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Skeleton.Text className="w-2/3 h-3.5" />
+                    <Skeleton.Text className="w-24 h-2.5" />
+                    <Skeleton.Text className="w-28 h-2.5" />
                   </div>
                 </div>
-                <Skeleton.Rect className="w-16 h-7 rounded-full shrink-0" />
+                <div className="flex items-center gap-2.5 shrink-0">
+                  <Skeleton.Rect className="w-[88px] h-7 rounded-full" />
+                  <Skeleton.Rect className="w-14 h-7 rounded-full" />
+                </div>
               </div>
             ))}
           </div>
@@ -346,19 +396,66 @@ const ApprovalSkeleton = () => {
 const BatchPrintSkeleton = () => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {[...Array(4)].map((_, i) => (
-        <div key={i} className="rounded-xl border p-5 bg-white border-slate-200">
+      {[...Array(6)].map((_, i) => (
+        <div key={i} className="rounded-xl border border-slate-200 bg-white p-5">
           <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 w-full flex flex-col">
-              <Skeleton.Text className="w-16 h-2.5 mb-1" />
-              <Skeleton.Text className="w-24 h-3.5 mb-2" />
-              <Skeleton.Text className="w-40 h-4 mb-1" />
-              <Skeleton.Text className="w-28 h-3" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton.Text className="w-14 h-2.5" />
+              <Skeleton.Text className="w-20 h-3" />
+              <Skeleton.Text className="w-3/4 max-w-[220px] h-4 mt-1" />
+              <Skeleton.Text className="w-24 h-3" />
             </div>
-            <Skeleton.Rect className="w-16 h-8 rounded-lg shrink-0" />
+            <Skeleton.Rect className="w-[72px] h-9 rounded-lg shrink-0" />
           </div>
         </div>
       ))}
+    </div>
+  );
+};
+
+const BatchPrintViewSkeleton = () => {
+  return (
+    <div className="space-y-6">
+      {/* Search + Actions */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <Skeleton.Rect className="w-full md:w-[28rem] h-12 rounded-xl" />
+          <div className="flex flex-col sm:flex-row items-center gap-3 md:gap-4 w-full md:w-auto">
+            <Skeleton.Text className="w-28 h-3" />
+            <Skeleton.Rect className="w-full sm:w-40 h-11 rounded-xl" />
+          </div>
+        </div>
+
+        <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-4 md:p-6">
+          <BatchPrintSkeleton />
+        </div>
+      </div>
+
+      {/* Preview */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+          <div className="space-y-2">
+            <Skeleton.Text className="w-44 h-6" />
+            <Skeleton.Text className="w-72 max-w-full h-3" />
+          </div>
+          <Skeleton.Rect className="w-56 h-8 rounded-full" />
+        </div>
+
+        <div className="space-y-6">
+          {[...Array(2)].map((_, i) => (
+            <div key={i} className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:p-6">
+              <div className="mb-4 flex items-center justify-between gap-4">
+                <Skeleton.Text className="w-48 h-4" />
+                <Skeleton.Rect className="w-28 h-7 rounded-lg" />
+              </div>
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+                <Skeleton.Rect className="w-full aspect-[480/300] rounded-lg border border-slate-200" />
+                <Skeleton.Rect className="w-full aspect-[480/300] rounded-lg border border-slate-200" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 };
@@ -711,6 +808,7 @@ export {
   RegistrySkeleton,
   ApprovalSkeleton,
   BatchPrintSkeleton,
+  BatchPrintViewSkeleton,
   HistoryLogSkeleton,
   UserReviewSkeleton,
   FormSkeleton,

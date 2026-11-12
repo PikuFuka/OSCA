@@ -44,13 +44,25 @@ const renderHarness = () =>
     </AuthProvider>
   );
 
+const seedToken = () => localStorage.setItem('auth_token', 'test-token');
+
 describe('AuthProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
   });
 
+  it('skips the /me request when no token is stored', async () => {
+    renderHarness();
+
+    await waitFor(() => {
+      expect(screen.getByText('no-user')).toBeInTheDocument();
+    });
+    expect(authAPI.getCurrentUser).not.toHaveBeenCalled();
+  });
+
   it('sets user after mount when getCurrentUser resolves', async () => {
+    seedToken();
     vi.mocked(authAPI.getCurrentUser).mockResolvedValue(rawUser);
 
     renderHarness();
@@ -61,6 +73,7 @@ describe('AuthProvider', () => {
   });
 
   it('login success sets user', async () => {
+    seedToken();
     vi.mocked(authAPI.getCurrentUser).mockRejectedValue(new Error('unauth'));
     vi.mocked(authAPI.login).mockResolvedValue({ token: 'tok123', user: rawUser });
 
@@ -72,7 +85,7 @@ describe('AuthProvider', () => {
     fireEvent.click(screen.getByText('sign-in'));
 
     await waitFor(() => {
-      expect(authAPI.login).toHaveBeenCalledWith('admin', 'secret');
+      expect(authAPI.login).toHaveBeenCalledWith('admin', 'secret', false);
     });
     await waitFor(() => {
       expect(screen.getByText('user:Admin User')).toBeInTheDocument();
@@ -80,6 +93,7 @@ describe('AuthProvider', () => {
   });
 
   it('logout clears user', async () => {
+    seedToken();
     vi.mocked(authAPI.getCurrentUser).mockResolvedValue(rawUser);
     vi.mocked(authAPI.logout).mockResolvedValue(undefined);
 
@@ -99,6 +113,7 @@ describe('AuthProvider', () => {
   });
 
   it('clears user on auth-unauthorized event (401 path)', async () => {
+    seedToken();
     vi.mocked(authAPI.getCurrentUser).mockResolvedValue(rawUser);
 
     renderHarness();

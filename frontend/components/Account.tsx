@@ -314,7 +314,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   };
 
   return (
-    <TransitionWrapper isLoading={isDataLoading} skeleton={<AccountSkeleton isAdmin={isAdmin} />}>
+    <TransitionWrapper isLoading={isDataLoading} skeleton={<AccountSkeleton isAdmin={isAdmin} />} animateContent={false}>
       {!isDataLoading && (
         <div className="space-y-8">
       {isAdmin && (
@@ -388,7 +388,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
                 <TableHeadCell className="px-6 w-[16%]" align="right">Settings</TableHeadCell>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-50 stagger-in">
+            <tbody className="divide-y divide-slate-50 stagger-sequence">
               {displayedAccounts.length > 0 ? displayedAccounts.map((acc) => (
                 <tr key={acc.id} className="group hover:bg-slate-50/60 transition-colors">
                   <td className="px-6 py-4">

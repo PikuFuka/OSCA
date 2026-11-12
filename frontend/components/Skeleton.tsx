@@ -17,7 +17,7 @@ export const SkeletonPrimitive = ({ className = '', ...props }: SkeletonProps) =
   return (
     <div
       aria-hidden="true"
-      className={`relative overflow-hidden bg-slate-200/60 skeleton-wave select-none pointer-events-none ${className}`}
+      className={`relative overflow-hidden bg-[#E4E6EB] skeleton-wave select-none pointer-events-none ${className}`}
       {...props}
     />
   );

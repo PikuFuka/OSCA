@@ -118,7 +118,7 @@ const BackupView: React.FC<BackupViewProps> = ({ notify, initialSection = 'backu
       ) : (
         <>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-in">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 stagger-sequence">
         {/* Export Card */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 flex flex-col">
           <div className="flex items-center gap-4 mb-6">

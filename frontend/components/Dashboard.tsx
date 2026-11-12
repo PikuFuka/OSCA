@@ -28,6 +28,13 @@ import { ViewType, BARANGAYS } from '../types';
 import { seniorsAPI, requestsAPI } from '../services/api';
 import { TableAvatar } from './Table';
 
+// Recharts' ResponsiveContainer starts at -1x-1 until ResizeObserver reports
+// the real size, which logs a noisy "width(-1) and height(-1)" warning on
+// first paint. Seed a positive 1x1 box so the measurement pass stays silent.
+const ChartContainer: React.FC<React.ComponentProps<typeof ResponsiveContainer>> = (props) => (
+  <ResponsiveContainer initialDimension={{ width: 1, height: 1 }} {...props} />
+);
+
 interface DashboardProps {
   setView?: (view: ViewType) => void;
   onCardNavigate?: (view: ViewType, reportSection?: 'masterlist' | 'centenarians' | 'deceased' | 'newly-registered') => void;
@@ -107,7 +114,7 @@ const KPICard = ({
       </div>
       
       <div className="w-full h-10 mt-2 relative z-10 min-w-0" style={{ minWidth: 0 }}>
-        <ResponsiveContainer width="100%" height="100%" style={{ width: '100%', height: '100%' }} minWidth={0} minHeight={0}>
+        <ChartContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <LineChart data={data}>
             <Line
               type="monotone"
@@ -120,7 +127,7 @@ const KPICard = ({
               animationEasing="ease-out"
             />
           </LineChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </div>
 
       <div className="flex items-center justify-end w-full pt-4 border-t border-slate-100 mt-2">
@@ -250,9 +257,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
 
   const isDataLoading = loading || !data;
   return (
-    <TransitionWrapper isLoading={isDataLoading} skeleton={<DashboardSkeleton />}>
+    <TransitionWrapper isLoading={isDataLoading} skeleton={<DashboardSkeleton />} animateContent={false}>
       {!isDataLoading && (
-        <div className="space-y-6 pb-16 bg-[#f8fafc] min-h-screen stagger-in min-w-0 w-full" style={{ minWidth: 0 }}>
+        <div className="space-y-6 pb-16 bg-[#f8fafc] min-h-screen stagger-sequence min-w-0 w-full" style={{ minWidth: 0 }}>
       
       {/* Utility / Control Bar */}
       <div className="flex items-center justify-end gap-3 mb-2">
@@ -276,7 +283,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
       </div>
 
       {/* Primary KPIs */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 stagger-sequence">
         <KPICard 
           title="Active Registry" 
           value={formatNumber(data.totalMembers)}
@@ -341,7 +348,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           </div>
           
           <div className="flex-1 w-full min-h-0 min-w-0" style={{ minWidth: 0, minHeight: 0, width: '100%', height: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <ChartContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={data.monthlyStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} dy={10} />
@@ -350,7 +357,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                 <ReferenceLine y={insights?.avgReg} stroke="#94a3b8" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: 'AVG', fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} />
                 <Area type="monotone" dataKey="total" name="Registrations" stroke="#007aff" strokeWidth={2} fill="#007aff" fillOpacity={0.05} activeDot={{ r: 4, fill: '#007aff', stroke: '#fff', strokeWidth: 2 }} isAnimationActive={true} animationDuration={1400} animationEasing="ease-out" />
               </AreaChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </div>
         </div>
 
@@ -366,7 +373,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                 <span className="text-xs font-semibold">No age data yet</span>
               </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <ChartContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart data={peakAges} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
                   <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} />
@@ -378,7 +385,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                     ))}
                   </Bar>
                 </BarChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             )}
           </div>
         </div>
@@ -434,7 +441,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           <p className="text-xs text-slate-500 mt-1 mb-6">Population sorted by age groups.</p>
           
           <div className="flex-1 w-full min-h-0 min-w-0" style={{ minWidth: 0, minHeight: 0, width: '100%', height: '100%' }}>
-            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <ChartContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <BarChart data={data.ageRanges} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10, fontWeight: 600}} dy={10} />
@@ -446,7 +453,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                   ))}
                 </Bar>
               </BarChart>
-            </ResponsiveContainer>
+            </ChartContainer>
           </div>
         </div>
 
@@ -462,7 +469,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                   <span className="text-xs font-semibold">Zero Variance</span>
                </div>
             ) : (
-              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0} style={{ width: '100%', height: '100%' }}>
+              <ChartContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <LineChart data={data.monthlyStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} dy={10} />
@@ -481,7 +488,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                     animationEasing="ease-out"
                   />
                 </LineChart>
-              </ResponsiveContainer>
+              </ChartContainer>
             )}
           </div>
         </div>
@@ -517,7 +524,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                 <p className="text-xs text-slate-400 mt-1">Records will appear here once registrations are approved.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-3 stagger-sequence">
                 {(data.allBarangayStats || []).map((brgy: any, idx: number) => {
                   const intensity = Math.max(0, Math.min(1, brgy.intensity || 0));
                   const tier = intensity > 0.66 ? 'high' : intensity > 0.32 ? 'mid' : 'low';
@@ -601,7 +608,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-3.5 stagger-sequence">
                 {celebrants.map((senior: any, idx: number) => {
                   const displayName = senior.fullName || senior.name || [senior.firstName, senior.middleName, senior.lastName, senior.extensionName].filter(Boolean).join(' ');
                   const initials = getCelebrantInitials(displayName);

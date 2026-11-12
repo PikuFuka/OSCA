@@ -175,7 +175,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
         setCurrentPage(nextPage);
         await fetchRequests(nextPage);
         setSelectedRequest(null);
-        notify(`Request ${type}d successfully.`, type === 'Approve' ? 'success' : 'info');
+        notify(`Request ${type === 'Approve' ? 'approved' : 'rejected'} successfully.`, type === 'Approve' ? 'success' : 'info');
       } catch (error) {
         notify(`Failed to ${type?.toLowerCase()} request.`, 'error');
       } finally {
@@ -212,6 +212,9 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
   const getReasonConfig = (type: string) => {
     if (type === 'New Application') {
       return { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'New Member' };
+    }
+    if (type === 'Information Update') {
+      return { bg: 'bg-violet-50', text: 'text-violet-700', label: 'Update' };
     }
     return { bg: 'bg-violet-50', text: 'text-violet-700', label: 'New ID' };
   };
@@ -257,7 +260,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
       </div>
 
       {/* Main Table Card — auto height to content */}
-      <TransitionWrapper isLoading={loading} skeleton={
+      <TransitionWrapper isLoading={loading} animateContent={false} skeleton={
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <ApprovalSkeleton />
@@ -279,7 +282,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                   <TableHeadCell className="px-6" align="right">Actions</TableHeadCell>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50 stagger-in">
+              <tbody className="divide-y divide-slate-50 stagger-sequence">
                 {filteredRequests.map((req, idx) => {
                   const typeConfig = getTypeConfig(req.type);
                   const reasonConfig = getReasonConfig(req.type);

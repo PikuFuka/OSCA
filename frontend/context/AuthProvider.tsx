@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { authAPI } from '../services/api';
+import { getAuthToken } from '../core/api/client';
 import { CurrentUser, UserRole } from '../types';
 import { AuthContext } from './AuthContext';
 
@@ -32,6 +33,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const checkAuth = useCallback(async () => {
+    // Without a stored token /api/me is guaranteed to answer 401; skip the
+    // request entirely so first visits do not log a spurious console error.
+    if (!getAuthToken()) {
+      setUser(null);
+      setLoading(false);
+      return;
+    }
     try {
       const userData = await authAPI.getCurrentUser();
       setUser(mapUserToCurrentUser(userData));

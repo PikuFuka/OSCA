@@ -99,6 +99,54 @@ class ResourceShapeTest extends TestCase
         $this->assertNull($data['details']['profilePicture']);
     }
 
+    public function test_request_resource_details_include_contact_fields_from_pending_data(): void
+    {
+        $senior = $this->makeSenior([
+            'street_address' => '123 Old St',
+            'rrn' => 'OLD-RRN',
+            'emergency_name' => 'Old Contact',
+            'emergency_contact' => '09000000000',
+        ]);
+        $req = SeniorRequest::create([
+            'senior_id' => $senior->id,
+            'type' => 'Information Update',
+            'status' => 'Pending',
+            'pending_data' => [
+                'streetAddress' => '456 Updated St',
+                'rrn' => '1111222233',
+                'emergencyName' => 'New Contact',
+                'emergencyContact' => '09998887777',
+            ],
+        ]);
+
+        $data = (new RequestResource($req->load('senior')))->toArray(request());
+
+        $this->assertSame('456 Updated St', $data['details']['streetAddress']);
+        $this->assertSame('1111222233', $data['details']['rrn']);
+        $this->assertSame('New Contact (09998887777)', $data['details']['emergency']);
+    }
+
+    public function test_request_resource_details_fall_back_to_senior_contact_fields(): void
+    {
+        $senior = $this->makeSenior([
+            'street_address' => '123 Old St',
+            'rrn' => 'OLD-RRN',
+            'emergency_name' => 'Old Contact',
+            'emergency_contact' => '09000000000',
+        ]);
+        $req = SeniorRequest::create([
+            'senior_id' => $senior->id,
+            'type' => 'New Application',
+            'status' => 'Pending',
+        ]);
+
+        $data = (new RequestResource($req->load('senior')))->toArray(request());
+
+        $this->assertSame('123 Old St', $data['details']['streetAddress']);
+        $this->assertSame('OLD-RRN', $data['details']['rrn']);
+        $this->assertSame('Old Contact (09000000000)', $data['details']['emergency']);
+    }
+
     public function test_show_endpoint_returns_storage_url_format(): void
     {
         $staff = User::create([

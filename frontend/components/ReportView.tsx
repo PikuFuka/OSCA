@@ -154,7 +154,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
   const isDataLoading = loading;
 
   return (
-    <TransitionWrapper isLoading={loading} skeleton={<ReportSkeleton />}>
+    <TransitionWrapper isLoading={loading} skeleton={<ReportSkeleton />} animateContent={false}>
       {!loading && (
         <div className="space-y-8 pb-12 relative">
       <div className="flex items-center justify-end gap-4 no-print">
@@ -261,7 +261,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <th className="px-8 py-4 text-center">Pension</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 stagger-in">
+                <tbody className="divide-y divide-slate-100 stagger-sequence">
                   {seniorsData.length > 0 ? (
                     seniorsData.map((item) => (
                       <tr key={item.id} className="hover:bg-slate-50 transition-colors">
@@ -355,7 +355,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <th className="px-8 py-4 text-center">Pension</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 stagger-in">
+                <tbody className="divide-y divide-slate-100 stagger-sequence">
                   {centenariansData.length > 0 ? (
                     centenariansData.slice((staticPage - 1) * itemsPerPage, staticPage * itemsPerPage).map((item) => (
                       <tr key={`cent-${item.id}`} className="hover:bg-slate-50 transition-colors">
@@ -447,7 +447,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <th className="px-8 py-4 text-center">Pension</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 stagger-in">
+                <tbody className="divide-y divide-slate-100 stagger-sequence">
                   {deceasedData.length > 0 ? (
                     deceasedData.slice((staticPage - 1) * itemsPerPage, staticPage * itemsPerPage).map((item) => (
                       <tr key={`dec-${item.id}`} className="hover:bg-slate-50 transition-colors">
@@ -547,7 +547,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
                     <th className="px-8 py-4 text-center print:px-2 print:py-2">Pension</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 stagger-in">
+                <tbody className="divide-y divide-slate-100 stagger-sequence">
                   {newlyRegisteredData.length > 0 ? (
                     newlyRegisteredData.slice((staticPage - 1) * itemsPerPage, staticPage * itemsPerPage).map((item) => (
                       <tr key={`new-${item.id}`} className="print:border-b print:border-slate-200 hover:bg-slate-50 transition-colors">

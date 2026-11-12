@@ -6,6 +6,11 @@ interface TransitionWrapperProps {
   skeleton?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  /**
+   * Disable the default content reveal animation so callers can provide their
+   * own sequencing (e.g. staggered dashboard entry).
+   */
+  animateContent?: boolean;
 }
 
 /**
@@ -16,7 +21,8 @@ export const TransitionWrapper: React.FC<TransitionWrapperProps> = ({
   isLoading, 
   skeleton, 
   children,
-  className = '' 
+  className = '',
+  animateContent = true,
 }) => {
   if (isLoading) {
     if (skeleton) {
@@ -36,7 +42,10 @@ export const TransitionWrapper: React.FC<TransitionWrapperProps> = ({
   }
 
   return (
-    <div key="content-ready" className={`w-full transition-fade-in will-change-[opacity,transform,filter] ${className}`}>
+    <div
+      key="content-ready"
+      className={`w-full ${animateContent ? 'transition-fade-in' : 'transition-content-soft'} ${className}`}
+    >
       {children}
     </div>
   );

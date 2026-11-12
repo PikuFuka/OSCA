@@ -162,7 +162,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
         </div>
       )}
 
-      <TransitionWrapper isLoading={loading} skeleton={
+      <TransitionWrapper isLoading={loading} animateContent={false} skeleton={
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col min-h-[500px]">
           <div className="overflow-x-auto border-t border-slate-50">
             <ArchiveSkeleton />
@@ -199,7 +199,7 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
                   <TableHeadCell className="px-8 py-5" align="right">Actions</TableHeadCell>
                 </tr>
               </thead>
-              <tbody className="stagger-in">
+              <tbody className="stagger-sequence">
                 {filteredData.length > 0 ? filteredData.slice((page - 1) * archivePerPage, page * archivePerPage).map((senior) => (
                   <tr key={senior.id} className="group hover:bg-slate-50/60 transition-colors">
                     <td className="px-8 py-4">

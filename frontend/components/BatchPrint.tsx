@@ -4,7 +4,7 @@ import { Search, Printer, X, Loader2, Plus, CheckCircle2, Trash2 } from 'lucide-
 import { SeniorCitizen, INITIAL_ID_CONFIG, CurrentUser } from '../types';
 import { seniorsAPI } from '../services/api';
 import Skeleton from './Skeleton';
-import { BatchPrintSkeleton } from './skeletons';
+import { BatchPrintSkeleton, BatchPrintViewSkeleton } from './skeletons';
 import TransitionWrapper from './TransitionWrapper';
 import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 
@@ -31,6 +31,12 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
   const [searchResults, setSearchResults] = useState<SeniorCitizen[]>([]);
   const [selectedSeniors, setSelectedSeniors] = useState<SeniorCitizen[]>([]);
   const [searching, setSearching] = useState(false);
+  const [viewLoading, setViewLoading] = useState(true);
+
+  useEffect(() => {
+    const id = window.requestAnimationFrame(() => setViewLoading(false));
+    return () => window.cancelAnimationFrame(id);
+  }, []);
 
   const formatName = (senior: SeniorCitizen) => {
     if (!senior) return '';
@@ -149,6 +155,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
   };
 
   return (
+    <TransitionWrapper isLoading={viewLoading} skeleton={<BatchPrintViewSkeleton />} animateContent={false}>
     <div className="space-y-6">
       {/* Search + Actions */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 md:p-8 print:hidden">
@@ -278,7 +285,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
             Select seniors above to generate the ID preview.
           </div>
         ) : (
-          <div className="space-y-6 stagger-in">
+          <div className="space-y-6 stagger-sequence">
             {selectedSeniors.map((senior) => (
               <div key={`preview-${senior.id}`} className="rounded-xl border border-slate-200 bg-slate-50 p-4 md:p-6">
                 <div className="mb-4 flex items-center justify-between gap-4">
@@ -381,6 +388,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
       document.body
       )}
     </div>
+    </TransitionWrapper>
   );
 };
 
