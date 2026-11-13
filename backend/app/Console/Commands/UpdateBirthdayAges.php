@@ -9,31 +9,37 @@ use Illuminate\Support\Carbon;
 class UpdateBirthdayAges extends Command
 {
     protected $signature = 'seniors:update-birthday-ages';
-    protected $description = 'Update the age column for seniors whose birthday is today';
+    protected $description = 'Recalculate and sync stored ages from date of birth (keeps age current after birthdays)';
 
     public function handle(): int
     {
         $today = Carbon::today();
-        $month = $today->month;
-        $day = $today->day;
-
-        // Find all seniors born on this month+day
-        $seniors = Senior::whereMonth('date_of_birth', $month)
-            ->whereDay('date_of_birth', $day)
-            ->whereNotNull('date_of_birth')
-            ->get();
-
+        $checked = 0;
         $updated = 0;
+        $birthdaysToday = 0;
 
-        foreach ($seniors as $senior) {
-            $correctAge = Carbon::parse($senior->date_of_birth)->age;
+        // Recompute from DOB so the stored age column stays correct for queries
+        // and reports even if a previous run was missed. Ages advance on birthdays.
+        Senior::query()
+            ->whereNotNull('date_of_birth')
+            ->select(['id', 'date_of_birth', 'age'])
+            ->chunkById(500, function ($seniors) use (&$checked, &$updated, &$birthdaysToday, $today) {
+                foreach ($seniors as $senior) {
+                    $checked++;
+                    $dob = Carbon::parse($senior->date_of_birth);
+                    $correctAge = $dob->age;
 
-            if ((int) $senior->age !== $correctAge) {
-                $senior->timestamps = false; // Don't touch updated_at
-                $senior->update(['age' => $correctAge]);
-                $updated++;
-            }
-        }
+                    if ($dob->isBirthday($today)) {
+                        $birthdaysToday++;
+                    }
+
+                    if ((int) $senior->age !== $correctAge) {
+                        // Don't touch updated_at: this is an automatic age rollover.
+                        Senior::whereKey($senior->id)->update(['age' => $correctAge]);
+                        $updated++;
+                    }
+                }
+            });
 
         if ($updated > 0) {
             \Illuminate\Support\Facades\Cache::forget('stats:v3:all:all');
@@ -44,7 +50,7 @@ class UpdateBirthdayAges extends Command
             }
         }
 
-        $this->info("Birthday age update complete. Found {$seniors->count()} birthday(s) today, updated {$updated} age(s).");
+        $this->info("Age sync complete. Checked {$checked} record(s), {$birthdaysToday} birthday(s) today, updated {$updated} age(s).");
 
         return self::SUCCESS;
     }

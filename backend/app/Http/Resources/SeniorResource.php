@@ -9,11 +9,13 @@ class SeniorResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
+        $age = $this->date_of_birth ? $this->date_of_birth->age : $this->age;
+
         return [
             'id' => $this->osca_id ?? $this->id,
             'oscaId' => $this->osca_id,
             'name' => $this->full_name,
-            'age' => $this->age,
+            'age' => $age,
             'gender' => $this->sex,
             'status' => in_array($this->status, ['deceased', 'Deceased']) ? 'Deceased' : (in_array($this->status, ['approved', 'Active']) ? 'Active' : $this->status),
             'joinedDate' => $this->created_at?->format('M d, Y') ?? 'N/A',

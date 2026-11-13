@@ -224,11 +224,13 @@ class SeniorController extends Controller
      * Helper to transform senior model to frontend format
      */
     private function transformSenior($senior) {
+        $age = $senior->date_of_birth ? \Illuminate\Support\Carbon::parse($senior->date_of_birth)->age : $senior->age;
+
         return [
             'id' => $senior->osca_id ?? $senior->id,
             'oscaId' => $senior->osca_id,
             'name' => $senior->full_name,
-            'age' => $senior->age,
+            'age' => $age,
             'gender' => $senior->sex,
             'status' => in_array($senior->status, ['deceased', 'Deceased']) ? 'Deceased' : (in_array($senior->status, ['approved', 'Active']) ? 'Active' : $senior->status),
             'joinedDate' => $senior->created_at?->format('M d, Y') ?? 'N/A',
@@ -343,6 +345,8 @@ class SeniorController extends Controller
                         ->where('osca_id', $id)
                         ->firstOrFail();
 
+        $age = $senior->date_of_birth ? $senior->date_of_birth->age : $senior->age;
+
         return response()->json([
             'id' => $senior->osca_id ?? $senior->id,
             'oscaId' => $senior->osca_id,
@@ -352,7 +356,7 @@ class SeniorController extends Controller
             'extensionName' => $senior->extension_name,
             'name' => $senior->full_name,
             'dateOfBirth' => $senior->date_of_birth->format('Y-m-d'),
-            'age' => $senior->age,
+            'age' => $age,
             'placeOfBirth' => $senior->place_of_birth,
             'sex' => $senior->sex,
             'mothersMaidenName' => $senior->mothers_maiden_name,
@@ -1100,6 +1104,7 @@ class SeniorController extends Controller
 
         $mapped = $seniors->map(function ($s) {
             $photoUrl = $s->profile_photo_path ? '/api/storage/profiles/' . basename($s->profile_photo_path) : null;
+            $age = $s->date_of_birth ? $s->date_of_birth->age : $s->age;
             return [
                 'id' => $s->id,
                 'oscaId' => $s->osca_id,
@@ -1109,7 +1114,7 @@ class SeniorController extends Controller
                 'extensionName' => $s->extension_name,
                 'name' => $s->full_name,
                 'fullName' => $s->full_name,
-                'age' => (int) $s->age,
+                'age' => (int) $age,
                 'sex' => $s->sex,
                 'gender' => $s->sex,
                 'barangay' => $s->barangay,

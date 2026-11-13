@@ -22,7 +22,7 @@ const StaticLabel = ({ text, config, className = "" }: { text: string, config: {
   </div>
 );
 
-const MAX_CARDS = 12;
+const MAX_CARDS = 20;
 const CARD_WIDTH = 480;
 const CARD_HEIGHT = 300;
 
@@ -320,7 +320,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
 
       {/* Print-only content: portaled to <body> so app layout (h-screen,
           overflow-hidden ancestors) can neither shrink nor clip it. Natural
-          flow paginates ~4 ID rows per A4 page: 12 cards = 3 pages, one job. */}
+          flow paginates ~4 ID rows per A4 page: 20 cards = 5 pages, one job. */}
       {createPortal(
       <div className="hidden print:block">
         <style>{`
@@ -329,12 +329,25 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
               size: A4 portrait;
               margin: 10mm;
             }
-            body * { visibility: hidden; }
-            .batch-print-area, .batch-print-area * { visibility: visible; }
-            .batch-print-area {
-              position: static;
-              width: 100%;
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              height: auto !important;
+              overflow: visible !important;
+              background: #fff !important;
+            }
+            body > *:not(:has(.batch-print-area)) {
+              display: none !important;
+            }
+            body > :has(.batch-print-area) {
               display: block !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            .batch-print-area {
+              display: block !important;
+              width: 100%;
+              margin: 0;
               padding: 0;
             }
             .batch-row {
@@ -344,7 +357,10 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
               gap: 0;
               break-inside: avoid;
               page-break-inside: avoid;
-              margin-bottom: 4mm;
+              margin: 0 0 4mm 0;
+            }
+            .batch-print-area > .batch-row:last-child {
+              margin-bottom: 0;
             }
             .batch-card {
               width: 3.5in;
@@ -354,6 +370,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
               position: relative;
               overflow: hidden;
               border: 0.1mm solid #ccc;
+              box-sizing: border-box;
             }
             .batch-card-content {
               width: 480px;

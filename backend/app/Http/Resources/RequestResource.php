@@ -31,7 +31,8 @@ class RequestResource extends JsonResource
                 'profilePicture' => ($photoPath = ($pendingData['profile_photo_path'] ?? $this->senior?->profile_photo_path))
                     ? '/api/storage/profiles/' . basename($photoPath)
                     : null,
-                'age' => $pendingData['age'] ?? $this->senior?->age,
+                'age' => $pendingData['age']
+                    ?? ($this->senior?->date_of_birth ? $this->senior->date_of_birth->age : $this->senior?->age),
                 'dateOfBirth' => $pendingData['dateOfBirth'] ?? $this->senior?->date_of_birth?->format('Y-m-d'),
                 'gender' => $pendingData['sex'] ?? $this->senior?->sex,
                 'barangay' => $pendingData['barangay'] ?? $this->senior?->barangay,
