@@ -204,7 +204,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   const data = useMemo(() => {
     if (!stats) return null;
     return {
-      totalMembers: stats.total || 0,
+      // "Active Registry" counts living/active member seniors only (excludes
+      // deceased, deleted/archived, and pending/non-active records). Admin/staff
+      // accounts are not part of the seniors registry.
+      totalMembers: stats.active || 0,
       totalDeceased: stats.deceased || 0,
       pendingApps: stats.pending || 0,
       centenarians: stats.centenarians || 0,

@@ -168,15 +168,47 @@ class SeniorController extends Controller
             }
 
             if ($barangay && $barangay !== 'All Barangays') {
-                $query->where('barangay', $barangay);
+                $barangay = trim((string) $barangay);
+                $candidates = [$barangay];
+
+                // Tolerate mojibake from past encoding mismatches (e.g. "Biñan"
+                // stored as "BiÃ±an"), so filters still match legacy records.
+                $toLatin1 = @mb_convert_encoding($barangay, 'ISO-8859-1', 'UTF-8');
+                if (is_string($toLatin1) && $toLatin1 !== '' && $toLatin1 !== $barangay) {
+                    $candidates[] = $toLatin1;
+                }
+                $toUtf8 = @mb_convert_encoding($barangay, 'UTF-8', 'ISO-8859-1');
+                if (is_string($toUtf8) && $toUtf8 !== '' && $toUtf8 !== $barangay) {
+                    $candidates[] = $toUtf8;
+                }
+
+                $candidates = array_values(array_unique(array_filter($candidates, fn ($v) => $v !== '')));
+                $query->whereIn('barangay', $candidates);
             }
 
+            // Filter by age derived from DOB so results stay correct even if the
+            // stored age column is stale. (Birthdays roll over daily.)
+            $today = \Illuminate\Support\Carbon::today();
             if (is_numeric($minAge) && (int) $minAge >= 0) {
-                $query->where('age', '>=', (int) $minAge);
+                $min = (int) $minAge;
+                $bornOnOrBefore = $today->copy()->subYears($min)->endOfDay();
+                $query->where(function ($ageQuery) use ($bornOnOrBefore, $min) {
+                    $ageQuery->where('date_of_birth', '<=', $bornOnOrBefore)
+                        ->orWhere(function ($fallback) use ($min) {
+                            $fallback->whereNull('date_of_birth')->where('age', '>=', $min);
+                        });
+                });
             }
 
             if (is_numeric($maxAge) && (int) $maxAge >= 0) {
-                $query->where('age', '<=', (int) $maxAge);
+                $max = (int) $maxAge;
+                $bornAfter = $today->copy()->subYears($max + 1)->endOfDay();
+                $query->where(function ($ageQuery) use ($bornAfter, $max) {
+                    $ageQuery->where('date_of_birth', '>', $bornAfter)
+                        ->orWhere(function ($fallback) use ($max) {
+                            $fallback->whereNull('date_of_birth')->where('age', '<=', $max);
+                        });
+                });
             }
 
             if ($category && $category !== 'All Categories') {

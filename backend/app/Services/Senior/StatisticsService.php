@@ -49,14 +49,25 @@ class StatisticsService
                 ];
             }
 
-            $heatmap = (clone $populationQuery)
+            // Status totals (all records in scope, including deceased/pending).
+            $total = (clone $populationQuery)->count();
+            $active = (clone $populationQuery)->where('status', 'Active')->count();
+            $pending = (clone $populationQuery)->where('status', 'Pending')->count();
+            $deceased = (clone $populationQuery)->where('status', 'Deceased')->count();
+
+            // Registry demographics: living active members only, so dashboard
+            // breakdowns (heatmap, ages, genders, centenarians) stay consistent
+            // with the "Active Registry" count and exclude deceased/deleted/pending.
+            $registryQuery = (clone $populationQuery)->where('status', 'Active');
+
+            $heatmap = (clone $registryQuery)
                 ->select('barangay as name', DB::raw('count(*) as count'))
                 ->groupBy('barangay')->orderByDesc('count')->get();
             $max = $heatmap->max('count') ?: 1;
             $heatmap->each(fn($s) => $s->intensity = $s->count / $max);
 
             // Top 10 single ages by population (powers the Peak Ages leaderboard)
-            $topAges = (clone $populationQuery)
+            $topAges = (clone $registryQuery)
                 ->select('age', DB::raw('count(*) as count'))
                 ->whereNotNull('age')
                 ->groupBy('age')
@@ -68,33 +79,32 @@ class StatisticsService
                 ->values();
 
             $today = \Illuminate\Support\Carbon::today();
-            $birthdaysToday = (clone $populationQuery)
+            $birthdaysToday = (clone $registryQuery)
                 ->whereMonth('date_of_birth', $today->month)
                 ->whereDay('date_of_birth', $today->day)
                 ->whereNotNull('date_of_birth')
-                ->where('status', '!=', 'Deceased')
                 ->count();
 
             return [
-                'total' => (clone $populationQuery)->count(),
-                'active' => (clone $populationQuery)->where('status','Active')->count(),
-                'pending' => (clone $populationQuery)->where('status','Pending')->count(),
-                'deceased' => (clone $populationQuery)->where('status','Deceased')->count(),
-                'centenarians' => (clone $populationQuery)->where('age','>=',100)->where('status','!=','Deceased')->count(),
+                'total' => $total,
+                'active' => $active,
+                'pending' => $pending,
+                'deceased' => $deceased,
+                'centenarians' => (clone $registryQuery)->where('age', '>=', 100)->count(),
                 'birthdaysToday' => $birthdaysToday,
                 'monthlyStats' => $monthlyStats,
                 'ageRanges' => [
-                    ['range'=>'60-65','count'=>(clone $populationQuery)->whereBetween('age',[60,65])->count()],
-                    ['range'=>'66-70','count'=>(clone $populationQuery)->whereBetween('age',[66,70])->count()],
-                    ['range'=>'71-75','count'=>(clone $populationQuery)->whereBetween('age',[71,75])->count()],
-                    ['range'=>'76-80','count'=>(clone $populationQuery)->whereBetween('age',[76,80])->count()],
-                    ['range'=>'81-85','count'=>(clone $populationQuery)->whereBetween('age',[81,85])->count()],
-                    ['range'=>'86-90','count'=>(clone $populationQuery)->whereBetween('age',[86,90])->count()],
-                    ['range'=>'91+','count'=>(clone $populationQuery)->where('age','>',90)->count()],
+                    ['range'=>'60-65','count'=>(clone $registryQuery)->whereBetween('age',[60,65])->count()],
+                    ['range'=>'66-70','count'=>(clone $registryQuery)->whereBetween('age',[66,70])->count()],
+                    ['range'=>'71-75','count'=>(clone $registryQuery)->whereBetween('age',[71,75])->count()],
+                    ['range'=>'76-80','count'=>(clone $registryQuery)->whereBetween('age',[76,80])->count()],
+                    ['range'=>'81-85','count'=>(clone $registryQuery)->whereBetween('age',[81,85])->count()],
+                    ['range'=>'86-90','count'=>(clone $registryQuery)->whereBetween('age',[86,90])->count()],
+                    ['range'=>'91+','count'=>(clone $registryQuery)->where('age','>',90)->count()],
                 ],
                 'genders' => [
-                    ['name'=>'Male','value'=>(clone $populationQuery)->where('sex','Male')->count()],
-                    ['name'=>'Female','value'=>(clone $populationQuery)->where('sex','Female')->count()],
+                    ['name'=>'Male','value'=>(clone $registryQuery)->where('sex','Male')->count()],
+                    ['name'=>'Female','value'=>(clone $registryQuery)->where('sex','Female')->count()],
                 ],
                 'topBarangays' => $heatmap->take(5),
                 'allBarangayStats' => $heatmap,
