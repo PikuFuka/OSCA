@@ -166,4 +166,26 @@ class SeniorRegistrationTest extends TestCase
 
         $this->assertNull($senior->fresh()->osca_id);
     }
+
+    public function test_update_can_clear_middle_name(): void
+    {
+        $staff = $this->makeStaff();
+        $senior = Senior::create([
+            'osca_id' => 'OSCA-MID-' . uniqid(),
+            'first_name' => 'No',
+            'middle_name' => 'Middle',
+            'last_name' => 'Name',
+            'date_of_birth' => '1960-01-01',
+            'age' => 66,
+            'sex' => 'Male',
+            'barangay' => 'Biñan',
+            'street_address' => '123 Test St',
+            'status' => 'Active',
+        ]);
+        $headers = ['Authorization' => 'Bearer ' . $staff->createToken('t')->plainTextToken];
+
+        $this->putJson("/api/seniors/{$senior->osca_id}", ['middleName' => ''], $headers)->assertOk();
+
+        $this->assertNull($senior->fresh()->middle_name);
+    }
 }

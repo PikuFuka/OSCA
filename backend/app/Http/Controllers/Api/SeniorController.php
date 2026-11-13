@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use App\Http\Requests\SeniorStoreRequest;
 use App\Http\Requests\SeniorUpdateRequest;
+use App\Http\Resources\ActivityLogResource;
+use App\Http\Resources\RequestResource;
 use App\Http\Resources\SeniorResource;
 use App\Services\Senior\SeniorService;
 use App\Services\Senior\DocumentService;
@@ -464,12 +466,17 @@ class SeniorController extends Controller
         if ($request->user()) {
             $user = $request->user();
             $isUser = $user instanceof \App\Models\User;
+            $changedFields = collect($updated->getChanges())
+                ->except(['updated_at'])
+                ->keys()
+                ->values()
+                ->all();
             ActivityLog::create([
                 'user_id' => $isUser ? $user->id : null,
                 'action' => 'UPDATED_SENIOR',
                 'target_type' => 'Senior',
                 'target_id' => $updated->id,
-                'details' => $request->validated(),
+                'details' => array_merge($request->validated(), ['changed_fields' => $changedFields]),
                 'ip_address' => $request->ip(),
             ]);
         }
@@ -485,6 +492,114 @@ class SeniorController extends Controller
             'message' => 'Senior updated successfully',
             'senior' => new SeniorResource($updated),
         ]);
+    }
+
+    /**
+     * Get a member's audit history: profile updates, ID requests, prints,
+     * request approvals/rejections, and other lifecycle events.
+     */
+    public function history(Request $request, $id)
+    {
+        $senior = $this->findSeniorByIdentifier($id);
+        $perPage = min(max((int) $request->get('per_page', 100), 1), 200);
+
+        $requestIds = SeniorRequest::where('senior_id', $senior->id)->pluck('id');
+
+        // Only member-facing events belong in this log. Authentication and
+        // other system activity (login/logout) are intentionally excluded.
+        $memberActions = [
+            'REGISTERED_SENIOR',
+            'UPDATED_SENIOR',
+            'REQUESTED_NEW_ID',
+            'PRINTED_ID',
+            'SUBMITTED_UPDATE_REQUEST',
+            'APPROVED_REQUEST',
+            'REJECTED_REQUEST',
+            'MARKED_DECEASED',
+            'REVERTED_DECEASED',
+            'DELETED_SENIOR',
+            'RESTORED_SENIOR',
+        ];
+
+        $logs = ActivityLog::with('user')
+            ->whereIn('action', $memberActions)
+            ->where(function ($query) use ($senior, $requestIds) {
+                $query->where(function ($memberLogs) use ($senior) {
+                    $memberLogs->where('target_type', 'Senior')
+                        ->where('target_id', $senior->id);
+                });
+
+                if ($requestIds->isNotEmpty()) {
+                    $query->orWhere(function ($requestLogs) use ($requestIds) {
+                        $requestLogs->where('target_type', 'Request')
+                            ->whereIn('target_id', $requestIds);
+                    });
+                }
+            })
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->limit($perPage)
+            ->get();
+
+        return ActivityLogResource::collection($logs);
+    }
+
+    /**
+     * Record a senior's request for a replacement ID and its reason.
+     */
+    public function requestNewId(Request $request, $id)
+    {
+        $senior = $this->findSeniorByIdentifier($id);
+
+        $validated = $request->validate([
+            'reason' => 'required|string|in:Lost ID,Damaged ID,Others',
+            'notes' => 'nullable|string|max:500',
+        ]);
+
+        $alreadyPending = SeniorRequest::where('senior_id', $senior->id)
+            ->where('type', 'ID Replacement')
+            ->where('status', 'Pending')
+            ->exists();
+
+        if ($alreadyPending) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An ID replacement request is already pending for this member.',
+            ], 422);
+        }
+
+        $seniorRequest = SeniorRequest::create([
+            'senior_id' => $senior->id,
+            'type' => 'ID Replacement',
+            'status' => 'Pending',
+            'reason' => $validated['reason'],
+            'pending_data' => [
+                'reason' => $validated['reason'],
+                'notes' => $validated['notes'] ?? null,
+            ],
+        ]);
+
+        $actor = $request->user();
+        ActivityLog::create([
+            'user_id' => $actor instanceof \App\Models\User ? $actor->id : null,
+            'action' => 'REQUESTED_NEW_ID',
+            'target_type' => 'Senior',
+            'target_id' => $senior->id,
+            'details' => [
+                'osca_id' => $senior->osca_id,
+                'name' => $senior->full_name,
+                'reason' => $validated['reason'],
+                'notes' => $validated['notes'] ?? null,
+                'request_id' => $seniorRequest->id,
+            ],
+            'ip_address' => $request->ip(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ID replacement request recorded.',
+            'request' => new RequestResource($seniorRequest->load('senior')),
+        ], 201);
     }
 
     /**

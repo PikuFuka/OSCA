@@ -18,6 +18,8 @@ class RequestResource extends JsonResource
             'name' => $this->senior ? $this->senior->full_name : 'Unknown',
             'type' => $this->type,
             'status' => $this->status,
+            'reason' => $this->reason ?? ($pendingData['reason'] ?? null),
+            'notes' => $pendingData['notes'] ?? null,
             'created_at' => $this->created_at,
             'date' => $this->created_at?->format('Y-m-d H:i'),
             'senior_id' => $this->senior_id,

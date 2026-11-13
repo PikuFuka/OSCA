@@ -13,6 +13,7 @@ class Request extends Model
         'senior_id',
         'type',
         'status',
+        'reason',
         'pending_data',
         'rejection_reason',
         'action_by'

@@ -147,6 +147,42 @@ class ResourceShapeTest extends TestCase
         $this->assertSame('Old Contact (09000000000)', $data['details']['emergency']);
     }
 
+    public function test_request_resource_exposes_id_replacement_reason_and_notes(): void
+    {
+        $senior = $this->makeSenior();
+        $req = SeniorRequest::create([
+            'senior_id' => $senior->id,
+            'type' => 'ID Replacement',
+            'status' => 'Pending',
+            'reason' => 'Lost ID',
+            'pending_data' => [
+                'reason' => 'Lost ID',
+                'notes' => 'Lost wallet at the market.',
+            ],
+        ]);
+
+        $data = (new RequestResource($req->load('senior')))->toArray(request());
+
+        $this->assertSame('Lost ID', $data['reason']);
+        $this->assertSame('Lost wallet at the market.', $data['notes']);
+    }
+
+    public function test_request_resource_falls_back_to_reason_in_pending_data(): void
+    {
+        $senior = $this->makeSenior();
+        $req = SeniorRequest::create([
+            'senior_id' => $senior->id,
+            'type' => 'ID Replacement',
+            'status' => 'Pending',
+            'pending_data' => ['reason' => 'Damaged ID'],
+        ]);
+
+        $data = (new RequestResource($req->load('senior')))->toArray(request());
+
+        $this->assertSame('Damaged ID', $data['reason']);
+        $this->assertNull($data['notes']);
+    }
+
     public function test_show_endpoint_returns_storage_url_format(): void
     {
         $staff = User::create([

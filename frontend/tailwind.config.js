@@ -7,7 +7,9 @@ export default {
     './index.{js,ts,jsx,tsx}',
     './components/**/*.{js,ts,jsx,tsx}',
     './context/**/*.{js,ts,jsx,tsx}',
+    './features/**/*.{js,ts,jsx,tsx}',
     './services/**/*.{js,ts,jsx,tsx}',
+    './shared/**/*.{js,ts,jsx,tsx}',
   ],
   theme: {
     extend: {

@@ -116,6 +116,12 @@ class SeniorService
             $normalizedExtension = in_array(strtolower($raw), ['', 'none', 'n/a', 'na'], true) ? null : $raw;
         }
 
+        $normalizedMiddle = $senior->middle_name;
+        if (array_key_exists('middleName', $validated)) {
+            $rawMiddle = trim((string) ($validated['middleName'] ?? ''));
+            $normalizedMiddle = $rawMiddle === '' ? null : $rawMiddle;
+        }
+
         $dob = $senior->date_of_birth;
         if (array_key_exists('dateOfBirth', $validated)) {
             $dob = \Illuminate\Support\Carbon::parse($validated['dateOfBirth']);
@@ -136,7 +142,7 @@ class SeniorService
         $senior->update([
             'osca_id' => $normalizedOsca,
             'first_name' => $validated['firstName'] ?? $senior->first_name,
-            'middle_name' => $validated['middleName'] ?? $senior->middle_name,
+            'middle_name' => $normalizedMiddle,
             'last_name' => $validated['lastName'] ?? $senior->last_name,
             'extension_name' => $normalizedExtension,
             'date_of_birth' => $dob,

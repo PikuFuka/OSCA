@@ -121,6 +121,8 @@ export interface PendingRequest {
   type: string;
   date: string;
   status: 'Pending' | 'Approved' | 'Rejected';
+  reason?: string;
+  notes?: string;
   details: {
     dateOfBirth: string;
     gender?: string;

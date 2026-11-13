@@ -20,14 +20,14 @@ class RequestModelTest extends TestCase
 
     public function test_fillable_contains_all_fields(): void
     {
-        $expected = ['senior_id', 'type', 'status', 'pending_data', 'rejection_reason', 'action_by'];
+        $expected = ['senior_id', 'type', 'status', 'reason', 'pending_data', 'rejection_reason', 'action_by'];
         $this->assertEquals($expected, $this->model->getFillable());
     }
 
     public function test_fillable_does_not_contain_extra_fields(): void
     {
         $fillable = $this->model->getFillable();
-        $this->assertCount(6, $fillable);
+        $this->assertCount(7, $fillable);
     }
 
     public function test_casts_has_pending_data_as_array(): void

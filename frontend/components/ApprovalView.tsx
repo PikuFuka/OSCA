@@ -59,6 +59,8 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
         type: r.type || 'New Application',
         date: r.date || new Date(r.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }),
         status: r.status || 'Pending',
+        reason: r.reason || r.pending_data?.reason || undefined,
+        notes: r.notes || r.pending_data?.notes || undefined,
         details: r.details ? {
           ...r.details,
           dateOfBirth: r.details.dateOfBirth || r.senior?.date_of_birth,
@@ -156,6 +158,12 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
     req.type.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const confirmRequest = confirmState.id
+    ? requests.find(req => req.id === confirmState.id)
+    : undefined;
+  const isIdReplacementApproval =
+    confirmState.type === 'Approve' && confirmRequest?.type === 'ID Replacement';
+
   const triggerConfirm = (id: string, action: 'Approve' | 'Reject') => {
     if (action === 'Approve') setApprovalOscaId('');
     setConfirmState({ isOpen: true, type: action, id });
@@ -206,10 +214,22 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
     if (type === 'New Application') {
       return { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-100', dot: 'bg-blue-500' };
     }
+    if (type === 'ID Replacement') {
+      return { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-100', dot: 'bg-cyan-500' };
+    }
     return { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-100', dot: 'bg-amber-500' };
   };
 
-  const getReasonConfig = (type: string) => {
+  const getReasonConfig = (type: string, reason?: string) => {
+    if (type === 'ID Replacement' && reason) {
+      if (reason === 'Lost ID') {
+        return { bg: 'bg-amber-50', text: 'text-amber-700', label: reason };
+      }
+      if (reason === 'Damaged ID') {
+        return { bg: 'bg-rose-50', text: 'text-rose-700', label: reason };
+      }
+      return { bg: 'bg-slate-100', text: 'text-slate-600', label: reason };
+    }
     if (type === 'New Application') {
       return { bg: 'bg-emerald-50', text: 'text-emerald-700', label: 'New Member' };
     }
@@ -285,7 +305,7 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
               <tbody className="divide-y divide-slate-50 stagger-sequence">
                 {filteredRequests.map((req, idx) => {
                   const typeConfig = getTypeConfig(req.type);
-                  const reasonConfig = getReasonConfig(req.type);
+                  const reasonConfig = getReasonConfig(req.type, req.reason);
                   return (
                     <tr 
                       key={req.id} 
@@ -454,7 +474,9 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                   <FileText size={18} className="text-white" />
                 </div>
                 <div>
-                  <h3 className="text-[15px] font-bold text-slate-900">Application Review</h3>
+                  <h3 className="text-[15px] font-bold text-slate-900">
+                    {selectedRequest.type === 'ID Replacement' ? 'ID Replacement Review' : 'Application Review'}
+                  </h3>
                   <p className="text-[11px] font-medium text-slate-400">Request #{selectedRequest.id}</p>
                 </div>
               </div>
@@ -498,6 +520,26 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
                   </div>
                 </div>
               </div>
+
+              {selectedRequest.type === 'ID Replacement' && (
+                <div className="mb-6 rounded-2xl border border-amber-100 bg-amber-50/70 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-amber-100 bg-white text-amber-600">
+                      <IdCard size={16} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-600">Replacement Reason</p>
+                      <p className="text-sm font-bold text-slate-800">{selectedRequest.reason || 'Not specified'}</p>
+                      {selectedRequest.notes && (
+                        <p className="mt-1 text-xs font-medium text-slate-600">{selectedRequest.notes}</p>
+                      )}
+                      <p className="mt-2 text-[11px] font-medium text-amber-700">
+                        Approving re-issues the card only. The OSCA ID number and personal information stay unchanged.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Detail Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
@@ -610,15 +652,19 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
       {/* Confirmation Modal Integration */}
       <ConfirmModal
         isOpen={confirmState.isOpen}
-        title={`${confirmState.type} Application?`}
-        message={`Are you sure you want to ${confirmState.type?.toLowerCase()} this request? This will finalize the member record in the registry.`}
+        title={isIdReplacementApproval ? 'Approve ID Replacement?' : `${confirmState.type} Application?`}
+        message={
+          isIdReplacementApproval
+            ? 'Confirm that this member should receive a replacement OSCA ID card. Their existing OSCA ID and personal information will not change.'
+            : `Are you sure you want to ${confirmState.type?.toLowerCase()} this request? This will finalize the member record in the registry.`
+        }
         variant={confirmState.type === 'Approve' ? 'success' : 'danger'}
         confirmLabel={confirmState.type === 'Approve' ? 'Confirm Approval' : 'Confirm Rejection'}
         onConfirm={handleAction}
         onCancel={() => { setApprovalOscaId(''); setConfirmState({ isOpen: false, type: null, id: null }); }}
         loading={isProcessing}
       >
-        {confirmState.type === 'Approve' && (
+        {confirmState.type === 'Approve' && !isIdReplacementApproval && (
           <div className="p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
             <label htmlFor="confirm-approval-osca-id" className="text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-600 mb-2 block">Assign OSCA ID</label>
             <input

@@ -46,6 +46,8 @@ Route::middleware(['auth:sanctum', 'role:Admin,Staff'])->group(function () {
     Route::delete('/seniors/{id}/photo', [SeniorController::class, 'deletePhoto']);
     Route::post('/seniors/{id}/documents', [SeniorController::class, 'uploadDocument']);
     Route::delete('/seniors/{seniorId}/documents/{documentId}', [SeniorController::class, 'deleteDocument']);
+    Route::get('/seniors/{id}/history', [SeniorController::class, 'history']);
+    Route::post('/seniors/{id}/id-request', [SeniorController::class, 'requestNewId']);
 
     // Approval Requests
     Route::get('/requests', [RequestController::class, 'index']);

@@ -9,6 +9,13 @@ import { BARANGAYS, SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } fr
 import { seniorsAPI, activityLogsAPI } from '../services/api';
 import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 import ConfirmModal from './ConfirmModal';
+import SeniorHistorySection from '../features/registry/history/SeniorHistorySection';
+import {
+  getExtensionSelectOptions,
+  inferExtensionName,
+  normalizeExtensionName,
+  stripEmbeddedExtensionSuffix,
+} from '../features/registry/utils/extensionName';
 import {
   TableHeadCell,
   TableAvatar,
@@ -394,18 +401,31 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     return senior?.oscaId || senior?.osca_id || senior?.id || '';
   };
 
+  const resolveEditExtension = (member: any) => {
+    const middleName = member.middleName || member.middle_name || '';
+    const extensionName =
+      normalizeExtensionName(member.extensionName || member.extension_name) ||
+      inferExtensionName(middleName, member.lastName || member.last_name, member.name);
+
+    return {
+      middleName: extensionName === 'Jr.' ? stripEmbeddedExtensionSuffix(middleName) : middleName,
+      extensionName,
+    };
+  };
+
   const openEditMember = async (senior: SeniorCitizen) => {
     setIsProcessing(true);
     try {
       const fullData = await seniorsAPI.getById(senior.id as any);
       const merged = { ...senior, ...fullData } as any;
+      const identity = resolveEditExtension(merged);
       setSelectedSenior(merged);
       setEditFormData({
         oscaId: getMemberOscaId(merged),
         firstName: merged.firstName || merged.first_name || '',
-        middleName: merged.middleName || merged.middle_name || '',
+        middleName: identity.middleName,
         lastName: merged.lastName || merged.last_name || '',
-        extensionName: merged.extensionName || merged.extension_name || '',
+        extensionName: identity.extensionName,
         dateOfBirth: merged.dateOfBirth || merged.date_of_birth || '',
         pensionStatus: merged.pensionStatus || merged.pension_status || '',
         barangay: merged.barangay || '',
@@ -414,13 +434,14 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
       });
     } catch (error: any) {
       // Fallback to current row data if detail fetch fails.
+      const identity = resolveEditExtension(senior);
       setSelectedSenior(senior);
       setEditFormData({
         oscaId: getMemberOscaId(senior),
         firstName: senior.firstName || '',
-        middleName: senior.middleName || '',
+        middleName: identity.middleName,
         lastName: senior.lastName || '',
-        extensionName: senior.extensionName || '',
+        extensionName: identity.extensionName,
         dateOfBirth: senior.dateOfBirth || '',
         pensionStatus: senior.pensionStatus || '',
         barangay: senior.barangay || '',
@@ -1133,7 +1154,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   return (
     <div className="space-y-8 stagger-sequence">
       {/* Controls Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+      <div className="relative z-30 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
           {/* Search Input */}
           <div className="relative group flex-1 lg:w-[320px]">
             <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-systemBlue transition-colors pointer-events-none">
@@ -1356,7 +1377,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
         {isSearching && <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-orange-400 via-amber-400 to-blue-500 animate-pulse z-10" aria-hidden />}
         <div className="overflow-x-auto overflow-y-clip">
           {!(loading && seniors.length === 0) && (
-            <div className={isSearching ? "opacity-60 transition-opacity duration-200" : "transition-opacity duration-200"}>
+            <div className="transition-opacity duration-200">
             <table className="w-full text-left table-fixed">
               <thead className="bg-slate-50/70">
                 <tr className="border-b border-slate-100">
@@ -1368,7 +1389,53 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   <TableHeadCell className="px-6 w-[14%]" align="right">Actions</TableHeadCell>
                 </tr>
               </thead>
-              <tbody key={`${debouncedSearch}|${filterBarangay}|${filterCategory}|${debouncedAgeMin}|${debouncedAgeMax}|${sortValue}|${page}`} className="divide-y divide-slate-50 stagger-sequence">
+              {isSearching ? (
+                <tbody className="divide-y divide-slate-50">
+                  {Array.from({ length: 10 }).map((_, i) => (
+                    <tr key={`search-skeleton-${i}`} className="bg-white">
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-3">
+                          <Skeleton.Rect className="w-9 h-9 rounded-xl shrink-0" />
+                          <div className="min-w-0 flex flex-col gap-1 w-full max-w-[200px]">
+                            <Skeleton.Text className="w-3/4 h-3.5" />
+                            <Skeleton.Text className="w-1/2 h-2.5" />
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <div className="flex flex-col items-center gap-1">
+                          <Skeleton.Text className="w-8 h-3.5" />
+                          <Skeleton.Text className="w-16 h-2.5" />
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-center">
+                          <Skeleton.Rect className="w-20 h-5 rounded-lg" />
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center justify-center">
+                          <Skeleton.Rect className="w-16 h-5 rounded-full" />
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-center">
+                        <Skeleton.Text className="w-24 h-3.5 mx-auto" />
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          {Array.from({ length: 4 }).map((__, j) => (
+                            <Skeleton.Rect key={j} className="w-7 h-7 rounded-lg shrink-0" />
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              ) : (
+              <tbody
+                key={`${debouncedSearch}|${filterBarangay}|${filterCategory}|${debouncedAgeMin}|${debouncedAgeMax}|${sortValue}|${page}|${displayedSeniors[0]?.id ?? 'none'}|${displayedSeniors.length}|${totalCount}`}
+                className="divide-y divide-slate-50 stagger-sequence"
+              >
                 {displayedSeniors.length > 0 ? displayedSeniors.map((senior, idx) => {
                   return (
                   <tr
@@ -1498,6 +1565,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   />
                 )}
               </tbody>
+              )}
             </table>
             </div>
             )}
@@ -2061,11 +2129,9 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                       <label htmlFor="edit-extensionName" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Extension Name</label>
                       <select id="edit-extensionName" name="extensionName" value={editFormData.extensionName || ''} onChange={e => setEditFormData(prev => ({ ...prev, extensionName: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none appearance-none">
                         <option value="">None</option>
-                        <option value="Jr.">Jr.</option>
-                        <option value="Sr.">Sr.</option>
-                        <option value="III">III</option>
-                        <option value="IV">IV</option>
-                        <option value="V">V</option>
+                        {getExtensionSelectOptions(editFormData.extensionName).map((option) => (
+                          <option key={option} value={option}>{option}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -2115,9 +2181,9 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                     setSeniors(prev => prev.map(s => {
                       if (s.id === selectedSenior.id || (s.oscaId && s.oscaId === selectedSenior.oscaId)) {
                         const newExt = editFormData.extensionName !== undefined ? editFormData.extensionName : s.extensionName;
-                        const newFirst = editFormData.firstName || s.firstName;
-                        const newMiddle = editFormData.middleName || s.middleName;
-                        const newLast = editFormData.lastName || s.lastName;
+                        const newFirst = editFormData.firstName !== undefined ? editFormData.firstName : s.firstName;
+                        const newMiddle = editFormData.middleName !== undefined ? editFormData.middleName : s.middleName;
+                        const newLast = editFormData.lastName !== undefined ? editFormData.lastName : s.lastName;
                         const computedName = updatedSenior.name || [newFirst, newMiddle, newLast, newExt].filter(Boolean).join(' ');
                         return {
                           ...s,
@@ -2141,9 +2207,9 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                         ...prev,
                         ...updatedSenior,
                         extensionName: editFormData.extensionName !== undefined ? editFormData.extensionName : prev.extensionName,
-                        firstName: editFormData.firstName || prev.firstName,
-                        middleName: editFormData.middleName || prev.middleName,
-                        lastName: editFormData.lastName || prev.lastName,
+                        firstName: editFormData.firstName !== undefined ? editFormData.firstName : prev.firstName,
+                        middleName: editFormData.middleName !== undefined ? editFormData.middleName : prev.middleName,
+                        lastName: editFormData.lastName !== undefined ? editFormData.lastName : prev.lastName,
                       } : prev);
                     }
                     setSelectedSenior(null);
@@ -2341,6 +2407,11 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                       </div>
                     )}
                   </section>
+
+                  <SeniorHistorySection
+                    seniorId={getMemberOscaId(selectedSeniorForView)}
+                    notify={notify}
+                  />
                 </div>
               ) : (
                 <div className="h-64 flex items-center justify-center text-slate-400 font-bold">

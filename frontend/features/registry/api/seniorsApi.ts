@@ -163,6 +163,22 @@ export const seniorsAPI = {
     const response = await api.get('/seniors/birthdays');
     return response.data;
   },
+
+  getHistory: async (id: number | string) => {
+    const response = await api.get(`/seniors/${id}/history`);
+    return response.data;
+  },
+
+  requestNewId: async (
+    id: number | string,
+    payload: { reason: 'Lost ID' | 'Damaged ID' | 'Others'; notes?: string }
+  ) => {
+    const body: { reason: string; notes?: string } = { reason: payload.reason };
+    if (payload.notes && payload.notes.trim()) body.notes = payload.notes.trim();
+    clearCache();
+    const response = await api.post(`/seniors/${id}/id-request`, body);
+    return response.data;
+  },
 };
 
 export default seniorsAPI;

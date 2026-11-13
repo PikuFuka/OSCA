@@ -23,7 +23,10 @@ class RequestService
         }
 
         return DB::transaction(function() use ($req, $senior, $oscaId, $actor) {
-            if ($req->type === 'Information Update' && $req->pending_data) {
+            if ($req->type === 'ID Replacement') {
+                // An ID replacement only re-issues the card. It must never
+                // change the member's OSCA ID, status, or personal details.
+            } elseif ($req->type === 'Information Update' && $req->pending_data) {
                 $data = $req->pending_data;
                 $senior->update([
                     'osca_id' => $oscaId ?: $senior->osca_id,
@@ -62,7 +65,7 @@ class RequestService
             }
 
             $req->update(['status'=>'Approved','action_by'=>$actor->id]);
-            ActivityLog::create(['user_id'=>$actor->id,'action'=>'APPROVED_REQUEST','target_type'=>'Request','target_id'=>$req->id,'details'=>['type'=>$req->type,'senior_id'=>$senior->osca_id,'senior_name'=>$senior->full_name],'ip_address'=>request()->ip()]);
+            ActivityLog::create(['user_id'=>$actor->id,'action'=>'APPROVED_REQUEST','target_type'=>'Request','target_id'=>$req->id,'details'=>['type'=>$req->type,'reason'=>$req->reason,'senior_id'=>$senior->osca_id,'senior_name'=>$senior->full_name],'ip_address'=>request()->ip()]);
             return $req;
         });
     }
