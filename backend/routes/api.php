@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ActivityLogController;
 use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\ReportController;
+use App\Http\Controllers\Api\OscaIdVacancyController;
 
 /*
 |--------------------------------------------------------------------------
@@ -48,6 +49,9 @@ Route::middleware(['auth:sanctum', 'role:Admin,Staff'])->group(function () {
     Route::delete('/seniors/{seniorId}/documents/{documentId}', [SeniorController::class, 'deleteDocument']);
     Route::get('/seniors/{id}/history', [SeniorController::class, 'history']);
     Route::post('/seniors/{id}/id-request', [SeniorController::class, 'requestNewId']);
+
+    // Reusable OSCA IDs released by deceased/deleted members
+    Route::get('/osca-id-vacancies', [OscaIdVacancyController::class, 'index']);
 
     // Approval Requests
     Route::get('/requests', [RequestController::class, 'index']);

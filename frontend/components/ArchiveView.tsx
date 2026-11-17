@@ -114,11 +114,12 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
     
     setIsProcessing(true);
     try {
+      const recordId = (confirmState.senior as any).recordId ?? confirmState.senior.id;
       if (confirmState.type === 'restore') {
-        await seniorsAPI.restore(confirmState.senior.id);
+        await seniorsAPI.restore(recordId);
         notify("Member restored successfully", "success");
       } else {
-        await seniorsAPI.unDeceased(confirmState.senior.id);
+        await seniorsAPI.unDeceased(recordId);
         notify("Member status reverted to Active", "success");
       }
       
@@ -131,10 +132,13 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
     }
   };
 
-  const filteredData = (activeTab === 'deleted' ? deletedSeniors : deceasedSeniors).filter(s => 
-    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    s.id.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredData = (activeTab === 'deleted' ? deletedSeniors : deceasedSeniors).filter(s => {
+    const haystack = [s.name, s.id, (s as any).oscaId, (s as any).formerOscaId]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase();
+    return haystack.includes(searchTerm.toLowerCase());
+  });
 
   return (
     <div className="space-y-10">
@@ -207,7 +211,10 @@ const ArchiveView: React.FC<ArchiveViewProps> = ({ notify, embedded = false }) =
                         <TableAvatar name={senior.name} />
                         <div className="min-w-0">
                           <p className="font-bold text-[13px] text-slate-900 uppercase leading-tight truncate">{senior.name}</p>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest tabular-nums">{senior.id}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest tabular-nums">
+                            {(senior as any).oscaId || (senior as any).formerOscaId || senior.id}
+                            {(senior as any).formerOscaId ? ' (former)' : ''}
+                          </p>
                         </div>
                       </div>
                     </td>

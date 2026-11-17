@@ -55,6 +55,16 @@ class SeniorBootTest extends TestCase
         $this->assertSame(Carbon::parse('1950-01-01')->age, (int) $senior->fresh()->age);
     }
 
+    public function test_age_is_not_recalculated_from_the_placeholder_birthdate(): void
+    {
+        $senior = Senior::create($this->baseAttributes([
+            'date_of_birth' => '1900-01-01',
+            'age' => 88,
+        ]));
+
+        $this->assertSame(88, (int) $senior->fresh()->age);
+    }
+
     public function test_full_name_accessor_joins_present_parts_only(): void
     {
         $senior = new Senior([

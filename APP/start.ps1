@@ -28,7 +28,9 @@ Write-Host ""
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $ProjectRoot = Resolve-Path "$ScriptDir\.."
 $IconPath = Join-Path $ScriptDir "osca_logo.ico"
-$ShortcutPath = Join-Path $env:USERPROFILE "Desktop\PROJECTS\OSCA.lnk"
+$DesktopPath = [Environment]::GetFolderPath('Desktop')
+if (-not $DesktopPath) { $DesktopPath = Join-Path $env:USERPROFILE 'Desktop' }
+$ShortcutPath = Join-Path $DesktopPath 'OSCA.lnk'
 
 # 1. Desktop Shortcut Check
 Write-Host -NoNewline "  [$gear] Verifying desktop environment shortcut ... " -ForegroundColor Gray
@@ -36,7 +38,7 @@ if (-not (Test-Path $ShortcutPath)) {
     try {
         $WshShell = New-Object -ComObject WScript.Shell
         $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
-        $Shortcut.TargetPath = Join-Path $ScriptDir "start.bat"
+        $Shortcut.TargetPath = Join-Path $ScriptDir 'start.bat'
         $Shortcut.IconLocation = $IconPath
         $Shortcut.WorkingDirectory = $ScriptDir
         $Shortcut.Save()
@@ -45,6 +47,15 @@ if (-not (Test-Path $ShortcutPath)) {
         Write-Host "[FAILED]" -ForegroundColor Red
     }
 } else {
+    # Keep the shortcut pointing to the current launcher/icon if it moved.
+    try {
+        $WshShell = New-Object -ComObject WScript.Shell
+        $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
+        $Shortcut.TargetPath = Join-Path $ScriptDir 'start.bat'
+        $Shortcut.IconLocation = $IconPath
+        $Shortcut.WorkingDirectory = $ScriptDir
+        $Shortcut.Save()
+    } catch { }
     Write-Host "[EXISTS]" -ForegroundColor Gray
 }
 

@@ -29,6 +29,12 @@ class StoreUpdateRequest extends FormRequest
             'emergencyContact' => 'nullable|string|max:20',
             'rrn' => 'nullable|string|max:50',
             'nationalId' => 'nullable|string|max:50',
+            'communityTaxNumber' => 'nullable|string|max:50',
+            'community_tax_number' => 'nullable|string|max:50',
+            'issuedOn' => 'nullable|date',
+            'issued_on' => 'nullable|date',
+            'issuedAt' => 'nullable|string|max:255',
+            'issued_at' => 'nullable|string|max:255',
             'familyMembers' => 'nullable',
         ];
     }

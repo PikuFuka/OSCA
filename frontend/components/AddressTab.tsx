@@ -1,3 +1,23 @@
+const filterPhoneNumber = (val: string) => {
+  const cleaned = val.replace(/[^0-9\-]/g, '');
+  let digitCount = 0;
+  let result = '';
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (ch >= '0' && ch <= '9') {
+      if (digitCount < 11) {
+        digitCount++;
+        result += ch;
+      }
+    } else if (ch === '-') {
+      if (digitCount < 11 && result.length > 0 && !result.endsWith('-')) {
+        result += ch;
+      }
+    }
+  }
+  return result;
+};
+
 import React from 'react';
 import { MapPin } from 'lucide-react';
 import { BARANGAYS } from '../types';
@@ -32,12 +52,12 @@ const AddressTab: React.FC<AddressTabProps> = ({ formData, setFormData }) => {
           <input
             type="tel"
             placeholder="09xx-xxx-xxxx"
-            maxLength={11}
+            maxLength={13}
             pattern="[0-9]{11}"
             className="w-full px-6 py-4 rounded-2xl bg-slate-50 border border-slate-200 font-bold text-slate-700"
             value={formData.contactNumber}
             onChange={e => {
-              const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+              const digits = filterPhoneNumber(e.target.value);
               setFormData({...formData, contactNumber: digits});
             }}
           />

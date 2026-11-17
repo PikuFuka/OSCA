@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -11,8 +12,21 @@ class Senior extends Authenticatable
 {
     use HasApiTokens, HasFactory, SoftDeletes;
 
+    /**
+     * Imported records without a real birthdate all share this date.
+     * It must never be treated as a real age source.
+     */
+    public const PLACEHOLDER_DATE_OF_BIRTH = '1900-01-01';
+
+    /**
+     * Oldest verified human lifespan. Stored ages above this are data errors,
+     * not a basis for demographic counts.
+     */
+    public const MAX_VERIFIED_HUMAN_AGE = 122;
+
     protected $fillable = [
         'osca_id',
+        'former_osca_id',
         'first_name',
         'middle_name',
         'last_name',
@@ -30,6 +44,9 @@ class Senior extends Authenticatable
         'emergency_contact',
         'rrn',
         'national_id',
+        'community_tax_number',
+        'issued_on',
+        'issued_at',
         'profile_photo_path',
         'id_config',
         'status',
@@ -43,6 +60,7 @@ class Senior extends Authenticatable
 
     protected $casts = [
         'date_of_birth' => 'date',
+        'issued_on' => 'date',
         'id_config' => 'array',
         'password' => 'hashed',
     ];
@@ -57,9 +75,11 @@ class Senior extends Authenticatable
                 $trimmed = trim((string) $senior->osca_id);
                 $senior->osca_id = $trimmed === '' ? null : $trimmed;
             }
-            // Auto-calculate exact age from date_of_birth
-            if ($senior->date_of_birth) {
-                $senior->age = \Illuminate\Support\Carbon::parse($senior->date_of_birth)->age;
+            // Auto-calculate exact age from a real date_of_birth. The shared
+            // 1900-01-01 placeholder means "unknown"; recalculating from it
+            // would turn ordinary seniors into impossible centenarians.
+            if ($senior->hasKnownDateOfBirth()) {
+                $senior->age = $senior->date_of_birth->age;
             }
             // Keep osca_id_trim in sync for fallback regular column (VIRTUAL columns auto-sync)
             try {
@@ -79,6 +99,87 @@ class Senior extends Authenticatable
         });
     }
 
+    /**
+     * Identifier to show on historical records. A deceased/deleted member
+     * releases their live OSCA ID for reuse, but keeps it for reports.
+     */
+    public function displayOscaId(): ?string
+    {
+        return $this->osca_id ?? $this->former_osca_id;
+    }
+
+    /**
+     * A real birthdate exists. 1900-01-01 is the historic import placeholder
+     * and carries no age information.
+     */
+    public function hasKnownDateOfBirth(): bool
+    {
+        return $this->date_of_birth !== null
+            && $this->date_of_birth->format('Y-m-d') !== self::PLACEHOLDER_DATE_OF_BIRTH;
+    }
+
+    /**
+     * Age used by the API, exports and reports. Real birthdates win; the
+     * placeholder falls back to the stored age only when it is plausible.
+     */
+    public function resolvedAge(): ?int
+    {
+        if ($this->hasKnownDateOfBirth()) {
+            return (int) $this->date_of_birth->age;
+        }
+
+        $storedAge = $this->age;
+
+        if ($storedAge === null || $storedAge < 0 || $storedAge > self::MAX_VERIFIED_HUMAN_AGE) {
+            return null;
+        }
+
+        return (int) $storedAge;
+    }
+
+    /**
+     * A living 100+ senior whose age can be trusted. Placeholder birthdates
+     * are excluded so unverified imports never become centenarians.
+     */
+    public function isCentenarian(): bool
+    {
+        if (!$this->hasKnownDateOfBirth()) {
+            return false;
+        }
+
+        $age = $this->resolvedAge();
+
+        return $age !== null && $age >= 100;
+    }
+
+    /**
+     * Restrict a query to seniors with a real birthdate aged 100 or more.
+     */
+    public function scopeCentenarians(Builder $query): Builder
+    {
+        $cutoff = \Illuminate\Support\Carbon::today()->subYears(100)->toDateString();
+
+        return $query
+            ->whereNotNull('date_of_birth')
+            ->whereDate('date_of_birth', '>', self::PLACEHOLDER_DATE_OF_BIRTH)
+            ->whereDate('date_of_birth', '<=', $cutoff);
+    }
+
+    /**
+     * Keep age-based aggregates free of impossible placeholder ages while
+     * retaining real birthdates and plausible stored fallbacks.
+     */
+    public function scopePlausibleAge(Builder $query): Builder
+    {
+        return $query->where(function (Builder $query) {
+            $query->whereDate('date_of_birth', '>', self::PLACEHOLDER_DATE_OF_BIRTH)
+                ->orWhere(function (Builder $query) {
+                    $query->whereDate('date_of_birth', self::PLACEHOLDER_DATE_OF_BIRTH)
+                        ->where('age', '<=', self::MAX_VERIFIED_HUMAN_AGE);
+                });
+        });
+    }
+
     public function familyMembers()
     {
         return $this->hasMany(\App\Models\FamilyMember::class);
@@ -92,6 +193,11 @@ class Senior extends Authenticatable
     public function requests()
     {
         return $this->hasMany(\App\Models\Request::class);
+    }
+
+    public function vacancyRecord()
+    {
+        return $this->hasOne(OscaIdVacancy::class);
     }
 
     // Helper to get full name

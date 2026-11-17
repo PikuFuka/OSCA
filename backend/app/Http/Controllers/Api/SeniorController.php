@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Senior;
+use App\Models\OscaIdVacancy;
 use App\Models\FamilyMember;
 use App\Models\SeniorDocument;
 use App\Models\Request as SeniorRequest;
@@ -22,6 +23,7 @@ use App\Http\Resources\RequestResource;
 use App\Http\Resources\SeniorResource;
 use App\Services\Senior\SeniorService;
 use App\Services\Senior\DocumentService;
+use App\Services\Senior\OscaIdVacancyService;
 
 class SeniorController extends Controller
 {
@@ -155,7 +157,7 @@ class SeniorController extends Controller
 
         $exec = function () use ($request, $search, $hasSearch, $barangay, $status, $minAge, $maxAge, $category, $perPageRaw, $sortBy, $sortOrder) {
             $query = Senior::withCount('familyMembers')
-                ->select(['id','osca_id','first_name','middle_name','last_name','extension_name','date_of_birth','age','place_of_birth','sex','mothers_maiden_name','pension_status','barangay','street_address','contact_number','emergency_name','emergency_contact','rrn','national_id','profile_photo_path','id_config','status','created_at','updated_at']);
+                ->select(['id','osca_id','first_name','middle_name','last_name','extension_name','date_of_birth','age','place_of_birth','sex','mothers_maiden_name','pension_status','barangay','street_address','contact_number','emergency_name','emergency_contact','rrn','national_id','community_tax_number','issued_on','issued_at','profile_photo_path','id_config','status','created_at','updated_at']);
 
             if (!$request->has('status')) {
                 $query->where('status', 'Active');
@@ -187,27 +189,38 @@ class SeniorController extends Controller
             }
 
             // Filter by age derived from DOB so results stay correct even if the
-            // stored age column is stale. (Birthdays roll over daily.)
+            // stored age column is stale. The 1900-01-01 placeholder falls back
+            // to the stored age, capped at a plausible human lifespan.
             $today = \Illuminate\Support\Carbon::today();
             if (is_numeric($minAge) && (int) $minAge >= 0) {
                 $min = (int) $minAge;
-                $bornOnOrBefore = $today->copy()->subYears($min)->endOfDay();
+                $bornOnOrBefore = $today->copy()->subYears($min)->toDateString();
                 $query->where(function ($ageQuery) use ($bornOnOrBefore, $min) {
-                    $ageQuery->where('date_of_birth', '<=', $bornOnOrBefore)
-                        ->orWhere(function ($fallback) use ($min) {
-                            $fallback->whereNull('date_of_birth')->where('age', '>=', $min);
-                        });
+                    $ageQuery->where(function ($realDob) use ($bornOnOrBefore) {
+                        $realDob->whereDate('date_of_birth', '>', Senior::PLACEHOLDER_DATE_OF_BIRTH)
+                            ->whereDate('date_of_birth', '<=', $bornOnOrBefore);
+                    })->orWhere(function ($fallback) use ($min) {
+                        $fallback->where(function ($unknownDob) {
+                            $unknownDob->whereNull('date_of_birth')
+                                ->orWhereDate('date_of_birth', Senior::PLACEHOLDER_DATE_OF_BIRTH);
+                        })->whereBetween('age', [$min, Senior::MAX_VERIFIED_HUMAN_AGE]);
+                    });
                 });
             }
 
             if (is_numeric($maxAge) && (int) $maxAge >= 0) {
                 $max = (int) $maxAge;
-                $bornAfter = $today->copy()->subYears($max + 1)->endOfDay();
+                $bornAfter = $today->copy()->subYears($max + 1)->toDateString();
                 $query->where(function ($ageQuery) use ($bornAfter, $max) {
-                    $ageQuery->where('date_of_birth', '>', $bornAfter)
-                        ->orWhere(function ($fallback) use ($max) {
-                            $fallback->whereNull('date_of_birth')->where('age', '<=', $max);
-                        });
+                    $ageQuery->where(function ($realDob) use ($bornAfter) {
+                        $realDob->whereDate('date_of_birth', '>', Senior::PLACEHOLDER_DATE_OF_BIRTH)
+                            ->whereDate('date_of_birth', '>', $bornAfter);
+                    })->orWhere(function ($fallback) use ($max) {
+                        $fallback->where(function ($unknownDob) {
+                            $unknownDob->whereNull('date_of_birth')
+                                ->orWhereDate('date_of_birth', Senior::PLACEHOLDER_DATE_OF_BIRTH);
+                        })->where('age', '<=', $max);
+                    });
                 });
             }
 
@@ -256,13 +269,16 @@ class SeniorController extends Controller
      * Helper to transform senior model to frontend format
      */
     private function transformSenior($senior) {
-        $age = $senior->date_of_birth ? \Illuminate\Support\Carbon::parse($senior->date_of_birth)->age : $senior->age;
+        $age = $senior->resolvedAge();
 
         return [
-            'id' => $senior->osca_id ?? $senior->id,
+            'id' => $senior->osca_id ?? (string) $senior->id,
+            'recordId' => $senior->id,
             'oscaId' => $senior->osca_id,
+            'formerOscaId' => $senior->former_osca_id,
             'name' => $senior->full_name,
             'age' => $age,
+            'isCentenarian' => $senior->isCentenarian(),
             'gender' => $senior->sex,
             'status' => in_array($senior->status, ['deceased', 'Deceased']) ? 'Deceased' : (in_array($senior->status, ['approved', 'Active']) ? 'Active' : $senior->status),
             'joinedDate' => $senior->created_at?->format('M d, Y') ?? 'N/A',
@@ -283,6 +299,9 @@ class SeniorController extends Controller
             'emergencyContact' => $senior->emergency_contact,
             'rrn' => $senior->rrn,
             'nationalId' => $senior->national_id,
+            'communityTaxNumber' => $senior->community_tax_number,
+            'issuedOn' => $senior->issued_on ? ($senior->issued_on instanceof \Carbon\CarbonInterface ? $senior->issued_on->format('Y-m-d') : substr((string)$senior->issued_on, 0, 10)) : null,
+            'issuedAt' => $senior->issued_at,
             'familyMembersCount' => $senior->family_members_count ?? 0,
             'updatedAt' => $senior->updated_at?->format('M d, Y h:i A') ?? null,
         ];
@@ -310,11 +329,16 @@ class SeniorController extends Controller
     }
 
     /**
-     * Get all deceased seniors
+     * Get all deceased seniors (mortality records), including members whose
+     * OSCA ID was released for reuse and whose live status may have changed.
      */
     public function deceased(Request $request)
     {
-        $query = Senior::where('status', 'Deceased');
+        $query = Senior::query()
+            ->where(function ($q) {
+                $q->where('status', 'Deceased')
+                  ->orWhereHas('vacancyRecord', fn ($v) => $v->where('reason', OscaIdVacancy::REASON_DECEASED));
+            });
 
         if ($request->has('search')) {
             $this->applySeniorSearch($query, (string) $request->search);
@@ -322,7 +346,12 @@ class SeniorController extends Controller
 
         $seniors = $query->orderBy('updated_at', 'desc')->get();
         $transformed = $seniors->map(function($senior) {
-            return $this->transformSenior($senior);
+            $data = $this->transformSenior($senior);
+            // These are mortality records even if their live status was changed
+            // (e.g. reverted/un-deceased while the ID is held in the vacancy pool).
+            $data['status'] = 'Deceased';
+            $data['isMortalityRecord'] = true;
+            return $data;
         });
 
         return response()->json(['data' => $transformed]);
@@ -333,15 +362,28 @@ class SeniorController extends Controller
      */
     public function restore($id)
     {
-        $senior = Senior::onlyTrashed()->where('osca_id', $id)->firstOrFail();
-        $senior->restore();
+        $senior = Senior::onlyTrashed()->findOrFail($id);
+        $vacancyService = app(OscaIdVacancyService::class);
+
+        DB::transaction(function () use ($senior, $vacancyService) {
+            // A released ID is returned when nobody has claimed it yet.
+            $reclaimed = $senior->osca_id ? false : $vacancyService->reclaim($senior);
+
+            $senior->restore();
+
+            if (!$senior->osca_id) {
+                $senior->update(['status' => 'Pending']);
+            } elseif ($reclaimed) {
+                $senior->update(['status' => 'Active']);
+            }
+        });
 
         ActivityLog::create([
             'user_id' => auth()->id(),
             'action' => 'RESTORED_SENIOR',
             'target_type' => 'Senior',
             'target_id' => $senior->id,
-            'details' => ['osca_id' => $senior->osca_id, 'name' => $senior->full_name]
+            'details' => ['osca_id' => $senior->displayOscaId(), 'name' => $senior->full_name]
         ]);
 
         return response()->json(['message' => 'Senior restored successfully', 'senior' => $this->transformSenior($senior)]);
@@ -377,11 +419,13 @@ class SeniorController extends Controller
                         ->where('osca_id', $id)
                         ->firstOrFail();
 
-        $age = $senior->date_of_birth ? $senior->date_of_birth->age : $senior->age;
+        $age = $senior->resolvedAge();
 
         return response()->json([
-            'id' => $senior->osca_id ?? $senior->id,
+            'id' => $senior->osca_id ?? (string) $senior->id,
+            'recordId' => $senior->id,
             'oscaId' => $senior->osca_id,
+            'formerOscaId' => $senior->former_osca_id,
             'firstName' => $senior->first_name,
             'middleName' => $senior->middle_name,
             'lastName' => $senior->last_name,
@@ -389,6 +433,7 @@ class SeniorController extends Controller
             'name' => $senior->full_name,
             'dateOfBirth' => $senior->date_of_birth->format('Y-m-d'),
             'age' => $age,
+            'isCentenarian' => $senior->isCentenarian(),
             'placeOfBirth' => $senior->place_of_birth,
             'sex' => $senior->sex,
             'mothersMaidenName' => $senior->mothers_maiden_name,
@@ -400,6 +445,9 @@ class SeniorController extends Controller
             'emergencyContact' => $senior->emergency_contact,
             'rrn' => $senior->rrn,
             'nationalId' => $senior->national_id,
+            'communityTaxNumber' => $senior->community_tax_number,
+            'issuedOn' => $senior->issued_on?->format('Y-m-d'),
+            'issuedAt' => $senior->issued_at,
             'status' => $senior->status,
             'familyMembersCount' => $senior->familyMembers->count(),
             'joinedDate' => $senior->created_at->format('M d, Y'),
@@ -643,8 +691,16 @@ class SeniorController extends Controller
      */
     public function destroy(Request $request, $id)
     {
-        $senior = Senior::where('osca_id', $id)->firstOrFail();
-        
+        // Mutations use the internal record id, never the reusable OSCA ID.
+        $senior = Senior::findOrFail($id);
+        $originalOscaId = $senior->osca_id;
+        $holderName = $senior->full_name;
+
+        DB::transaction(function () use ($senior) {
+            app(OscaIdVacancyService::class)->vacate($senior, OscaIdVacancy::REASON_DELETED);
+            $senior->delete();
+        });
+
         if ($request->user()) {
             $user = $request->user();
             $isUser = $user instanceof \App\Models\User;
@@ -654,7 +710,7 @@ class SeniorController extends Controller
                 'action' => 'DELETED_SENIOR',
                 'target_type' => 'Senior',
                 'target_id' => $senior->id,
-                'details' => ['osca_id' => $senior->osca_id, 'name' => $senior->full_name],
+                'details' => ['osca_id' => $originalOscaId, 'name' => $holderName],
                 'ip_address' => $request->ip(),
             ]);
         }
@@ -663,8 +719,6 @@ class SeniorController extends Controller
         // if ($senior->profile_photo_path) {
         //     \Illuminate\Support\Facades\Storage::disk('public')->delete($senior->profile_photo_path);
         // }
-
-        $senior->delete();
 
         return response()->json([
             'success' => true,
@@ -677,8 +731,14 @@ class SeniorController extends Controller
      */
     public function markDeceased(Request $request, $id)
     {
-        $senior = Senior::where('osca_id', $id)->firstOrFail();
-        $senior->update(['status' => 'Deceased']);
+        $senior = Senior::findOrFail($id);
+        $originalOscaId = $senior->osca_id;
+        $holderName = $senior->full_name;
+
+        DB::transaction(function () use ($senior) {
+            app(OscaIdVacancyService::class)->vacate($senior, OscaIdVacancy::REASON_DECEASED);
+            $senior->update(['status' => 'Deceased']);
+        });
 
         if ($request->user()) {
             $user = $request->user();
@@ -689,7 +749,7 @@ class SeniorController extends Controller
                 'action' => 'MARKED_DECEASED',
                 'target_type' => 'Senior',
                 'target_id' => $senior->id,
-                'details' => ['osca_id' => $senior->osca_id, 'name' => $senior->full_name],
+                'details' => ['osca_id' => $originalOscaId, 'name' => $holderName],
                 'ip_address' => $request->ip(),
             ]);
         }
@@ -705,8 +765,17 @@ class SeniorController extends Controller
      */
     public function unDeceased(Request $request, $id)
     {
-        $senior = Senior::where('osca_id', $id)->firstOrFail();
-        $senior->update(['status' => 'Active']);
+        $senior = Senior::findOrFail($id);
+        $vacancyService = app(OscaIdVacancyService::class);
+
+        DB::transaction(function () use ($senior, $vacancyService) {
+            // A released ID is returned when nobody has claimed it yet.
+            if (!$senior->osca_id) {
+                $vacancyService->reclaim($senior);
+            }
+
+            $senior->update(['status' => $senior->osca_id ? 'Active' : 'Pending']);
+        });
 
         if ($request->user()) {
             $user = $request->user();
@@ -717,14 +786,16 @@ class SeniorController extends Controller
                 'action' => 'REVERTED_DECEASED',
                 'target_type' => 'Senior',
                 'target_id' => $senior->id,
-                'details' => ['osca_id' => $senior->osca_id, 'name' => $senior->full_name],
+                'details' => ['osca_id' => $senior->displayOscaId(), 'name' => $senior->full_name],
                 'ip_address' => $request->ip(),
             ]);
         }
 
         return response()->json([
             'success' => true,
-            'message' => 'Senior record reverted to Active status',
+            'message' => $senior->osca_id
+                ? 'Senior record reverted to Active status'
+                : 'Senior record reverted, but the old OSCA ID was already reassigned. Assign a new ID.',
         ]);
     }
 
@@ -1109,14 +1180,19 @@ class SeniorController extends Controller
         $seniors = Senior::whereMonth('date_of_birth', $month)
             ->whereDay('date_of_birth', $day)
             ->whereNotNull('date_of_birth')
+            ->whereDate('date_of_birth', '>', Senior::PLACEHOLDER_DATE_OF_BIRTH)
             ->where('status', '!=', 'Deceased')
             ->orderBy('last_name')
             ->get();
 
-        // Lazily correct ages
+        // Lazily correct ages from real birthdates only.
         $updated = 0;
         foreach ($seniors as $senior) {
-            $correctAge = Carbon::parse($senior->date_of_birth)->age;
+            if (!$senior->hasKnownDateOfBirth()) {
+                continue;
+            }
+
+            $correctAge = $senior->date_of_birth->age;
             if ((int) $senior->age !== $correctAge) {
                 $senior->timestamps = false;
                 $senior->update(['age' => $correctAge]);
@@ -1136,7 +1212,7 @@ class SeniorController extends Controller
 
         $mapped = $seniors->map(function ($s) {
             $photoUrl = $s->profile_photo_path ? '/api/storage/profiles/' . basename($s->profile_photo_path) : null;
-            $age = $s->date_of_birth ? $s->date_of_birth->age : $s->age;
+            $age = $s->resolvedAge();
             return [
                 'id' => $s->id,
                 'oscaId' => $s->osca_id,
@@ -1146,7 +1222,8 @@ class SeniorController extends Controller
                 'extensionName' => $s->extension_name,
                 'name' => $s->full_name,
                 'fullName' => $s->full_name,
-                'age' => (int) $age,
+                'age' => $age,
+                'isCentenarian' => $s->isCentenarian(),
                 'sex' => $s->sex,
                 'gender' => $s->sex,
                 'barangay' => $s->barangay,

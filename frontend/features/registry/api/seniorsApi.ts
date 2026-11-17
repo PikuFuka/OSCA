@@ -86,6 +86,13 @@ export const seniorsAPI = {
     });
   },
 
+  getAvailableOscaIds: async (search?: string) => {
+    const response = await api.get('/osca-id-vacancies', {
+      params: search ? { search } : undefined,
+    });
+    return response.data;
+  },
+
   restore: async (id: number | string) => {
     clearCache();
     const response = await api.post(`/seniors/${id}/restore`);

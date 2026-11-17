@@ -22,6 +22,12 @@ class SeniorUpdateRequest extends FormRequest
             'barangay' => 'sometimes|string|max:255',
             'streetAddress' => 'sometimes|string',
             'contactNumber' => 'nullable|string|max:20',
+            'communityTaxNumber' => 'nullable|string|max:50',
+            'community_tax_number' => 'nullable|string|max:50',
+            'issuedOn' => 'nullable|date',
+            'issued_on' => 'nullable|date',
+            'issuedAt' => 'nullable|string|max:255',
+            'issued_at' => 'nullable|string|max:255',
             'idConfig' => 'nullable|array',
         ];
     }

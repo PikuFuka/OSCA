@@ -42,6 +42,29 @@ interface DocumentsTabProps {
   passwordHasSpecial: boolean;
 }
 
+const filterLettersAndHyphen = (val: string) => val.replace(/[^a-zA-Z\s\-ñÑ\.]/g, "");
+const filterLettersAndLocation = (val: string) => val.replace(/[^a-zA-Z\s\-ñÑ\.,]/g, "");
+const filterNumbersAndHyphen = (val: string) => val.replace(/[^0-9\-]/g, "");
+const filterPhoneNumber = (val: string) => {
+  const cleaned = val.replace(/[^0-9\-]/g, '');
+  let digitCount = 0;
+  let result = '';
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (ch >= '0' && ch <= '9') {
+      if (digitCount < 11) {
+        digitCount++;
+        result += ch;
+      }
+    } else if (ch === '-') {
+      if (digitCount < 11 && result.length > 0 && !result.endsWith('-')) {
+        result += ch;
+      }
+    }
+  }
+  return result;
+};
+
 const DocumentsTab: React.FC<DocumentsTabProps> = ({ 
   formData, setFormData, applicantType, uploadedFiles, handleFileChange,
   showPassword, setShowPassword, showConfirmPassword, setShowConfirmPassword,
@@ -74,18 +97,35 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({
         <div className="space-y-2">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">RRN No. (Optional)</label>
           <input type="text" className="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 outline-none"
-            value={formData.rrn} onChange={e => setFormData({...formData, rrn: e.target.value})} />
+            value={formData.rrn} onChange={e => setFormData({...formData, rrn: filterNumbersAndHyphen(e.target.value)})} />
         </div>
         <div className="space-y-2">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">National ID (Optional)</label>
           <input type="text" className="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 outline-none"
-            value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value})} />
+            value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: filterNumbersAndHyphen(e.target.value)})} />
         </div>
       </div>
       <div className="space-y-2">
           <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Mother's Maiden Name</label>
           <input type="text" className="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 outline-none"
-            value={formData.mothersMaidenName} onChange={e => setFormData({...formData, mothersMaidenName: e.target.value})} />
+            value={formData.mothersMaidenName} onChange={e => setFormData({...formData, mothersMaidenName: filterLettersAndHyphen(e.target.value)})} />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-4">
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Community Tax Number</label>
+          <input type="text" placeholder="e.g. 12345678" className="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 outline-none"
+            value={formData.communityTaxNumber} onChange={e => setFormData({...formData, communityTaxNumber: filterNumbersAndHyphen(e.target.value)})} />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Issued On</label>
+          <input type="date" className="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 outline-none"
+            value={formData.issuedOn} onChange={e => setFormData({...formData, issuedOn: e.target.value})} />
+        </div>
+        <div className="space-y-2">
+          <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 pl-2">Issued At</label>
+          <input type="text" placeholder="e.g. Pagsanjan, Laguna" className="w-full px-6 py-4 rounded-2xl bg-white border border-slate-200 focus:ring-4 focus:ring-blue-50 focus:border-blue-900 transition-all font-bold text-slate-700 outline-none"
+            value={formData.issuedAt} onChange={e => setFormData({...formData, issuedAt: filterLettersAndLocation(e.target.value)})} />
+        </div>
       </div>
       
       {applicantType === 'new' && (
@@ -163,16 +203,15 @@ const DocumentsTab: React.FC<DocumentsTabProps> = ({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
            <input type="text" placeholder="Contact Name" className="w-full px-6 py-4 rounded-2xl bg-rose-50/30 border border-rose-100 font-bold text-slate-700 outline-none focus:border-rose-300"
-            value={formData.emergencyName} onChange={e => setFormData({...formData, emergencyName: e.target.value})} />
+            value={formData.emergencyName} onChange={e => setFormData({...formData, emergencyName: filterLettersAndHyphen(e.target.value)})} />
           <input
             type="tel"
             placeholder="Contact Number"
-            maxLength={11}
-            pattern="[0-9]{11}"
+            maxLength={13}
             className="w-full px-6 py-4 rounded-2xl bg-rose-50/30 border border-rose-100 font-bold text-slate-700 outline-none focus:border-rose-300"
             value={formData.emergencyContact}
             onChange={e => {
-              const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+              const digits = filterPhoneNumber(e.target.value);
               setFormData({...formData, emergencyContact: digits});
             }}
           />

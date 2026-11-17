@@ -26,7 +26,14 @@ class UpdateBirthdayAges extends Command
             ->chunkById(500, function ($seniors) use (&$checked, &$updated, &$birthdaysToday, $today) {
                 foreach ($seniors as $senior) {
                     $checked++;
-                    $dob = Carbon::parse($senior->date_of_birth);
+
+                    // 1900-01-01 is the import placeholder, not a birthdate.
+                    // Recalculating from it would create impossible ages.
+                    if (!$senior->hasKnownDateOfBirth()) {
+                        continue;
+                    }
+
+                    $dob = $senior->date_of_birth;
                     $correctAge = $dob->age;
 
                     if ($dob->isBirthday($today)) {

@@ -38,6 +38,8 @@ const ReviewTab: React.FC<ReviewTabProps> = ({ formData, applicantType }) => {
           <ReviewField label="Applicant Name" value={`${formData.lastName}, ${formData.firstName} ${formData.middleName}${formData.extensionName ? ' ' + formData.extensionName : ''}`.trim()} fullWidth={true} />
           <ReviewField label="Details" value={`${formData.sex} • ${formData.age} Years Old • Born ${formData.dateOfBirth}`} />
           <ReviewField label="Mother's Maiden Name" value={formData.mothersMaidenName} fullWidth={true} />
+          <ReviewField label="Community Tax Number" value={formData.communityTaxNumber} />
+          <ReviewField label="CTC Issued On / At" value={formData.issuedOn ? `${formData.issuedOn}${formData.issuedAt ? ' • ' + formData.issuedAt : ''}` : (formData.issuedAt || '')} />
         </div>
         <div className="space-y-6">
           <ReviewField label="Contact Info" value={formData.contactNumber} />

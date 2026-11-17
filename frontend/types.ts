@@ -3,6 +3,7 @@ export enum ViewType {
   DASHBOARD = 'DASHBOARD',
   ADD_MEMBER = 'ADD_MEMBER',
   MEMBER_REGISTRY = 'MEMBER_REGISTRY',
+  AVAILABLE_IDS = 'AVAILABLE_IDS',
   ACCOUNT = 'ACCOUNT',
   HISTORY = 'HISTORY',
   FINAL_REPORT = 'FINAL_REPORT',
@@ -68,7 +69,9 @@ export interface FamilyMember {
 
 export interface SeniorCitizen {
   id: string;
+  recordId?: number;
   oscaId?: string;
+  formerOscaId?: string | null;
   name: string;
   age: number;
   gender: 'Male' | 'Female' | 'Other';
@@ -92,6 +95,9 @@ export interface SeniorCitizen {
   emergencyContact?: string;
   rrn?: string;
   nationalId?: string;
+  communityTaxNumber?: string;
+  issuedOn?: string;
+  issuedAt?: string;
   familyMembersCount?: number;
   familyMembers?: FamilyMember[];
   updatedAt?: string;

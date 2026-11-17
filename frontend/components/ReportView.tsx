@@ -8,7 +8,10 @@ import {
   ChevronLeft,
   FileText,
   Clock,
-  MapPin
+  MapPin,
+  Users,
+  X,
+  Filter
 } from 'lucide-react';
 import { BARANGAYS } from '../types';
 import { seniorsAPI, reportsAPI } from '../services/api';
@@ -24,6 +27,11 @@ interface ReportViewProps {
 const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initialSection = 'masterlist' }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [selectedBrgy, setSelectedBrgy] = useState('All Barangays');
+  const [selectedCategory, setSelectedCategory] = useState('All Categories');
+  const [ageMin, setAgeMin] = useState('');
+  const [ageMax, setAgeMax] = useState('');
+  const [debouncedAgeMin, setDebouncedAgeMin] = useState('');
+  const [debouncedAgeMax, setDebouncedAgeMax] = useState('');
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
@@ -36,6 +44,15 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
   const [activeSection, setActiveSection] = useState<'masterlist' | 'centenarians' | 'deceased' | 'newly-registered'>(initialSection);
   const itemsPerPage = 15;
 
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedAgeMin(ageMin.trim());
+      setDebouncedAgeMax(ageMax.trim());
+      setPage(1);
+    }, 260);
+    return () => clearTimeout(timer);
+  }, [ageMin, ageMax]);
+
   // Fetch report data from API with pagination and filtering
   useEffect(() => {
     const fetchData = async () => {
@@ -44,6 +61,9 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
         const [masterlistResponse, allActiveResponse, deceasedResponse] = await Promise.all([
           seniorsAPI.getAll({
             barangay: selectedBrgy === 'All Barangays' ? undefined : selectedBrgy,
+            category: selectedCategory === 'All Categories' ? undefined : selectedCategory,
+            min_age: debouncedAgeMin || undefined,
+            max_age: debouncedAgeMax || undefined,
             page,
             per_page: itemsPerPage,
           }),
@@ -75,7 +95,10 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
         setSeniorsData(masterlistData);
         setTotalPages(masterlistResponse?.meta?.last_page || masterlistResponse?.last_page || 1);
         setTotalCount(masterlistResponse?.meta?.total ?? masterlistResponse?.total ?? masterlistData.length);
-        setCentenariansData(allActiveData.filter((item: any) => Number(item.age || 0) >= 100));
+        // The backend owns the centenarian rule: a real birthdate and age 100+.
+        // Never infer it from the displayed age, which may be an unknown
+        // fallback for imported 1900-01-01 placeholder records.
+        setCentenariansData(allActiveData.filter((item: any) => item.isCentenarian === true));
         setDeceasedData(
           selectedBrgy === 'All Barangays'
             ? allDeceasedData
@@ -103,7 +126,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
       }
     };
     fetchData();
-  }, [selectedBrgy, page]);
+  }, [selectedBrgy, selectedCategory, debouncedAgeMin, debouncedAgeMax, page]);
 
   useEffect(() => {
     scrollMainToTop();
@@ -121,31 +144,42 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
     return date.toLocaleDateString();
   };
 
-  const handleExcelExport = () => {
+  const handleExcelExport = async () => {
+    if (isExporting) return;
+
     setIsExporting(true);
     if (setGlobalLoading) setGlobalLoading(true);
     notify('Preparing your Excel report. Please wait...', 'info');
-    
+
     try {
-      // Get the download URL with authentication token and filters
-      const url = reportsAPI.getSeniorCitizensReportUrl({ 
-        barangay: selectedBrgy === 'All Barangays' ? undefined : selectedBrgy 
+      // Wait for the entire workbook to arrive before dismissing the loading
+      // overlay. A fixed timeout could hide the overlay while the server is
+      // still generating the report.
+      const hasFilter = (selectedBrgy !== 'All Barangays') || (selectedCategory !== 'All Categories') || Boolean(debouncedAgeMin || ageMin) || Boolean(debouncedAgeMax || ageMax);
+      const { blob, filename } = await reportsAPI.downloadSeniorCitizensReport({
+        barangay: selectedBrgy === 'All Barangays' ? undefined : selectedBrgy,
+        category: selectedCategory === 'All Categories' ? undefined : selectedCategory,
+        min_age: debouncedAgeMin || ageMin.trim() || undefined,
+        max_age: debouncedAgeMax || ageMax.trim() || undefined,
+        filtered: hasFilter,
       });
-      
-      // Trigger download using window.location.href for better reliability than window.open
-      // This won't open a new tab and will trigger the download headers immediately.
-      window.location.href = url;
-      
-      notify(`Final Report for ${selectedBrgy} is being downloaded.`, 'success');
-      
-      // Reset the generating state after a short delay since location.href doesn't block
-      setTimeout(() => {
-        setIsExporting(false);
-        if (setGlobalLoading) setGlobalLoading(false);
-      }, 5000);
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+
+      // Give the browser a moment to start the save before releasing the blob.
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+
+      notify(`Final Report for ${selectedBrgy} has been downloaded.`, 'success');
     } catch (error) {
       console.error('Failed to export report:', error);
       notify('Failed to generate report. Please try again.', 'error');
+    } finally {
       setIsExporting(false);
       if (setGlobalLoading) setGlobalLoading(false);
     }

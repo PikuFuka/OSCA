@@ -25,10 +25,11 @@ class SeniorModelTest extends TestCase
     public function test_fillable_contains_all_fields(): void
     {
         $expected = [
-            'osca_id', 'first_name', 'middle_name', 'last_name', 'extension_name',
+            'osca_id', 'former_osca_id', 'first_name', 'middle_name', 'last_name', 'extension_name',
             'date_of_birth', 'age', 'place_of_birth', 'sex', 'mothers_maiden_name',
             'pension_status', 'barangay', 'street_address', 'contact_number',
             'emergency_name', 'emergency_contact', 'rrn', 'national_id',
+            'community_tax_number', 'issued_on', 'issued_at',
             'profile_photo_path', 'id_config', 'status', 'password', 'force_password_change',
         ];
         $this->assertEquals($expected, $this->model->getFillable());
@@ -36,7 +37,7 @@ class SeniorModelTest extends TestCase
 
     public function test_fillable_count(): void
     {
-        $this->assertCount(23, $this->model->getFillable());
+        $this->assertCount(27, $this->model->getFillable());
     }
 
     public function test_hidden_contains_password(): void
@@ -54,6 +55,13 @@ class SeniorModelTest extends TestCase
         $casts = $this->model->getCasts();
         $this->assertArrayHasKey('date_of_birth', $casts);
         $this->assertEquals('date', $casts['date_of_birth']);
+    }
+
+    public function test_casts_issued_on_as_date(): void
+    {
+        $casts = $this->model->getCasts();
+        $this->assertArrayHasKey('issued_on', $casts);
+        $this->assertEquals('date', $casts['issued_on']);
     }
 
     public function test_casts_id_config_as_array(): void

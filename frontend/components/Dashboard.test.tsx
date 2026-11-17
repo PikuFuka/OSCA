@@ -56,6 +56,7 @@ afterEach(() => {
 
 const statsPayload = {
   total: 10,
+  active: 10,
   deceased: 1,
   pending: 2,
   centenarians: 0,
@@ -88,15 +89,34 @@ describe('Dashboard refresh robustness', () => {
     expect(requestsAPI.getPending).toHaveBeenCalled();
   });
 
+  it('does not render the placeholder Export button', async () => {
+    vi.mocked(seniorsAPI.getStatistics).mockResolvedValue({ ...statsPayload });
+    vi.mocked(requestsAPI.getPending).mockResolvedValue({ total: 0, data: [] });
+    vi.mocked(seniorsAPI.getBirthdays).mockResolvedValue({ count: 0, date: '', seniors: [] });
+
+    render(<Dashboard />);
+
+    expect(await screen.findByText('Active Registry')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /export/i })).not.toBeInTheDocument();
+  });
+
   it('refetches and shows new data when the year filter changes', async () => {
-    vi.mocked(seniorsAPI.getStatistics).mockResolvedValue({ ...statsPayload, total: 10 });
+    vi.mocked(seniorsAPI.getStatistics).mockResolvedValue({
+      ...statsPayload,
+      total: 10,
+      active: 10,
+    });
     vi.mocked(requestsAPI.getPending).mockResolvedValue({ total: 0, data: [] });
     vi.mocked(seniorsAPI.getBirthdays).mockResolvedValue({ count: 0, date: '', seniors: [] });
 
     render(<Dashboard />);
     let selects = await screen.findAllByRole('combobox');
 
-    vi.mocked(seniorsAPI.getStatistics).mockResolvedValue({ ...statsPayload, total: 20 });
+    vi.mocked(seniorsAPI.getStatistics).mockResolvedValue({
+      ...statsPayload,
+      total: 20,
+      active: 20,
+    });
     fireEvent.change(selects[0], { target: { value: '2024' } });
 
     await waitFor(() => {

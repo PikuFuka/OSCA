@@ -111,6 +111,9 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
     contact: memberData.contactNumber || 'Not provided',
     rrn: memberData.rrn || 'N/A',
     nationalId: memberData.nationalId || 'N/A',
+    communityTaxNumber: memberData.communityTaxNumber || 'N/A',
+    issuedOn: memberData.issuedOn || 'N/A',
+    issuedAt: memberData.issuedAt || 'N/A',
     mother: memberData.mothersMaidenName || 'Not provided',
     emergency: `${memberData.emergencyName || ''} (${memberData.emergencyContact || ''})`.trim() || 'Not provided',
     familyCount: memberData?.familyMembers?.length || 0
@@ -291,6 +294,8 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
             <InfoField label="Pension Category" value={memberData.pensionStatus} icon={HeartPulse} />
             <InfoField label="National ID" value={details.nationalId} icon={CreditCard} />
             <InfoField label="RRN Number" value={details.rrn} icon={FileText} />
+            <InfoField label="Community Tax Number" value={details.communityTaxNumber} icon={CreditCard} />
+            <InfoField label="CTC Issued On / At" value={details.issuedOn !== 'N/A' ? `${details.issuedOn}${details.issuedAt !== 'N/A' ? ' • ' + details.issuedAt : ''}` : details.issuedAt} icon={Calendar} />
           </InfoGroup>
 
           <InfoGroup title="Family & Emergency">

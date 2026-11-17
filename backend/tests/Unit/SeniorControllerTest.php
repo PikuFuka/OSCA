@@ -4,11 +4,25 @@ namespace Tests\Unit;
 
 use App\Http\Controllers\Api\SeniorController;
 use App\Models\Senior;
+use Illuminate\Support\Carbon;
 use PHPUnit\Framework\TestCase;
 use ReflectionMethod;
 
 class SeniorControllerTest extends TestCase
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Freeze "today" so DOB-derived ages do not change with the calendar.
+        Carbon::setTestNow(Carbon::create(2026, 6, 14, 12, 0, 0));
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
+
     private function invokePrivateMethod(SeniorController $controller, string $method, array $args = []): mixed
     {
         $m = new ReflectionMethod($controller, $method);
@@ -43,6 +57,9 @@ class SeniorControllerTest extends TestCase
             'emergency_contact' => '09171234568',
             'rrn' => 'RRN-001',
             'national_id' => 'NID-001',
+            'community_tax_number' => 'CTC-001',
+            'issued_on' => \Carbon\Carbon::create(2025, 1, 10),
+            'issued_at' => 'Pagsanjan',
             'family_members_count' => 2,
             'created_at' => \Carbon\Carbon::create(2025, 1, 15, 10, 30, 0),
             'updated_at' => \Carbon\Carbon::create(2025, 6, 1, 14, 0, 0),
@@ -80,8 +97,49 @@ class SeniorControllerTest extends TestCase
         $this->assertSame('09171234568', $result['emergencyContact']);
         $this->assertSame('RRN-001', $result['rrn']);
         $this->assertSame('NID-001', $result['nationalId']);
+        $this->assertSame('CTC-001', $result['communityTaxNumber']);
+        $this->assertSame('2025-01-10', $result['issuedOn']);
+        $this->assertSame('Pagsanjan', $result['issuedAt']);
         $this->assertSame(2, $result['familyMembersCount']);
         $this->assertSame('Jun 01, 2025 02:00 PM', $result['updatedAt']);
+    }
+
+    public function test_transform_senior_uses_stored_age_for_a_placeholder_birthdate(): void
+    {
+        $controller = new SeniorController();
+        $senior = $this->makeSeniorStub([
+            'date_of_birth' => \Carbon\Carbon::create(1900, 1, 1),
+            'age' => 88,
+        ]);
+        $result = $this->invokePrivateMethod($controller, 'transformSenior', [$senior]);
+
+        $this->assertSame(88, $result['age']);
+    }
+
+    public function test_transform_senior_marks_a_verified_centenarian(): void
+    {
+        $controller = new SeniorController();
+        $senior = $this->makeSeniorStub([
+            'date_of_birth' => \Carbon\Carbon::create(1923, 1, 2),
+            'age' => 103,
+        ]);
+        $result = $this->invokePrivateMethod($controller, 'transformSenior', [$senior]);
+
+        $this->assertSame(103, $result['age']);
+        $this->assertTrue($result['isCentenarian']);
+    }
+
+    public function test_transform_senior_does_not_mark_a_placeholder_birthdate_as_centenarian(): void
+    {
+        $controller = new SeniorController();
+        $senior = $this->makeSeniorStub([
+            'date_of_birth' => \Carbon\Carbon::create(1900, 1, 1),
+            'age' => 126,
+        ]);
+        $result = $this->invokePrivateMethod($controller, 'transformSenior', [$senior]);
+
+        $this->assertNull($result['age']);
+        $this->assertFalse($result['isCentenarian']);
     }
 
     public function test_transform_senior_id_falls_back_to_model_id_when_osca_id_null(): void
@@ -90,8 +148,10 @@ class SeniorControllerTest extends TestCase
         $senior = $this->makeSeniorStub(['osca_id' => null, 'id' => 42]);
         $result = $this->invokePrivateMethod($controller, 'transformSenior', [$senior]);
 
-        $this->assertSame(42, $result['id']);
+        $this->assertSame('42', $result['id']);
+        $this->assertSame(42, $result['recordId']);
         $this->assertNull($result['oscaId']);
+        $this->assertNull($result['formerOscaId']);
     }
 
     public static function statusNormalizationProvider(): array

@@ -101,9 +101,9 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
       if (searchQuery.length > 1) {
         setIsSearching(true);
         try {
-          const res = await seniorsAPI.getAll({ search: searchQuery });
+          const res = await seniorsAPI.getAll({ search: searchQuery, per_page: 100 });
           const items = res.data || res || [];
-          setSearchResults(items.slice(0, 6));
+          setSearchResults(items);
         } catch (e) {
           console.error("Search failed", e);
         } finally {
@@ -142,6 +142,17 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
     return actionDirectory.filter(a => a.label.toLowerCase().includes(q) || (a.sublabel || '').toLowerCase().includes(q));
   }, [searchQuery, actionDirectory]);
 
+  const getSeniorDisplayName = (senior: any) => {
+    const name = [
+      senior.first_name || senior.firstName,
+      senior.middle_name || senior.middleName,
+      senior.last_name || senior.lastName,
+      senior.extension_name || senior.extensionName,
+    ].filter(Boolean).join(' ').trim();
+
+    return name || senior.name || 'Unknown Senior';
+  };
+
   // Build the flat list of all results for keyboard nav
   const allFlatResults = useMemo(() => {
     const results: SearchResultItem[] = [];
@@ -151,7 +162,7 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
       results.push({
         id: `person-${senior.id}`,
         category: 'person',
-        label: `${senior.first_name || senior.firstName || ''} ${senior.last_name || senior.lastName || senior.name || ''}`.trim(),
+        label: getSeniorDisplayName(senior),
         sublabel: `${senior.osca_id || senior.oscaId || 'Pending ID'} • Brgy. ${senior.barangay || 'N/A'}`,
         icon: <User size={14} />,
         iconBg: 'bg-slate-100 text-slate-600',
@@ -487,7 +498,7 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
                               {senior.idPhoto ? (
                                 <ProfilePhoto
                                   src={senior.idPhoto}
-                                  name={`${senior.first_name || senior.firstName || ''} ${senior.last_name || senior.lastName || senior.name || ''}`.trim()}
+                                  name={getSeniorDisplayName(senior)}
                                   className="w-full h-full rounded-full object-cover"
                                   fallback={<User size={14} />}
                                 />
@@ -497,7 +508,7 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
                             </div>
                             <div className="flex flex-col flex-1 min-w-0">
                               <span className={`text-[13px] font-semibold truncate transition-colors ${isActive ? 'text-systemBlue' : 'text-slate-800'}`}>
-                                {senior.first_name || senior.firstName} {senior.last_name || senior.lastName || senior.name}
+                                {getSeniorDisplayName(senior)}
                               </span>
                               <span className="text-[11px] font-medium text-slate-500 truncate">
                                 {senior.osca_id || senior.oscaId || 'Pending ID'} • Brgy. {senior.barangay || 'N/A'}

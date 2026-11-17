@@ -1,12 +1,32 @@
+const filterPhoneNumber = (val: string) => {
+  const cleaned = val.replace(/[^0-9\-]/g, '');
+  let digitCount = 0;
+  let result = '';
+  for (let i = 0; i < cleaned.length; i++) {
+    const ch = cleaned[i];
+    if (ch >= '0' && ch <= '9') {
+      if (digitCount < 11) {
+        digitCount++;
+        result += ch;
+      }
+    } else if (ch === '-') {
+      if (digitCount < 11 && result.length > 0 && !result.endsWith('-')) {
+        result += ch;
+      }
+    }
+  }
+  return result;
+};
+
 
 import React, { useState, useRef, useMemo, useEffect } from 'react';
 import TransitionWrapper from './TransitionWrapper';
 import Skeleton from './Skeleton';
 import { RegistrySkeleton } from './skeletons';
 import { createPortal } from 'react-dom';
-import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock, Edit2Icon, ChevronLeft, ChevronRight, Filter, ArrowUpDown } from 'lucide-react';
+import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock, Edit2Icon, ChevronLeft, ChevronRight, Filter, ArrowUpDown, FileSpreadsheet } from 'lucide-react';
 import { BARANGAYS, SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } from '../types';
-import { seniorsAPI, activityLogsAPI } from '../services/api';
+import { seniorsAPI, activityLogsAPI, reportsAPI } from '../services/api';
 import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 import ConfirmModal from './ConfirmModal';
 import SeniorHistorySection from '../features/registry/history/SeniorHistorySection';
@@ -234,6 +254,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
   const [selectedSenior, setSelectedSenior] = useState<SeniorCitizen | null>(null);
   const [editFormData, setEditFormData] = useState<Partial<SeniorCitizen>>({});
 
@@ -601,15 +622,16 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
     setIsProcessing(true);
     try {
+      const recordId = (senior as any).recordId ?? senior.id;
       if (type === 'Delete') {
-        await seniorsAPI.delete(senior.id as any);
+        await seniorsAPI.delete(recordId as any);
         setSeniors(prev => prev.filter(s => s.id !== senior.id));
         setTotalCount(prev => prev - 1);
-        notify(`Record for ${senior.name} has been permanently deleted.`, 'error');
+        notify(`Record for ${senior.name} has been deleted. Its OSCA ID is now available for reuse.`, 'error');
       } else if (type === 'Decease') {
-        await seniorsAPI.markDeceased(senior.id as any, new Date().toISOString().split('T')[0]);
-        setSeniors(prev => prev.map(s => s.id === senior.id ? { ...s, status: 'Deceased' } : s));
-        notify(`Status for ${senior.name} marked as Deceased.`, 'warning');
+        await seniorsAPI.markDeceased(recordId as any, new Date().toISOString().split('T')[0]);
+        setSeniors(prev => prev.map(s => s.id === senior.id ? { ...s, status: 'Deceased', oscaId: undefined, formerOscaId: (senior as any).oscaId || senior.id } : s));
+        notify(`Status for ${senior.name} marked as Deceased. Its OSCA ID is now available for reuse.`, 'warning');
       }
     } catch (error: any) {
       console.error(error);
@@ -1150,6 +1172,43 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
     setAgeMax('');
     setPage(1);
   };
+
+  const handleGenerateReport = async () => {
+    if (isExporting) return;
+    setIsExporting(true);
+    notify('Preparing your Excel report. Please wait...', 'info');
+
+    try {
+      const [sortField, sortDir] = sortValue.split(':');
+      const { blob, filename } = await reportsAPI.downloadSeniorCitizensReport({
+        barangay: filterBarangay === 'All Barangays' ? undefined : filterBarangay,
+        category: filterCategory === 'All Categories' ? undefined : filterCategory,
+        min_age: debouncedAgeMin || ageMin.trim() || undefined,
+        max_age: debouncedAgeMax || ageMax.trim() || undefined,
+        search: debouncedSearch || searchTerm.trim() || undefined,
+        status: 'Active',
+        sort: sortField,
+        order: sortDir,
+        filtered: true,
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.setTimeout(() => window.URL.revokeObjectURL(url), 1000);
+
+      notify(`Excel report (${filename}) has been downloaded.`, 'success');
+    } catch (error) {
+      console.error('Failed to export report:', error);
+      notify('Failed to generate report. Please try again.', 'error');
+    } finally {
+      setIsExporting(false);
+    }
+  };
   
   return (
     <div className="space-y-8 stagger-sequence">
@@ -1323,17 +1382,47 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   ) : (
                     <span className="text-[12px] font-medium text-slate-400">No filters applied</span>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => setFiltersOpen(false)}
-                    className="px-4 py-2 rounded-xl bg-slate-900 text-white text-[12px] font-bold hover:bg-slate-700 transition-colors"
-                  >
-                    Done
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFiltersOpen(false);
+                        handleGenerateReport();
+                      }}
+                      disabled={isExporting || totalCount === 0}
+                      className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 text-white text-[12px] font-bold hover:bg-emerald-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                      title="Export report based on current filters"
+                    >
+                      <FileSpreadsheet size={14} /> Export Report
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFiltersOpen(false)}
+                      className="px-4 py-2 rounded-xl bg-slate-900 text-white text-[12px] font-bold hover:bg-slate-700 transition-colors"
+                    >
+                      Done
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
           </div>
+
+          {/* Generate Report Button on Toolbar */}
+          <button
+            type="button"
+            onClick={handleGenerateReport}
+            disabled={isExporting || totalCount === 0}
+            className={`flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-[13px] font-bold shadow-sm hover:bg-emerald-700 active:scale-[0.98] transition-all outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 shrink-0 ${
+              isExporting || totalCount === 0 ? 'opacity-50 cursor-not-allowed shadow-none' : ''
+            }`}
+            title={filtersActive ? 'Generate report based on active filters' : 'Generate full active members report'}
+          >
+            {isExporting ? <Clock className="animate-spin" size={16} /> : <FileSpreadsheet size={16} />}
+            <span className="hidden sm:inline">
+              {isExporting ? 'GENERATING REPORT...' : 'GENERATE REPORT'}
+            </span>
+          </button>
 
           {/* Total */}
           <div className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm whitespace-nowrap shrink-0">
@@ -2115,15 +2204,15 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                     </div>
                     <div>
                       <label htmlFor="edit-firstName" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">First Name</label>
-                      <input id="edit-firstName" name="firstName" type="text" value={editFormData.firstName || ''} onChange={e => setEditFormData(prev => ({ ...prev, firstName: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
+                      <input id="edit-firstName" name="firstName" type="text" value={editFormData.firstName || ''} onChange={e => setEditFormData(prev => ({ ...prev, firstName: e.target.value.replace(/[^a-zA-Z\s\-ñÑ\.]/g, '') }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
                     </div>
                     <div>
                       <label htmlFor="edit-middleName" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Middle Name</label>
-                      <input id="edit-middleName" name="middleName" type="text" value={editFormData.middleName || ''} onChange={e => setEditFormData(prev => ({ ...prev, middleName: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
+                      <input id="edit-middleName" name="middleName" type="text" value={editFormData.middleName || ''} onChange={e => setEditFormData(prev => ({ ...prev, middleName: e.target.value.replace(/[^a-zA-Z\s\-ñÑ\.]/g, '') }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
                     </div>
                     <div>
                       <label htmlFor="edit-lastName" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Last Name</label>
-                      <input id="edit-lastName" name="lastName" type="text" value={editFormData.lastName || ''} onChange={e => setEditFormData(prev => ({ ...prev, lastName: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
+                      <input id="edit-lastName" name="lastName" type="text" value={editFormData.lastName || ''} onChange={e => setEditFormData(prev => ({ ...prev, lastName: e.target.value.replace(/[^a-zA-Z\s\-ñÑ\.]/g, '') }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
                     </div>
                     <div>
                       <label htmlFor="edit-extensionName" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Extension Name</label>
@@ -2156,7 +2245,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                     </div>
                     <div>
                       <label htmlFor="edit-contactNumber" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Contact Number</label>
-                      <input id="edit-contactNumber" name="contactNumber" type="text" value={editFormData.contactNumber || ''} onChange={e => setEditFormData(prev => ({ ...prev, contactNumber: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
+                      <input id="edit-contactNumber" name="contactNumber" type="text" value={editFormData.contactNumber || ''} maxLength={13} onChange={e => setEditFormData(prev => ({ ...prev, contactNumber: filterPhoneNumber(e.target.value) }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none" />
                     </div>
                     <div className="md:col-span-2">
                       <label htmlFor="edit-streetAddress" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Street Address</label>
@@ -2313,6 +2402,9 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                             <InfoField label="Pension Status" value={mapPensionStatus(selectedSeniorForView.pensionStatus)} />
                             <InfoField label="RRN" value={selectedSeniorForView.rrn || 'None'} />
                             <InfoField label="National ID" value={selectedSeniorForView.nationalId || 'None'} />
+                            <InfoField label="Community Tax No." value={selectedSeniorForView.communityTaxNumber || 'None'} />
+                            <InfoField label="CTC Issued On" value={selectedSeniorForView.issuedOn || 'None'} />
+                            <InfoField label="CTC Issued At" value={selectedSeniorForView.issuedAt || 'None'} />
                          </div>
                        </section>
 

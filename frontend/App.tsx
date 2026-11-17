@@ -19,6 +19,7 @@ import ApprovalView from './components/ApprovalView';
 import BatchPrint from './components/BatchPrint';
 import UserDashboard from './components/UserDashboard';
 import UserReview from './components/UserReview';
+import AvailableIdsView from './components/AvailableIdsView';
 
 import { 
   ArrowLeft, 
@@ -243,6 +244,8 @@ const App: React.FC = () => {
         />;
       case ViewType.MEMBER_REGISTRY:
         return <MemberRegistry currentUser={currentUser} notify={notify} setView={changeView} />;
+      case ViewType.AVAILABLE_IDS:
+        return <AvailableIdsView notify={notify} />;
       case ViewType.ACCOUNT:
         return <Account currentUser={currentUser} notify={notify} />;
       case ViewType.HISTORY:

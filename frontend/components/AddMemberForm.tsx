@@ -47,7 +47,9 @@ type UppercaseFormField =
   | 'rrn'
   | 'nationalId'
   | 'mothersMaidenName'
-  | 'emergencyName';
+  | 'emergencyName'
+  | 'communityTaxNumber'
+  | 'issuedAt';
 
 const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, notify }) => {
   const [mode, setMode] = useState<ApplicationMode>('selection');
@@ -111,6 +113,9 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
     rrn: '',
     nationalId: '',
     mothersMaidenName: '',
+    communityTaxNumber: '',
+    issuedOn: '',
+    issuedAt: '',
     emergencyName: '',
     emergencyContact: '',
     // Password for senior portal access
@@ -154,6 +159,27 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
     : 'All password requirements met';
 
   const normalizeUppercaseValue = (value: string) => value.toUpperCase();
+  const filterLettersAndHyphen = (val: string) => val.replace(/[^a-zA-Z\s\-ñÑ\.]/g, '');
+  const filterLettersAndLocation = (val: string) => val.replace(/[^a-zA-Z\s\-ñÑ\.,]/g, '');
+  const filterNumbersAndHyphen = (val: string) => val.replace(/[^0-9\-]/g, '');
+  const filterPhoneNumber = (val: string) => {
+    const cleaned = val.replace(/[^0-9\-]/g, '');
+    let digitCount = 0;
+    let result = '';
+
+    for (const character of cleaned) {
+      if (character >= '0' && character <= '9') {
+        if (digitCount < 11) {
+          digitCount++;
+          result += character;
+        }
+      } else if (character === '-' && digitCount < 11 && result.length > 0 && !result.endsWith('-')) {
+        result += character;
+      }
+    }
+
+    return result;
+  };
 
   // Spatial Navigation State
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -264,6 +290,9 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
       rrn: '',
       nationalId: '',
       mothersMaidenName: '',
+      communityTaxNumber: '',
+      issuedOn: '',
+      issuedAt: '',
       emergencyName: '',
       emergencyContact: '',
       familyMembers: []
@@ -330,6 +359,9 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
       rrn: normalizeUppercaseValue(data.rrn || ''),
       nationalId: normalizeUppercaseValue(data.nationalId || data.national_id || ''),
       mothersMaidenName: normalizeUppercaseValue(data.mothersMaidenName || data.mothers_maiden_name || ''),
+      communityTaxNumber: normalizeUppercaseValue(data.communityTaxNumber || data.community_tax_number || ''),
+      issuedOn: data.issuedOn || data.issued_on || data.communityTaxIssuedOn || '',
+      issuedAt: normalizeUppercaseValue(data.issuedAt || data.issued_at || data.communityTaxIssuedAt || ''),
       emergencyName: normalizeUppercaseValue(data.emergencyName || data.emergency_name || ''),
       emergencyContact: data.emergencyContact || data.emergency_contact || '',
       familyMembers: data.familyMembers || []
@@ -366,6 +398,9 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
       rrn: '',
       nationalId: '',
       mothersMaidenName: '',
+      communityTaxNumber: '',
+      issuedOn: '',
+      issuedAt: '',
       emergencyName: '',
       emergencyContact: '',
       password: '',
@@ -399,6 +434,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
         oscaId: '', lastName: '', firstName: '', middleName: '', extensionName: '',
         dateOfBirth: '', age: '', sex: 'Male', placeOfBirth: '', streetAddress: '', barangay: BARANGAYS[0],
         contactNumber: '', rrn: '', nationalId: '', mothersMaidenName: '',
+        communityTaxNumber: '', issuedOn: '', issuedAt: '',
         emergencyName: '', emergencyContact: '', pensionStatus: 'Indigent',
         password: '', confirmPassword: '',
         familyMembers: []
@@ -910,17 +946,17 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 <div className="space-y-1 md:col-span-4">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Last Name *</label>
                   <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
-                    value={formData.lastName} onChange={e => setUppercaseFormField('lastName', e.target.value)} />
+                    value={formData.lastName} onChange={e => setUppercaseFormField('lastName', filterLettersAndHyphen(e.target.value))} />
                 </div>
                 <div className="space-y-1 md:col-span-4">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">First Name *</label>
                   <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
-                    value={formData.firstName} onChange={e => setUppercaseFormField('firstName', e.target.value)} />
+                    value={formData.firstName} onChange={e => setUppercaseFormField('firstName', filterLettersAndHyphen(e.target.value))} />
                 </div>
                 <div className="space-y-1 md:col-span-3">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Middle Name</label>
                   <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
-                    value={formData.middleName} onChange={e => setUppercaseFormField('middleName', e.target.value)} />
+                    value={formData.middleName} onChange={e => setUppercaseFormField('middleName', filterLettersAndHyphen(e.target.value))} />
                 </div>
                 <div className="space-y-1 md:col-span-1">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Ext</label>
@@ -962,7 +998,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Place of Birth</label>
                     <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
-                      value={formData.placeOfBirth} onChange={e => setUppercaseFormField('placeOfBirth', e.target.value)} />
+                      value={formData.placeOfBirth} onChange={e => setUppercaseFormField('placeOfBirth', filterLettersAndLocation(e.target.value))} />
                   </div>
                 </div>
               </div>
@@ -997,16 +1033,15 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                     <input
                       type="tel"
                       placeholder="09xx-xxx-xxxx"
-                      maxLength={11}
-                      pattern="[0-9]{11}"
+                      maxLength={13}
                       className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
                       value={formData.contactNumber}
                       onChange={e => {
-                        const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+                        const digits = filterPhoneNumber(e.target.value);
                         setFormData({...formData, contactNumber: digits});
                       }}
                     />
-                    <p className="text-[10px] text-slate-400 font-bold pl-2 pt-1">Enter 11 digits (e.g., 09XXXXXXXXX)</p>
+                    <p className="text-[10px] text-slate-400 font-bold pl-2 pt-1">Enter 11 digits (e.g., 09xx-xxx-xxxx or 09xxxxxxxxx)</p>
                   </div>
                 </div>
               </div>
@@ -1039,7 +1074,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                         <div className="md:col-span-5 space-y-1">
                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Full Name</label>
                            <input className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
-                          placeholder="e.g. Juan Dela Cruz" value={tempMember.name} onChange={e => setTempMember({...tempMember, name: normalizeUppercaseValue(e.target.value)})} />
+                          placeholder="e.g. Juan Dela Cruz" value={tempMember.name} onChange={e => setTempMember({...tempMember, name: normalizeUppercaseValue(filterLettersAndHyphen(e.target.value))})} />
                         </div>
                         <div className="md:col-span-3 space-y-1">
                            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Relationship</label>
@@ -1057,7 +1092,7 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                         <div className="md:col-span-2 space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Age</label>
                             <input className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
-                              placeholder="0" type="number" value={tempMember.age} onChange={e => setTempMember({...tempMember, age: e.target.value})} />
+                              placeholder="0" type="text" value={tempMember.age} onChange={e => setTempMember({...tempMember, age: filterNumbersAndHyphen(e.target.value)})} />
                         </div>
                         <div className="md:col-span-2 space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Civil Status</label>
@@ -1073,12 +1108,12 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                         <div className="md:col-span-4 space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Occupation</label>
                             <input className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
-                          placeholder="Work / Job" value={tempMember.occupation} onChange={e => setTempMember({...tempMember, occupation: normalizeUppercaseValue(e.target.value)})} />
+                          placeholder="Work / Job" value={tempMember.occupation} onChange={e => setTempMember({...tempMember, occupation: normalizeUppercaseValue(filterLettersAndHyphen(e.target.value))})} />
                         </div>
                         <div className="md:col-span-4 space-y-1">
                             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Monthly Income</label>
                             <input className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
-                              placeholder="Amount" value={tempMember.income} onChange={e => setTempMember({...tempMember, income: e.target.value})} />
+                              placeholder="Amount" value={tempMember.income} onChange={e => setTempMember({...tempMember, income: e.target.value.replace(/[^0-9\-\.,]/g, '')})} />
                         </div>
                         <div className="md:col-span-4 flex items-end">
                            <button type="button" onClick={addFamilyMember} className="w-full bg-systemBlue hover:bg-blue-800 text-white font-bold py-2.5 rounded-lg text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-100 mb-[1px]">
@@ -1144,17 +1179,36 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                 <div className="space-y-1 md:col-span-4">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">RRN No. (Optional)</label>
                   <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
-                    value={formData.rrn} onChange={e => setUppercaseFormField('rrn', e.target.value)} />
+                    value={formData.rrn} onChange={e => setUppercaseFormField('rrn', filterNumbersAndHyphen(e.target.value))} />
                 </div>
                 <div className="space-y-1 md:col-span-4">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">National ID (Optional)</label>
                   <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
-                    value={formData.nationalId} onChange={e => setUppercaseFormField('nationalId', e.target.value)} />
+                    value={formData.nationalId} onChange={e => setUppercaseFormField('nationalId', filterNumbersAndHyphen(e.target.value))} />
                 </div>
                 <div className="space-y-1 md:col-span-4">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Mother's Maiden Name</label>
                   <input type="text" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
-                    value={formData.mothersMaidenName} onChange={e => setUppercaseFormField('mothersMaidenName', e.target.value)} />
+                    value={formData.mothersMaidenName} onChange={e => setUppercaseFormField('mothersMaidenName', filterLettersAndHyphen(e.target.value))} />
+                </div>
+              </div>
+
+              {/* Community Tax Certificate (CTC) Details */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mt-4">
+                <div className="space-y-1 md:col-span-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Community Tax Number</label>
+                  <input type="text" placeholder="e.g. 12345678" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                    value={formData.communityTaxNumber} onChange={e => setUppercaseFormField('communityTaxNumber', filterNumbersAndHyphen(e.target.value))} />
+                </div>
+                <div className="space-y-1 md:col-span-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Issued On</label>
+                  <input type="date" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none"
+                    value={formData.issuedOn} onChange={e => setFormData(prev => ({ ...prev, issuedOn: e.target.value }))} />
+                </div>
+                <div className="space-y-1 md:col-span-4">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest pl-1">Issued At</label>
+                  <input type="text" placeholder="e.g. Pagsanjan, Laguna" className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-slate-400"
+                    value={formData.issuedAt} onChange={e => setUppercaseFormField('issuedAt', filterLettersAndLocation(e.target.value))} />
                 </div>
               </div>
               
@@ -1237,19 +1291,18 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-rose-400 uppercase tracking-widest pl-1">Contact Name</label>
                     <input type="text" placeholder="e.g. Maria Dela Cruz" className="w-full px-3 py-2.5 rounded-lg text-sm bg-rose-50/50 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-rose-300"
-                      value={formData.emergencyName} onChange={e => setUppercaseFormField('emergencyName', e.target.value)} />
+                      value={formData.emergencyName} onChange={e => setUppercaseFormField('emergencyName', filterLettersAndHyphen(e.target.value))} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] font-bold text-rose-400 uppercase tracking-widest pl-1">Contact Number</label>
                     <input
                       type="tel"
                       placeholder="09xx-xxx-xxxx"
-                      maxLength={11}
-                      pattern="[0-9]{11}"
+                      maxLength={13}
                       className="w-full px-3 py-2.5 rounded-lg text-sm bg-rose-50/50 border border-rose-200 hover:bg-rose-50 hover:border-rose-300 focus:bg-white focus:border-rose-500 focus:ring-2 focus:ring-rose-100 transition-all font-semibold text-slate-900 outline-none placeholder:text-rose-300"
                       value={formData.emergencyContact}
                       onChange={e => {
-                        const digits = e.target.value.replace(/\D/g, '').slice(0, 11);
+                        const digits = filterPhoneNumber(e.target.value);
                         setFormData({...formData, emergencyContact: digits});
                       }}
                     />
@@ -1280,6 +1333,8 @@ const AddMemberForm: React.FC<FormProps> = ({ onSuccess, onCancel, currentUser, 
                   <ReviewField label="Applicant Name" value={`${formData.lastName}, ${formData.firstName} ${formData.middleName}${formData.extensionName ? ' ' + formData.extensionName : ''}`.trim()} fullWidth={true} />
                   <ReviewField label="Details" value={`${formData.sex} • ${formData.age} Years Old • Born ${formData.dateOfBirth}`} />
                   <ReviewField label="Mother's Maiden Name" value={formData.mothersMaidenName} fullWidth={true} />
+                  <ReviewField label="Community Tax Number" value={formData.communityTaxNumber} />
+                  <ReviewField label="CTC Issued On / At" value={formData.issuedOn ? `${formData.issuedOn}${formData.issuedAt ? ' • ' + formData.issuedAt : ''}` : (formData.issuedAt || '')} />
                 </div>
                 <div className="space-y-6">
                   <ReviewField label="Contact Info" value={formData.contactNumber} />

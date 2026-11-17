@@ -57,6 +57,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentView, setView, isOpen, toggleS
     { id: ViewType.APPROVAL, label: 'For Approvals', icon: FileCheck, roles: ['Admin', 'Staff'], group: 'OPERATIONS' },
     { id: ViewType.ADD_MEMBER, label: 'Registration', icon: UserPlus, roles: ['Admin', 'Staff'], group: 'OPERATIONS' },
     { id: ViewType.MEMBER_REGISTRY, label: 'Members', icon: Users, roles: ['Admin', 'Staff'], group: 'OPERATIONS' },
+    { id: ViewType.AVAILABLE_IDS, label: 'Available IDs', icon: CircleDot, roles: ['Admin', 'Staff'], group: 'OPERATIONS' },
     { id: ViewType.BATCH_PRINT, label: 'Batch Print', icon: Printer, roles: ['Admin', 'Staff'], group: 'DOCUMENTS' },
     { id: ViewType.FINAL_REPORT, label: 'Reports', icon: FileSpreadsheet, roles: ['Admin', 'Staff'], group: 'DOCUMENTS' },
     { id: ViewType.ACCOUNT, label: 'Accounts', icon: UserCircle, roles: ['Admin', 'Staff'], group: 'SYSTEM' }, 

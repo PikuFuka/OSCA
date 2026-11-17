@@ -62,6 +62,9 @@ class SeniorService
                 'emergency_contact' => $validated['emergencyContact'] ?? null,
                 'rrn' => $validated['rrn'] ?? null,
                 'national_id' => $validated['nationalId'] ?? null,
+                'community_tax_number' => $validated['communityTaxNumber'] ?? $validated['community_tax_number'] ?? null,
+                'issued_on' => $validated['issuedOn'] ?? $validated['issued_on'] ?? null,
+                'issued_at' => $validated['issuedAt'] ?? $validated['issued_at'] ?? null,
                 'password' => isset($validated['password']) ? Hash::make($validated['password']) : null,
                 'status' => 'Pending',
             ]);
@@ -133,28 +136,39 @@ class SeniorService
             $normalizedOsca = $t === '' ? null : $t;
         }
 
-        if ($normalizedOsca !== $senior->osca_id) {
-            $exists = $this->repo->applyValidOscaScope(Senior::query())
-                ->where('osca_id', $normalizedOsca)->where('id','!=',$senior->id)->exists();
-            if ($exists) abort(response()->json(['success'=>false,'message'=>'The provided OSCA ID is already in use by another member.'], 422));
-        }
+        return DB::transaction(function () use ($senior, $validated, $normalizedOsca, $normalizedMiddle, $normalizedExtension, $dob) {
+            if ($normalizedOsca !== $senior->osca_id) {
+                $exists = $this->repo->applyValidOscaScope(Senior::query())
+                    ->where('osca_id', $normalizedOsca)->where('id','!=',$senior->id)->exists();
+                if ($exists) abort(response()->json(['success'=>false,'message'=>'The provided OSCA ID is already in use by another member.'], 422));
 
-        $senior->update([
-            'osca_id' => $normalizedOsca,
-            'first_name' => $validated['firstName'] ?? $senior->first_name,
-            'middle_name' => $normalizedMiddle,
-            'last_name' => $validated['lastName'] ?? $senior->last_name,
-            'extension_name' => $normalizedExtension,
-            'date_of_birth' => $dob,
-            'age' => $dob ? \Illuminate\Support\Carbon::parse($dob)->age : $senior->age,
-            'status' => $validated['status'] ?? $senior->status,
-            'pension_status' => $validated['pensionStatus'] ?? $senior->pension_status,
-            'barangay' => $validated['barangay'] ?? $senior->barangay,
-            'street_address' => $validated['streetAddress'] ?? $senior->street_address,
-            'contact_number' => $validated['contactNumber'] ?? $senior->contact_number,
-            'id_config' => $validated['idConfig'] ?? $senior->id_config,
-        ]);
+                if ($normalizedOsca) {
+                    // Assigning a released ID from the vacancy pool consumes it.
+                    app(\App\Services\Senior\OscaIdVacancyService::class)->claim($normalizedOsca);
+                }
+            }
 
-        return $senior;
+            $senior->update([
+                'osca_id' => $normalizedOsca,
+                'first_name' => $validated['firstName'] ?? $senior->first_name,
+                'middle_name' => $normalizedMiddle,
+                'last_name' => $validated['lastName'] ?? $senior->last_name,
+                'extension_name' => $normalizedExtension,
+                'date_of_birth' => $dob,
+                // Age is recalculated by the Senior model boot from a real DOB;
+                // the 1900-01-01 placeholder leaves the stored fallback intact.
+                'status' => $validated['status'] ?? $senior->status,
+                'pension_status' => $validated['pensionStatus'] ?? $senior->pension_status,
+                'barangay' => $validated['barangay'] ?? $senior->barangay,
+                'street_address' => $validated['streetAddress'] ?? $senior->street_address,
+                'contact_number' => $validated['contactNumber'] ?? $senior->contact_number,
+                'community_tax_number' => array_key_exists('communityTaxNumber', $validated) ? $validated['communityTaxNumber'] : (array_key_exists('community_tax_number', $validated) ? $validated['community_tax_number'] : $senior->community_tax_number),
+                'issued_on' => array_key_exists('issuedOn', $validated) ? $validated['issuedOn'] : (array_key_exists('issued_on', $validated) ? $validated['issued_on'] : $senior->issued_on),
+                'issued_at' => array_key_exists('issuedAt', $validated) ? $validated['issuedAt'] : (array_key_exists('issued_at', $validated) ? $validated['issued_at'] : $senior->issued_at),
+                'id_config' => $validated['idConfig'] ?? $senior->id_config,
+            ]);
+
+            return $senior;
+        });
     }
 }

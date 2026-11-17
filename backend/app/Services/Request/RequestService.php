@@ -6,15 +6,23 @@ use App\Models\Senior;
 use App\Models\Request as SeniorRequest;
 use App\Models\ActivityLog;
 use App\Models\FamilyMember;
+use App\Services\Senior\OscaIdVacancyService;
 use Illuminate\Support\Facades\DB;
 
 class RequestService
 {
+    public function __construct(private OscaIdVacancyService $vacancies)
+    {
+    }
+
     public function approve(SeniorRequest $req, ?string $oscaId, $actor): SeniorRequest
     {
         if ($req->status !== 'Pending') {
             abort(response()->json(['success' => false, 'message' => 'Only pending requests can be approved.'], 422));
         }
+
+        $oscaId = $oscaId !== null ? trim($oscaId) : null;
+        $oscaId = $oscaId === '' ? null : $oscaId;
 
         $senior = $req->senior;
         if ($oscaId) {
@@ -23,6 +31,12 @@ class RequestService
         }
 
         return DB::transaction(function() use ($req, $senior, $oscaId, $actor) {
+            if ($oscaId && $req->type !== 'ID Replacement') {
+                // Consume a released ID if this is one, inside the same
+                // transaction that assigns it so it cannot be double-claimed.
+                $this->vacancies->claim($oscaId);
+            }
+
             if ($req->type === 'ID Replacement') {
                 // An ID replacement only re-issues the card. It must never
                 // change the member's OSCA ID, status, or personal details.
@@ -47,6 +61,9 @@ class RequestService
                     'emergency_contact' => $data['emergencyContact'] ?? $senior->emergency_contact,
                     'rrn' => $data['rrn'] ?? $senior->rrn,
                     'national_id' => $data['nationalId'] ?? $senior->national_id,
+                    'community_tax_number' => $data['communityTaxNumber'] ?? $data['community_tax_number'] ?? $senior->community_tax_number,
+                    'issued_on' => $data['issuedOn'] ?? $data['issued_on'] ?? $senior->issued_on,
+                    'issued_at' => $data['issuedAt'] ?? $data['issued_at'] ?? $senior->issued_at,
                     'profile_photo_path' => $data['profile_photo_path'] ?? $senior->profile_photo_path,
                     'status' => 'Active',
                 ]);

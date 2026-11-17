@@ -21,7 +21,7 @@ import {
 } from 'recharts';
 import { 
   Users, UserX, IdCard, MapPin, ClipboardList, Award, 
-  Calendar as CalendarIcon, Clock, CheckCircle2, Download, AlertCircle, RefreshCw,
+  Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, RefreshCw,
   Cake, Sparkles, PartyPopper, ChevronRight
 } from 'lucide-react';
 import { ViewType, BARANGAYS } from '../types';
@@ -114,20 +114,22 @@ const KPICard = ({
       </div>
       
       <div className="w-full h-10 mt-2 relative z-10 min-w-0" style={{ minWidth: 0 }}>
-        <ChartContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-          <LineChart data={data}>
-            <Line
-              type="monotone"
-              dataKey={dataKey}
-              stroke={chartColor}
-              strokeWidth={2}
-              dot={false}
-              isAnimationActive={true}
-              animationDuration={900}
-              animationEasing="ease-out"
-            />
-          </LineChart>
-        </ChartContainer>
+        {data && dataKey && (
+          <ChartContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <LineChart data={data}>
+              <Line
+                type="monotone"
+                dataKey={dataKey}
+                stroke={chartColor}
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={true}
+                animationDuration={900}
+                animationEasing="ease-out"
+              />
+            </LineChart>
+          </ChartContainer>
+        )}
       </div>
 
       <div className="flex items-center justify-end w-full pt-4 border-t border-slate-100 mt-2">
@@ -279,10 +281,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
             {BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
         </div>
-        <div className="w-px h-6 bg-slate-200 hidden sm:block"></div>
-        <button onClick={() => alert('Generating PDF Report...')} className="bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 px-4 py-2 text-xs font-semibold flex items-center gap-2 transition-colors">
-          <Download size={14} /> <span className="hidden sm:block">Export</span>
-        </button>
       </div>
 
       {/* Primary KPIs */}
@@ -314,8 +312,6 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           value={formatNumber(data.centenarians)} 
           icon={Award}
           statusLabel="Verified DB"
-          data={data.monthlyStats.map((d: any, idx: number) => ({ ...d, centenarianTrend: (d.total ? (idx % 3) + 1 : 0) }))}
-          dataKey="centenarianTrend"
           onClick={() => onCardNavigate?.(ViewType.FINAL_REPORT, 'centenarians')}
           iconClass="text-purple-500"
           chartColor="#a855f7"

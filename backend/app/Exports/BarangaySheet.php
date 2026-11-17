@@ -101,7 +101,32 @@ class BarangaySheet implements WithTitle, WithEvents
                 $nextRow = $this->writeAgeDistribution($sheet, $nextRow, $population);
                 $nextRow = $this->writeDeceasedPerMonth($sheet, $nextRow, $registeredInPeriod);
                 $nextRow = $this->writeSummary($sheet, $nextRow, $population);
-                $nextRow = $this->writeMasterlist($sheet, $nextRow, $population);
+
+                // Keep living and deceased members in separate tables so each
+                // barangay tab mirrors the consolidated masterlist/deceased tabs.
+                $livingSeniors = $population
+                    ->filter(fn ($senior) => strtolower((string) $senior->status) !== 'deceased')
+                    ->values();
+                $deceasedSeniors = $population
+                    ->filter(fn ($senior) => strtolower((string) $senior->status) === 'deceased')
+                    ->values();
+
+                $nextRow = $this->writeMasterlist(
+                    $sheet,
+                    $nextRow,
+                    $livingSeniors,
+                    'VI. MASTERLIST OF LIVING SENIORS (PER BARANGAY)',
+                    true
+                );
+                $nextRow += 2;
+
+                $nextRow = $this->writeMasterlist(
+                    $sheet,
+                    $nextRow,
+                    $deceasedSeniors,
+                    'VII. DECEASED SENIORS (PER BARANGAY)',
+                    false
+                );
 
                 // Final styling: Font and Autofit
                 $sheet->getStyle('A1:T' . max($nextRow, 10))->getFont()->setName(self::FONT_NAME);
@@ -252,7 +277,11 @@ class BarangaySheet implements WithTitle, WithEvents
         ];
 
         foreach ($ranges as $label => [$min, $max]) {
-            $count = $seniors->filter(fn ($s) => $s->age >= $min && $s->age <= $max)->count();
+            $count = $seniors->filter(function ($s) use ($min, $max) {
+                $age = $s->resolvedAge();
+
+                return $age !== null && $age >= $min && $age <= $max;
+            })->count();
             $sheet->setCellValue("A{$row}", $label);
             $sheet->setCellValue("B{$row}", $count);
             $this->applyTableBody($sheet, "A{$row}:B{$row}");
@@ -335,10 +364,16 @@ class BarangaySheet implements WithTitle, WithEvents
         return $row;
     }
 
-    private function writeMasterlist(Worksheet $sheet, int $row, $seniors): int
-    {
-        $this->writeSectionTitle($sheet, $row, 'VI. MASTERLIST (PER BARANGAY)', 'A', 'T');
+    private function writeMasterlist(
+        Worksheet $sheet,
+        int $row,
+        $seniors,
+        string $title,
+        bool $withAutoFilter
+    ): int {
+        $this->writeSectionTitle($sheet, $row, $title, 'A', 'T');
         $row++;
+        $headerRow = $row;
 
         $headers = [
             'SORT SEQ',
@@ -368,7 +403,7 @@ class BarangaySheet implements WithTitle, WithEvents
             $sheet->setCellValue("{$col}{$row}", $h);
         }
 
-        $headerRange = "A{$row}:T{$row}";
+        $headerRange = "A{$headerRow}:T{$headerRow}";
         $sheet->getStyle($headerRange)->applyFromArray([
             'font' => [
                 'bold' => true,
@@ -390,10 +425,7 @@ class BarangaySheet implements WithTitle, WithEvents
                 ],
             ],
         ]);
-        $sheet->getRowDimension($row)->setRowHeight(20);
-
-        // Apply filter to just the masterlist block
-        $sheet->setAutoFilter($headerRange);
+        $sheet->getRowDimension($headerRow)->setRowHeight(20);
 
         $row++;
         $seq = 1;
@@ -414,9 +446,9 @@ class BarangaySheet implements WithTitle, WithEvents
             $sheet->setCellValue("K{$row}", $dob ? $dob->format('m') : '');
             $sheet->setCellValue("L{$row}", $dob ? $dob->format('d') : '');
             $sheet->setCellValue("M{$row}", $dob ? $dob->format('Y') : '');
-            $sheet->setCellValue("N{$row}", $senior->age ?? '');
+            $sheet->setCellValue("N{$row}", $senior->resolvedAge() ?? '');
             $sheet->setCellValue("O{$row}", $senior->contact_number ?? '');
-            $sheet->setCellValue("P{$row}", $senior->osca_id ?? '');
+            $sheet->setCellValue("P{$row}", $senior->displayOscaId() ?? '');
             $sheet->setCellValue("Q{$row}", $senior->rrn ?? '');
             $sheet->setCellValue("R{$row}", $senior->national_id ?? '');
             $sheet->setCellValue("S{$row}", $senior->status ?? '');
@@ -424,6 +456,13 @@ class BarangaySheet implements WithTitle, WithEvents
 
             $this->applyTableBody($sheet, "A{$row}:T{$row}");
             $row++;
+        }
+
+        // A worksheet only supports one auto-filter. Keep it on the living
+        // masterlist table (full data range) and leave the deceased table
+        // unfiltered.
+        if ($withAutoFilter) {
+            $sheet->setAutoFilter("A{$headerRow}:T" . ($row - 1));
         }
 
         return $row;

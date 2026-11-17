@@ -34,11 +34,19 @@ class RequestController extends Controller
 
     private function ensurePendingApprovalRequests(): void
     {
-        // Force status to Pending if osca_id is null or empty
-        Senior::where(function ($query) {
-            $query->whereNull('osca_id')
-                ->orWhereRaw("TRIM(osca_id) = ''");
-        })->where('status', '!=', 'Pending')->update(['status' => 'Pending']);
+        // Force status to Pending only for members awaiting a NEW OSCA ID
+        // (no live ID and no historical/former ID). Records that released an
+        // OSCA ID (deceased/deleted mortality) or that are trashed must never
+        // be turned into pending approval applications.
+        Senior::query()
+            ->where(function ($query) {
+                $query->whereNull('osca_id')
+                    ->orWhereRaw("TRIM(osca_id) = ''");
+            })
+            ->whereNull('former_osca_id')
+            ->where('status', '!=', 'Deceased')
+            ->where('status', '!=', 'Pending')
+            ->update(['status' => 'Pending']);
 
         $pendingSeniorIdsWithRequests = SeniorRequest::query()
             ->where('status', 'Pending')
@@ -51,6 +59,7 @@ class RequestController extends Controller
                 $query->whereNull('osca_id')
                     ->orWhereRaw("TRIM(osca_id) = ''");
             })
+            ->whereNull('former_osca_id')
             ->when($pendingSeniorIdsWithRequests !== [], function ($query) use ($pendingSeniorIdsWithRequests) {
                 $query->whereNotIn('id', $pendingSeniorIdsWithRequests);
             })
