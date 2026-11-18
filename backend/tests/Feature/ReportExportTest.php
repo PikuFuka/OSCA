@@ -98,6 +98,31 @@ class ReportExportTest extends TestCase
         }
     }
 
+    public function test_filtered_export_matches_the_search_term(): void
+    {
+        $this->makeSenior('Anibong', [
+            'first_name' => 'Target',
+            'last_name' => 'Villarosa',
+        ]);
+        $this->makeSenior('Anibong', [
+            'first_name' => 'Other',
+            'last_name' => 'Senior',
+        ]);
+        Sanctum::actingAs($this->makeStaff());
+
+        $response = $this->get('/api/reports/senior-citizens?search=Villarosa&filtered=1');
+
+        $response->assertOk();
+
+        $reader = IOFactory::createReader('Xlsx');
+        $reader->setReadDataOnly(true);
+        $book = $reader->load($response->getFile()->getRealPath());
+        $masterlistText = $this->sheetText($book->getSheetByName('Masterlist of Pagsanjan'));
+
+        $this->assertStringContainsString('Villarosa', $masterlistText);
+        $this->assertStringNotContainsString('Other', $masterlistText);
+    }
+
     public function test_masterlist_excludes_deceased_and_deceased_tab_contains_them(): void
     {
         $this->makeSenior('Anibong', [

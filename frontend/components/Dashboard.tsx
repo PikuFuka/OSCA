@@ -24,8 +24,9 @@ import {
   Calendar as CalendarIcon, Clock, CheckCircle2, AlertCircle, RefreshCw,
   Cake, Sparkles, PartyPopper, ChevronRight
 } from 'lucide-react';
-import { ViewType, BARANGAYS } from '../types';
+import { ViewType } from '../types';
 import { seniorsAPI, requestsAPI } from '../services/api';
+import { useBarangays } from '../hooks/useBarangays';
 import { TableAvatar } from './Table';
 
 // Recharts' ResponsiveContainer starts at -1x-1 until ResizeObserver reports
@@ -143,8 +144,10 @@ const KPICard = ({
 const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   const [selectedBarangay, setSelectedBarangay] = useState('All Barangays');
   const [selectedYear, setSelectedYear] = useState('All Years');
+  const barangays = useBarangays();
   const [stats, setStats] = useState<any>(null);
   const [birthdaysData, setBirthdaysData] = useState<{ count: number; date: string; seniors: any[] } | null>(null);
+  const [birthdaysLoading, setBirthdaysLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const fetchIdRef = useRef(0);
@@ -165,32 +168,47 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
     const fetchId = ++fetchIdRef.current;
     setError(null);
     setLoading(true);
-    try {
-      const [data, pendingData, birthdayRes] = await Promise.all([
-        seniorsAPI.getStatistics(selectedBarangay, selectedYear),
-        // Use same perPage as Approvals (15) and bypass cache for accurate count — fixes 1 vs 2 mismatch
-        requestsAPI.getPending(1, 15, { fresh: true }),
-        seniorsAPI.getBirthdays().catch(() => ({ count: 0, date: '', seniors: [] }))
-      ]);
+    setBirthdaysLoading(true);
 
-      // A newer fetch started while this one was in flight — drop the stale result.
-      if (fetchId !== fetchIdRef.current) return;
-       
-      const accuratePendingCount = pendingData.total ?? pendingData.data?.length ?? 0;
-      data.pending = accuratePendingCount;
-
-      setStats(data);
-      setBirthdaysData(birthdayRes);
-    } catch (err: any) {
-      if (fetchId !== fetchIdRef.current) return;
-      if (err.status !== 401) {
-        setError('Failed to load analytical data.');
-      }
-    } finally {
-      if (fetchId === fetchIdRef.current) {
+    // Statistics are the primary view. Show their cards and charts as soon as
+    // this request completes instead of waiting for pending/birthday requests.
+    seniorsAPI.getStatistics(selectedBarangay, selectedYear)
+      .then((data) => {
+        if (fetchId !== fetchIdRef.current) return;
+        setStats(data);
         setLoading(false);
-      }
-    }
+      })
+      .catch((err: any) => {
+        if (fetchId !== fetchIdRef.current) return;
+        if (err.status !== 401) {
+          setError('Failed to load analytical data.');
+        }
+        setLoading(false);
+      });
+
+    // Pending applications and birthdays are independent secondary widgets.
+    requestsAPI.getPending(1, 15, { fresh: true })
+      .then((pendingData) => {
+        if (fetchId !== fetchIdRef.current) return;
+        const accuratePendingCount = pendingData.total ?? pendingData.data?.length ?? 0;
+        setStats((current: any) => current ? { ...current, pending: accuratePendingCount } : current);
+      })
+      .catch(() => {
+        // The main statistics response remains usable; pending is retried from
+        // the dashboard refresh action rather than blocking the whole view.
+      });
+
+    seniorsAPI.getBirthdays()
+      .then((birthdayRes) => {
+        if (fetchId !== fetchIdRef.current) return;
+        setBirthdaysData(birthdayRes);
+      })
+      .catch(() => {
+        if (fetchId === fetchIdRef.current) setBirthdaysData(null);
+      })
+      .finally(() => {
+        if (fetchId === fetchIdRef.current) setBirthdaysLoading(false);
+      });
   };
 
   useEffect(() => {
@@ -278,7 +296,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           <MapPin size={14} className="text-slate-500" />
           <select value={selectedBarangay} onChange={(e) => setSelectedBarangay(e.target.value)} className="text-xs font-semibold text-slate-700 outline-none bg-transparent cursor-pointer w-full min-w-[120px]">
             <option value="All Barangays">All Barangays</option>
-            {BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
+            {barangays.map(b => <option key={b} value={b}>{b}</option>)}
           </select>
         </div>
       </div>
@@ -591,14 +609,30 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                 <Cake size={16} strokeWidth={2.5} />
               </div>
               <h3 className="text-[15px] font-extrabold tracking-tight text-slate-900">Today's Birthday Celebrants</h3>
-              <span className="inline-flex items-center rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-[10px] font-bold tracking-widest text-slate-600 uppercase">
-                {celebrants.length} {celebrants.length === 1 ? 'Celebrant' : 'Celebrants'}{selectedBarangay !== 'All Barangays' ? ` (${selectedBarangay})` : ''}
-              </span>
+              {birthdaysLoading ? (
+                <Skeleton.Badge className="w-24 h-6" />
+              ) : (
+                <span className="inline-flex items-center rounded-full bg-slate-100 border border-slate-200 px-2.5 py-1 text-[10px] font-bold tracking-widest text-slate-600 uppercase">
+                  {celebrants.length} {celebrants.length === 1 ? 'Celebrant' : 'Celebrants'}{selectedBarangay !== 'All Barangays' ? ` (${selectedBarangay})` : ''}
+                </span>
+              )}
             </div>
           </div>
 
           <div className="p-4 sm:p-6 bg-slate-50/40">
-            {celebrants.length === 0 ? (
+            {birthdaysLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" aria-busy="true" aria-label="Loading birthday celebrants">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="rounded-2xl border border-slate-200 bg-white p-4 flex items-center gap-3">
+                    <Skeleton.Circle className="w-11 h-11" />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <Skeleton.Text className="w-36 h-3.5" />
+                      <Skeleton.Text className="w-24 h-3" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : celebrants.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-10 text-center">
                 <Cake size={28} className="mx-auto text-slate-300 mb-2" />
                 <p className="text-sm font-semibold text-slate-500">No birthdays today.</p>

@@ -24,8 +24,11 @@ class SeniorObserver
 
     private function clearCaches(): void
     {
-        // File driver: forget known stats keys; with redis you would use tags
-        Cache::forget('stats:v3:all:all');
+        if (Cache::has('stats:cache_version')) {
+            Cache::increment('stats:cache_version');
+        } else {
+            Cache::forever('stats:cache_version', 2);
+        }
         if (Cache::has('seniors:cache_version')) {
             Cache::increment('seniors:cache_version');
         } else {

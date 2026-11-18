@@ -16,6 +16,11 @@ class ReconcilePendingRequests implements ShouldQueue
 
     public function handle(): void
     {
+        if (\Illuminate\Support\Facades\Cache::has('stats:cache_version')) {
+            \Illuminate\Support\Facades\Cache::increment('stats:cache_version');
+        } else {
+            \Illuminate\Support\Facades\Cache::forever('stats:cache_version', 2);
+        }
         Senior::where(function ($q) {
             $q->whereNull('osca_id')->orWhereRaw("TRIM(osca_id) = ''");
         })->where('status','!=','Pending')->update(['status'=>'Pending']);

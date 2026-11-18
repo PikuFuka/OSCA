@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface TransitionWrapperProps {
@@ -24,11 +24,47 @@ export const TransitionWrapper: React.FC<TransitionWrapperProps> = ({
   className = '',
   animateContent = true,
 }) => {
+  const wasLoadingRef = useRef(isLoading);
+  const [isRevealing, setIsRevealing] = useState(false);
+
+  useEffect(() => {
+    if (isLoading) {
+      wasLoadingRef.current = true;
+      setIsRevealing(false);
+      return;
+    }
+
+    if (wasLoadingRef.current) {
+      wasLoadingRef.current = false;
+      setIsRevealing(true);
+      const timer = window.setTimeout(() => setIsRevealing(false), 420);
+      return () => window.clearTimeout(timer);
+    }
+  }, [isLoading]);
+
   if (isLoading) {
     if (skeleton) {
       return (
         <div className={`w-full transition-wrapper-skeleton will-change-[opacity,filter] ${className}`} aria-busy="true" aria-live="polite">
           {skeleton}
+        </div>
+      );
+    }
+
+    if (isRevealing && skeleton) {
+      return (
+        <div className={`relative w-full ${className}`} aria-busy="false">
+          <div className="relative z-0">
+            <div className={animateContent ? 'transition-fade-in' : 'transition-content-soft'}>
+              {children}
+            </div>
+          </div>
+          <div
+            className="absolute inset-0 z-10 pointer-events-none transition-wrapper-skeleton-out"
+            aria-hidden="true"
+          >
+            {skeleton}
+          </div>
         </div>
       );
     }

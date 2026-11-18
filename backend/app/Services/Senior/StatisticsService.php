@@ -14,7 +14,8 @@ class StatisticsService
      */
     public function get(string $barangay = null, string $year = null): array
     {
-        $cacheKey = sprintf('stats:v4:%s:%s', $barangay && $barangay !== 'All Barangays' ? $barangay : 'all', $year && $year !== 'All Years' ? $year : 'all');
+        $cacheVersion = Cache::get('stats:cache_version', 1);
+        $cacheKey = sprintf('stats:v4:%s:%s:%s', $cacheVersion, $barangay && $barangay !== 'All Barangays' ? $barangay : 'all', $year && $year !== 'All Years' ? $year : 'all');
 
         return Cache::remember($cacheKey, now()->addMinutes(5), function () use ($barangay, $year) {
             $vacancyQuery = \App\Models\OscaIdVacancy::query();
@@ -73,7 +74,7 @@ class StatisticsService
 
             // Status totals (all records in scope, including deceased/pending).
             $total = (clone $populationQuery)->count();
-            $active = (clone $populationQuery)->where('status', 'Active')->count();
+            $active = (clone $populationQuery)->whereIn('status', ['Active', 'active', 'approved', 'Approved'])->count();
             $pending = (clone $populationQuery)->where('status', 'Pending')->count();
 
             // Mortality includes members whose OSCA ID was released on death
@@ -90,7 +91,7 @@ class StatisticsService
             // Registry demographics: living active members only, so dashboard
             // breakdowns (heatmap, ages, genders, centenarians) stay consistent
             // with the "Active Registry" count and exclude deceased/deleted/pending.
-            $registryQuery = (clone $populationQuery)->where('status', 'Active');
+            $registryQuery = (clone $populationQuery)->whereIn('status', ['Active', 'active', 'approved', 'Approved']);
 
             $heatmap = (clone $registryQuery)
                 ->select('barangay as name', DB::raw('count(*) as count'))
@@ -102,17 +103,31 @@ class StatisticsService
             // 1900-01-01 imports cannot inflate the oldest buckets.
             $ageQuery = (clone $registryQuery)->plausibleAge();
 
-            // Top 10 single ages by population (powers the Peak Ages leaderboard)
-            $topAges = (clone $ageQuery)
-                ->select('age', DB::raw('count(*) as count'))
-                ->whereNotNull('age')
-                ->groupBy('age')
-                ->orderByDesc('count')
-                ->orderBy('age')
-                ->limit(10)
-                ->get()
-                ->map(fn($r) => ['age' => (int) $r->age, 'count' => (int) $r->count])
+            // Derive dashboard ages from the same resolvedAge() source used by
+            // resources and exports, rather than trusting stale stored ages.
+            $resolvedAges = (clone $registryQuery)
+                ->get(['date_of_birth', 'age'])
+                ->map(fn (Senior $senior) => $senior->resolvedAge())
+                ->filter(fn ($age) => $age !== null && $age >= 0 && $age <= Senior::MAX_VERIFIED_HUMAN_AGE)
                 ->values();
+
+            $topAges = $resolvedAges
+                ->countBy()
+                ->map(fn ($count, $age) => ['age' => (int) $age, 'count' => (int) $count])
+                ->sortByDesc('count')
+                ->sortBy('age')
+                ->take(10)
+                ->values();
+
+            $ageRanges = [
+                ['range'=>'60-65','count'=>$resolvedAges->filter(fn ($age) => $age >= 60 && $age <= 65)->count()],
+                ['range'=>'66-70','count'=>$resolvedAges->filter(fn ($age) => $age >= 66 && $age <= 70)->count()],
+                ['range'=>'71-75','count'=>$resolvedAges->filter(fn ($age) => $age >= 71 && $age <= 75)->count()],
+                ['range'=>'76-80','count'=>$resolvedAges->filter(fn ($age) => $age >= 76 && $age <= 80)->count()],
+                ['range'=>'81-85','count'=>$resolvedAges->filter(fn ($age) => $age >= 81 && $age <= 85)->count()],
+                ['range'=>'86-90','count'=>$resolvedAges->filter(fn ($age) => $age >= 86 && $age <= 90)->count()],
+                ['range'=>'91+','count'=>$resolvedAges->filter(fn ($age) => $age > 90)->count()],
+            ];
 
             $today = \Illuminate\Support\Carbon::today();
             $birthdaysToday = (clone $registryQuery)
@@ -131,15 +146,7 @@ class StatisticsService
                 'centenarians' => (clone $registryQuery)->centenarians()->count(),
                 'birthdaysToday' => $birthdaysToday,
                 'monthlyStats' => $monthlyStats,
-                'ageRanges' => [
-                    ['range'=>'60-65','count'=>(clone $ageQuery)->whereBetween('age',[60,65])->count()],
-                    ['range'=>'66-70','count'=>(clone $ageQuery)->whereBetween('age',[66,70])->count()],
-                    ['range'=>'71-75','count'=>(clone $ageQuery)->whereBetween('age',[71,75])->count()],
-                    ['range'=>'76-80','count'=>(clone $ageQuery)->whereBetween('age',[76,80])->count()],
-                    ['range'=>'81-85','count'=>(clone $ageQuery)->whereBetween('age',[81,85])->count()],
-                    ['range'=>'86-90','count'=>(clone $ageQuery)->whereBetween('age',[86,90])->count()],
-                    ['range'=>'91+','count'=>(clone $ageQuery)->where('age','>',90)->count()],
-                ],
+                'ageRanges' => $ageRanges,
                 'genders' => [
                     ['name'=>'Male','value'=>(clone $registryQuery)->where('sex','Male')->count()],
                     ['name'=>'Female','value'=>(clone $registryQuery)->where('sex','Female')->count()],
@@ -153,8 +160,10 @@ class StatisticsService
 
     public function clearCache(): void
     {
-        // File driver has no tags; clear known keys pattern would require redis tags.
-        // For file driver we rely on TTL; for redis, caller can use Cache::tags(['stats'])->flush()
-        Cache::forget('stats:v3:all:all');
+        if (Cache::has('stats:cache_version')) {
+            Cache::increment('stats:cache_version');
+        } else {
+            Cache::forever('stats:cache_version', 2);
+        }
     }
 }

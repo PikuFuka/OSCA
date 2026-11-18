@@ -2,9 +2,10 @@ import { api } from '../../../core/api/client';
 import { withCache, clearCache } from '../../../core/api/cache';
 
 export const usersAPI = {
-  getAll: async () => {
-    return withCache('users-all', async () => {
-      const response = await api.get('/users');
+  getAll: async (params?: any) => {
+    const key = `users-all-${JSON.stringify(params || {})}`;
+    return withCache(key, async () => {
+      const response = await api.get('/users', { params });
       return response.data;
     });
   },

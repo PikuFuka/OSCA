@@ -126,7 +126,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
 
     const formattedDob = senior.dateOfBirth
       ? new Date(senior.dateOfBirth).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
-      : (senior.age ? new Date(new Date().getFullYear() - senior.age, 0, 1).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }) : 'N/A');
+      : 'N/A';
 
     const formattedGender = (senior as any).sex || senior.gender || '';
 

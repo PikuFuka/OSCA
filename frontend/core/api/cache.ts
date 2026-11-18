@@ -1,8 +1,8 @@
 // Modular cache layer — shared by all feature APIs
-// Keeps the 5-minute in-memory cache but now isolated in core (not duplicated per feature)
+// Keeps the short-lived in-memory cache isolated in core (not duplicated per feature)
 
 const cache = new Map<string, { data: any; timestamp: number }>();
-export const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+export const CACHE_DURATION = 45 * 1000; // 45 seconds
 
 // In-flight flights by key — concurrent callers (spam refresh, simultaneous
 // mounts) share one network request instead of stampeding the backend.

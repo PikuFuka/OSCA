@@ -72,16 +72,9 @@ class BarangaySheet implements WithTitle, WithEvents
 
                 $sheet->getDefaultRowDimension()->setRowHeight(15);
 
-                // Data
-                $baseQuery = Senior::query()->where('barangay', $this->barangay);
-                if ($this->year) {
-                    $baseQuery->where(function ($q) {
-                        $q->whereYear('created_at', $this->year)
-                          ->orWhereNull('created_at');
-                    });
-                }
-                $registeredInPeriod = (clone $baseQuery)->get();
-
+                // Data: fetch the barangay population once and derive the
+                // registered-in-period subset in memory instead of running a
+                // second full query for every barangay tab.
                 $populationQuery = Senior::query()->where('barangay', $this->barangay);
                 if ($this->year) {
                     $populationQuery->where(function ($q) {
@@ -90,6 +83,13 @@ class BarangaySheet implements WithTitle, WithEvents
                     });
                 }
                 $population = $populationQuery->get();
+
+                $registeredInPeriod = $this->year
+                    ? $population->filter(
+                        fn ($senior) => !$senior->created_at
+                            || (int) $senior->created_at->format('Y') === $this->year
+                    )
+                    : $population;
 
                 // Header + logos
                 $nextRow = $this->writeHeader($sheet);
@@ -128,10 +128,18 @@ class BarangaySheet implements WithTitle, WithEvents
                     false
                 );
 
-                // Final styling: Font and Autofit
-                $sheet->getStyle('A1:T' . max($nextRow, 10))->getFont()->setName(self::FONT_NAME);
-                foreach (range('A', 'T') as $col) {
-                    $sheet->getColumnDimension($col)->setAutoSize(true);
+                // Final styling: font and fixed widths. Fixed widths avoid the
+                // expensive per-column content scan that auto-size performs on
+                // every barangay tab, and match the consolidated masterlist.
+                $sheet->getParent()->getDefaultStyle()->getFont()->setName(self::FONT_NAME);
+                $widths = [
+                    'A' => 10, 'B' => 28, 'C' => 18, 'D' => 18, 'E' => 18,
+                    'F' => 8, 'G' => 32, 'H' => 20, 'I' => 10, 'J' => 14,
+                    'K' => 8, 'L' => 8, 'M' => 10, 'N' => 8, 'O' => 16,
+                    'P' => 16, 'Q' => 16, 'R' => 18, 'S' => 12, 'T' => 16,
+                ];
+                foreach ($widths as $col => $width) {
+                    $sheet->getColumnDimension($col)->setWidth($width);
                 }
 
                 // Print area
@@ -213,9 +221,15 @@ class BarangaySheet implements WithTitle, WithEvents
         $row++;
 
         $sheet->setCellValue('A' . $row, 'Count');
+        $counts = array_fill(1, 12, 0);
+        foreach ($seniors as $senior) {
+            if ($senior->created_at) {
+                $counts[(int) $senior->created_at->format('m')]++;
+            }
+        }
         $total = 0;
         for ($m = 1; $m <= 12; $m++) {
-            $count = $seniors->filter(fn ($s) => $s->created_at && (int) $s->created_at->format('m') === $m)->count();
+            $count = $counts[$m];
             $total += $count;
             $col = chr(ord('A') + $m); // B..M
             $sheet->setCellValue("{$col}{$row}", $count);
@@ -276,14 +290,23 @@ class BarangaySheet implements WithTitle, WithEvents
             '80+' => [80, 200],
         ];
 
-        foreach ($ranges as $label => [$min, $max]) {
-            $count = $seniors->filter(function ($s) use ($min, $max) {
-                $age = $s->resolvedAge();
+        $counts = array_fill_keys(array_keys($ranges), 0);
+        foreach ($seniors as $senior) {
+            $age = $senior->resolvedAge();
+            if ($age === null) {
+                continue;
+            }
+            foreach ($ranges as $label => [$min, $max]) {
+                if ($age >= $min && $age <= $max) {
+                    $counts[$label]++;
+                    break;
+                }
+            }
+        }
 
-                return $age !== null && $age >= $min && $age <= $max;
-            })->count();
+        foreach ($ranges as $label => [$min, $max]) {
             $sheet->setCellValue("A{$row}", $label);
-            $sheet->setCellValue("B{$row}", $count);
+            $sheet->setCellValue("B{$row}", $counts[$label]);
             $this->applyTableBody($sheet, "A{$row}:B{$row}");
             $row++;
         }
@@ -307,12 +330,17 @@ class BarangaySheet implements WithTitle, WithEvents
         $this->applyTableHeader($sheet, "A{$row}:M{$row}");
         $row++;
 
-        $deceased = $seniorsInPeriod->where('status', 'Deceased');
-
         $sheet->setCellValue("A{$row}", 'Count');
+        $counts = array_fill(1, 12, 0);
+        foreach ($seniorsInPeriod as $senior) {
+            if ($senior->status !== 'Deceased' || !$senior->updated_at) {
+                continue;
+            }
+            $counts[(int) $senior->updated_at->format('m')]++;
+        }
         $total = 0;
         for ($m = 1; $m <= 12; $m++) {
-            $count = $deceased->filter(fn ($s) => $s->updated_at && (int) $s->updated_at->format('m') === $m)->count();
+            $count = $counts[$m];
             $total += $count;
             $col = chr(ord('A') + $m); // B..M
             $sheet->setCellValue("{$col}{$row}", $count);
@@ -429,33 +457,40 @@ class BarangaySheet implements WithTitle, WithEvents
 
         $row++;
         $seq = 1;
+        $firstDataRow = $row;
 
         $sorted = $seniors->sortBy(['last_name', 'first_name'])->values();
+        $rows = [];
         foreach ($sorted as $senior) {
             $dob = $senior->date_of_birth ? Carbon::parse($senior->date_of_birth) : null;
-            $sheet->setCellValue("A{$row}", $seq++);
-            $sheet->setCellValue("B{$row}", $senior->full_name);
-            $sheet->setCellValue("C{$row}", $senior->last_name);
-            $sheet->setCellValue("D{$row}", $senior->first_name);
-            $sheet->setCellValue("E{$row}", $senior->middle_name ?? '');
-            $sheet->setCellValue("F{$row}", $senior->extension_name ?? '');
-            $sheet->setCellValue("G{$row}", $senior->street_address ?? '');
-            $sheet->setCellValue("H{$row}", $senior->barangay ?? '');
-            $sheet->setCellValue("I{$row}", $senior->sex ?? '');
-            $sheet->setCellValue("J{$row}", $dob ? $dob->format('m/d/Y') : '');
-            $sheet->setCellValue("K{$row}", $dob ? $dob->format('m') : '');
-            $sheet->setCellValue("L{$row}", $dob ? $dob->format('d') : '');
-            $sheet->setCellValue("M{$row}", $dob ? $dob->format('Y') : '');
-            $sheet->setCellValue("N{$row}", $senior->resolvedAge() ?? '');
-            $sheet->setCellValue("O{$row}", $senior->contact_number ?? '');
-            $sheet->setCellValue("P{$row}", $senior->displayOscaId() ?? '');
-            $sheet->setCellValue("Q{$row}", $senior->rrn ?? '');
-            $sheet->setCellValue("R{$row}", $senior->national_id ?? '');
-            $sheet->setCellValue("S{$row}", $senior->status ?? '');
-            $sheet->setCellValue("T{$row}", $senior->created_at ? $senior->created_at->format('m/d/Y') : '');
+            $rows[] = [
+                $seq++,
+                $senior->full_name,
+                $senior->last_name,
+                $senior->first_name,
+                $senior->middle_name ?? '',
+                $senior->extension_name ?? '',
+                $senior->street_address ?? '',
+                $senior->barangay ?? '',
+                $senior->sex ?? '',
+                $dob ? $dob->format('m/d/Y') : '',
+                $dob ? $dob->format('m') : '',
+                $dob ? $dob->format('d') : '',
+                $dob ? $dob->format('Y') : '',
+                $senior->resolvedAge() ?? '',
+                $senior->contact_number ?? '',
+                $senior->displayOscaId() ?? '',
+                $senior->rrn ?? '',
+                $senior->national_id ?? '',
+                $senior->status ?? '',
+                $senior->created_at ? $senior->created_at->format('m/d/Y') : '',
+            ];
+        }
 
-            $this->applyTableBody($sheet, "A{$row}:T{$row}");
-            $row++;
+        if ($rows !== []) {
+            $sheet->fromArray($rows, null, "A{$firstDataRow}", true);
+            $this->applyTableBody($sheet, "A{$firstDataRow}:T" . ($firstDataRow + count($rows) - 1));
+            $row = $firstDataRow + count($rows);
         }
 
         // A worksheet only supports one auto-filter. Keep it on the living

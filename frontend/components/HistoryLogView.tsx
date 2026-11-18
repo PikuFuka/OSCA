@@ -25,6 +25,7 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
 
   const formatTimeAgo = (date: Date): string => {
     const now = new Date();
@@ -50,6 +51,7 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
 
   const fetchLogs = useCallback(async (search?: string) => {
     setLoading(true);
+    setFetchError(false);
     try {
       const params: any = {};
       if (search) params.search = search;
@@ -79,9 +81,14 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
           };
         });
         setLogs(transformedLogs);
+        setFetchError(false);
+      } else {
+        setLogs([]);
+        setFetchError(true);
       }
     } catch (error) {
-      // Silent fail
+      setLogs([]);
+      setFetchError(true);
     } finally {
       setLoading(false);
     }
@@ -167,7 +174,13 @@ const HistoryLogView: React.FC<HistoryLogViewProps> = ({ notify }) => {
         
         <div className="divide-y divide-slate-100 stagger-sequence">
           {!loading && (
-            logs.length === 0 ? (
+            fetchError ? (
+            <div className="p-12 text-center text-rose-500">
+              <AlertCircle size={32} className="mx-auto mb-3" />
+              <p className="font-bold">Unable to load activity logs.</p>
+              <p className="text-xs mt-1">Database data could not be retrieved.</p>
+            </div>
+            ) : logs.length === 0 ? (
             <div className="p-12 text-center text-slate-400">
               <Clock size={32} className="mx-auto mb-3 text-slate-200" />
               <p className="font-bold">No activity logs found.</p>

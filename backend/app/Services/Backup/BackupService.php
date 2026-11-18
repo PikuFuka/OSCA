@@ -4,6 +4,7 @@ namespace App\Services\Backup;
 
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Cache;
 
 class BackupService
 {
@@ -25,5 +26,10 @@ class BackupService
         if (!file_exists($tempPath)) return;
         // Simulate import by validating file exists
         Storage::disk('local')->put('imports/' . basename($tempPath), file_get_contents($tempPath));
+        if (Cache::has('stats:cache_version')) {
+            Cache::increment('stats:cache_version');
+        } else {
+            Cache::forever('stats:cache_version', 2);
+        }
     }
 }

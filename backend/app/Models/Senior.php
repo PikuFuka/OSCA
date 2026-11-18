@@ -70,6 +70,9 @@ class Senior extends Authenticatable
     protected static function booted(): void
     {
         static::saving(function (self $senior) {
+            if (is_string($senior->status) && strtolower(trim($senior->status)) === 'approved') {
+                $senior->status = 'Active';
+            }
             // Normalize osca_id: trim, empty -> null
             if (array_key_exists('osca_id', $senior->getAttributes()) || $senior->isDirty('osca_id')) {
                 $trimmed = trim((string) $senior->osca_id);

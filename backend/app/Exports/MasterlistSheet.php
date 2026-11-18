@@ -120,7 +120,10 @@ class MasterlistSheet implements WithTitle, WithEvents
                 if ($this->deceasedOnly) {
                     $query->where('status', 'Deceased');
                 } elseif ($this->status && $this->status !== 'All') {
-                    $query->where('status', $this->status);
+                    $status = strtolower(trim($this->status)) === 'active'
+                        ? ['Active', 'active', 'approved', 'Approved']
+                        : [$this->status];
+                    $query->whereIn('status', $status);
                 } else {
                     $query->where(function ($q) {
                         $q->whereNull('status')->orWhere('status', '!=', 'Deceased');
@@ -153,13 +156,26 @@ class MasterlistSheet implements WithTitle, WithEvents
                     $search = trim($this->search);
                     $terms = preg_split('/\s+/', $search) ?: [];
                     $terms = array_values(array_filter($terms, fn($t) => $t !== ''));
-                    $query->where(function ($q) use ($search, $terms) {
-                        $q->where('osca_id', 'like', "%{$search}%");
+                    $searchableColumns = [
+                        'first_name',
+                        'middle_name',
+                        'last_name',
+                        'extension_name',
+                        'barangay',
+                        'contact_number',
+                        'rrn',
+                        'national_id',
+                        'former_osca_id',
+                        'osca_id',
+                    ];
+
+                    $query->where(function ($q) use ($terms, $searchableColumns) {
                         foreach ($terms as $term) {
-                            $q->orWhere('first_name', 'like', "%{$term}%")
-                              ->orWhere('last_name', 'like', "%{$term}%")
-                              ->orWhere('middle_name', 'like', "%{$term}%")
-                              ->orWhere('contact_number', 'like', "%{$term}%");
+                            $q->where(function ($termQuery) use ($term, $searchableColumns) {
+                                foreach ($searchableColumns as $column) {
+                                    $termQuery->orWhere($column, 'like', "%{$term}%");
+                                }
+                            });
                         }
                     });
                 }
@@ -236,6 +252,25 @@ class MasterlistSheet implements WithTitle, WithEvents
                     }
                 }
 
+                $query->select([
+                    'id',
+                    'osca_id',
+                    'former_osca_id',
+                    'first_name',
+                    'middle_name',
+                    'last_name',
+                    'extension_name',
+                    'date_of_birth',
+                    'age',
+                    'sex',
+                    'barangay',
+                    'street_address',
+                    'contact_number',
+                    'rrn',
+                    'national_id',
+                    'status',
+                    'created_at',
+                ]);
                 $seniors = $query->get();
 
                 // Write Header
@@ -251,11 +286,18 @@ class MasterlistSheet implements WithTitle, WithEvents
                 // Write Masterlist
                 $this->writeMasterlist($sheet, 7, $seniors);
 
-                // Font and Autofit
-                $highestRow = $sheet->getHighestRow();
-                $sheet->getStyle('A1:T' . $highestRow)->getFont()->setName(self::FONT_NAME);
-                foreach (range('A', 'T') as $col) {
-                    $sheet->getColumnDimension($col)->setAutoSize(true);
+                // Font and column widths. Applying the font through the sheet
+                // default avoids styling every cell in a multi-thousand-row
+                // range.
+                $sheet->getParent()->getDefaultStyle()->getFont()->setName(self::FONT_NAME);
+                $widths = [
+                    'A' => 10, 'B' => 28, 'C' => 18, 'D' => 18, 'E' => 18,
+                    'F' => 8, 'G' => 32, 'H' => 20, 'I' => 10, 'J' => 14,
+                    'K' => 8, 'L' => 8, 'M' => 10, 'N' => 8, 'O' => 16,
+                    'P' => 16, 'Q' => 16, 'R' => 18, 'S' => 12, 'T' => 16,
+                ];
+                foreach ($widths as $col => $width) {
+                    $sheet->getColumnDimension($col)->setWidth($width);
                 }
             }
         ];
@@ -350,38 +392,42 @@ class MasterlistSheet implements WithTitle, WithEvents
         ]);
 
         $currentRow = $startRow + 1;
+        $rows = [];
         foreach ($seniors as $index => $senior) {
             $fullName = strtoupper("{$senior->last_name}, {$senior->first_name} " . ($senior->middle_name ? substr($senior->middle_name, 0, 1) . "." : ""));
-            
             $dob = $senior->date_of_birth;
             $hasKnownDob = $senior->hasKnownDateOfBirth();
-            
-            $sheet->setCellValue('A' . $currentRow, $index + 1);
-            $sheet->setCellValue('B' . $currentRow, $fullName);
-            $sheet->setCellValue('C' . $currentRow, $senior->last_name);
-            $sheet->setCellValue('D' . $currentRow, $senior->first_name);
-            $sheet->setCellValue('E' . $currentRow, $senior->middle_name);
-            $sheet->setCellValue('F' . $currentRow, $senior->extension_name);
-            $sheet->setCellValue('G' . $currentRow, $senior->street_address);
-            $sheet->setCellValue('H' . $currentRow, $senior->barangay);
-            $sheet->setCellValue('I' . $currentRow, $senior->sex);
-            $sheet->setCellValue('J' . $currentRow, ($dob && $hasKnownDob) ? $dob->format('m/d/Y') : '');
-            $sheet->setCellValue('K' . $currentRow, ($dob && $hasKnownDob) ? $dob->format('m') : '');
-            $sheet->setCellValue('L' . $currentRow, ($dob && $hasKnownDob) ? $dob->format('d') : '');
-            $sheet->setCellValue('M' . $currentRow, ($dob && $hasKnownDob) ? $dob->format('Y') : '');
-            $sheet->setCellValue('N' . $currentRow, $senior->resolvedAge());
-            $sheet->setCellValue('O' . $currentRow, $senior->contact_number);
-            $sheet->setCellValue('P' . $currentRow, $senior->displayOscaId());
-            $sheet->setCellValue('Q' . $currentRow, $senior->rrn);
-            $sheet->setCellValue('R' . $currentRow, $senior->national_id);
-            $sheet->setCellValue('S' . $currentRow, ucfirst($senior->status));
-            $sheet->setCellValue('T' . $currentRow, $senior->created_at ? $senior->created_at->format('m/d/Y') : '');
-
-            $sheet->getStyle('A' . $currentRow . ':T' . $currentRow)->getBorders()->getAllBorders()->setBorderStyle(Border::BORDER_THIN);
+            $rows[] = [
+                $index + 1,
+                $fullName,
+                $senior->last_name,
+                $senior->first_name,
+                $senior->middle_name,
+                $senior->extension_name,
+                $senior->street_address,
+                $senior->barangay,
+                $senior->sex,
+                ($dob && $hasKnownDob) ? $dob->format('m/d/Y') : '',
+                ($dob && $hasKnownDob) ? $dob->format('m') : '',
+                ($dob && $hasKnownDob) ? $dob->format('d') : '',
+                ($dob && $hasKnownDob) ? $dob->format('Y') : '',
+                $senior->resolvedAge(),
+                $senior->contact_number,
+                $senior->displayOscaId(),
+                $senior->rrn,
+                $senior->national_id,
+                ucfirst($senior->status),
+                $senior->created_at ? $senior->created_at->format('m/d/Y') : '',
+            ];
             $currentRow++;
         }
 
         if ($seniors->count() > 0) {
+            $sheet->fromArray($rows, null, 'A' . ($startRow + 1), true);
+            $sheet->getStyle('A' . ($startRow + 1) . ':T' . ($currentRow - 1))
+                ->getBorders()
+                ->getAllBorders()
+                ->setBorderStyle(Border::BORDER_THIN);
             $sheet->setAutoFilter('A' . $startRow . ':T' . ($currentRow - 1));
         }
     }

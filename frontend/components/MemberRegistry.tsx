@@ -25,8 +25,9 @@ import Skeleton from './Skeleton';
 import { RegistrySkeleton } from './skeletons';
 import { createPortal } from 'react-dom';
 import { Search, Edit2, Award, MapPin, X, User, Users, Calendar, Home, CreditCard, Phone, HeartPulse, IdCard, Trash2, UserX, Camera, Upload, Printer, RotateCw, QrCode, ArrowLeft, Move, Loader2, Save, Eye, FileText, FileCheck, Clock, Edit2Icon, ChevronLeft, ChevronRight, Filter, ArrowUpDown, FileSpreadsheet } from 'lucide-react';
-import { BARANGAYS, SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } from '../types';
+import { SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } from '../types';
 import { seniorsAPI, activityLogsAPI, reportsAPI } from '../services/api';
+import { useBarangays } from '../hooks/useBarangays';
 import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 import ConfirmModal from './ConfirmModal';
 import SeniorHistorySection from '../features/registry/history/SeniorHistorySection';
@@ -238,6 +239,7 @@ const InfoField = ({ label, value, className = "" }: { label: string, value: str
 
 const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView }) => {
   const [seniors, setSeniors] = useState<SeniorCitizen[]>([]);
+  const barangays = useBarangays();
   const [loading, setLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -626,7 +628,11 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
       if (type === 'Delete') {
         await seniorsAPI.delete(recordId as any);
         setSeniors(prev => prev.filter(s => s.id !== senior.id));
-        setTotalCount(prev => prev - 1);
+        const nextTotalCount = Math.max(0, totalCount - 1);
+        const nextTotalPages = Math.max(1, Math.ceil(nextTotalCount / itemsPerPage));
+        setTotalCount(nextTotalCount);
+        setTotalPages(nextTotalPages);
+        if (page > nextTotalPages) setPage(nextTotalPages);
         notify(`Record for ${senior.name} has been deleted. Its OSCA ID is now available for reuse.`, 'error');
       } else if (type === 'Decease') {
         await seniorsAPI.markDeceased(recordId as any, new Date().toISOString().split('T')[0]);
@@ -1305,7 +1311,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                       className="w-full pl-10 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-[13px] text-slate-800 focus:outline-none focus:border-systemBlue/50 focus:ring-3 focus:ring-systemBlue/10 transition-all font-semibold shadow-sm cursor-pointer appearance-none"
                     >
                       <option value="All Barangays">All Barangays</option>
-                      {BARANGAYS.map(b => (
+                      {barangays.map(b => (
                         <option key={b} value={b}>{b}</option>
                       ))}
                     </select>
@@ -1783,7 +1789,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                           <StaticLabel 
                             text={idGenerationSenior.dateOfBirth 
                               ? new Date(idGenerationSenior.dateOfBirth).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
-                              : new Date(new Date().getFullYear() - idGenerationSenior.age, 0, 1).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+                              : 'N/A'}
                             config={textConfig.dob} 
                             className="font-black text-slate-900" 
                           />
@@ -2082,7 +2088,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                                     id="dob" 
                                     text={idGenerationSenior.dateOfBirth 
                                       ? new Date(idGenerationSenior.dateOfBirth).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
-                                      : new Date(new Date().getFullYear() - idGenerationSenior.age, 0, 1).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
+                                      : 'N/A'}
                                     config={textConfig.dob} 
                                     updateConfig={updateTextConfig}
                                     isSelected={selectedField === 'dob'}
@@ -2240,7 +2246,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                     <div>
                       <label htmlFor="edit-barangay" className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1 block pl-1">Barangay</label>
                       <select id="edit-barangay" name="barangay" value={editFormData.barangay || ''} onChange={e => setEditFormData(prev => ({ ...prev, barangay: e.target.value }))} className="w-full px-3 py-2.5 rounded-lg text-sm bg-slate-50 border border-slate-200 hover:bg-slate-100 hover:border-slate-300 focus:bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition-all font-semibold text-slate-900 outline-none appearance-none">
-                        {BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
+                        {barangays.map(b => <option key={b} value={b}>{b}</option>)}
                       </select>
                     </div>
                     <div>

@@ -8,6 +8,8 @@ use App\Models\Senior;
 use App\Models\SeniorDocument;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use App\Http\Requests\ApproveRequestRequest;
 use App\Http\Resources\RequestResource;
 use App\Services\Request\RequestService;
@@ -47,6 +49,11 @@ class RequestController extends Controller
             ->where('status', '!=', 'Deceased')
             ->where('status', '!=', 'Pending')
             ->update(['status' => 'Pending']);
+        if (\Illuminate\Support\Facades\Cache::has('stats:cache_version')) {
+            \Illuminate\Support\Facades\Cache::increment('stats:cache_version');
+        } else {
+            \Illuminate\Support\Facades\Cache::forever('stats:cache_version', 2);
+        }
 
         $pendingSeniorIdsWithRequests = SeniorRequest::query()
             ->where('status', 'Pending')

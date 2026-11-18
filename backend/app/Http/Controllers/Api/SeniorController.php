@@ -68,11 +68,17 @@ class SeniorController extends Controller
         $terms = array_values(array_filter($terms, fn($t) => $t !== ''));
 
         $query->where(function ($q) use ($search, $terms) {
-            $q->where('osca_id', 'like', "%{$search}%");
+            $q->where('osca_id', 'like', "%{$search}%")
+                ->orWhere('former_osca_id', 'like', "%{$search}%")
+                ->orWhere('barangay', 'like', "%{$search}%")
+                ->orWhere('contact_number', 'like', "%{$search}%")
+                ->orWhere('rrn', 'like', "%{$search}%")
+                ->orWhere('national_id', 'like', "%{$search}%");
 
             if ($terms === []) return;
 
-            // Prefer FULLTEXT boolean mode for name search (uses seniors_ft_name index)
+            // Use FULLTEXT for name search when available, but retain the LIKE
+            // fallback for extension names, non-name fields, and short tokens.
             if ($this->hasFulltextIndex() && count($terms) <= 5) {
                 $boolean = implode(' ', array_map(function ($t) {
                     $clean = preg_replace('/[^\p{L}\p{N}]/u', '', $t);
@@ -82,18 +88,28 @@ class SeniorController extends Controller
                 $boolean = trim($boolean);
                 if ($boolean !== '' && $boolean !== '+' && $boolean !== '+*') {
                     $q->orWhereRaw("MATCH(first_name, middle_name, last_name) AGAINST(? IN BOOLEAN MODE)", [$boolean]);
-                    return;
                 }
             }
 
-            // Fallback: LIKE per-term (original behavior) — kept for when FT not yet migrated or boolean empty
-            $q->orWhere(function ($nameQuery) use ($terms) {
+            $searchableColumns = [
+                'first_name',
+                'middle_name',
+                'last_name',
+                'extension_name',
+                'barangay',
+                'contact_number',
+                'rrn',
+                'national_id',
+                'former_osca_id',
+            ];
+
+            // LIKE fallback also supports short terms and fields outside FULLTEXT.
+            $q->orWhere(function ($nameQuery) use ($terms, $searchableColumns) {
                 foreach ($terms as $term) {
-                    $nameQuery->where(function ($termQuery) use ($term) {
-                        $termQuery->where('first_name', 'like', "%{$term}%")
-                            ->orWhere('middle_name', 'like', "%{$term}%")
-                            ->orWhere('last_name', 'like', "%{$term}%")
-                            ->orWhere('extension_name', 'like', "%{$term}%");
+                    $nameQuery->where(function ($termQuery) use ($term, $searchableColumns) {
+                        foreach ($searchableColumns as $column) {
+                            $termQuery->orWhere($column, 'like', "%{$term}%");
+                        }
                     });
                 }
             });
@@ -120,6 +136,22 @@ class SeniorController extends Controller
     /**
      * Get all seniors with optional filtering — optimized for fast search
      */
+    public function barangays()
+    {
+        $barangays = Senior::query()
+            ->whereNotNull('barangay')
+            ->whereRaw("TRIM(barangay) <> ''")
+            ->distinct()
+            ->orderBy('barangay')
+            ->pluck('barangay')
+            ->map(fn ($barangay) => trim((string) $barangay))
+            ->filter()
+            ->unique()
+            ->values();
+
+        return response()->json(['data' => $barangays]);
+    }
+
     public function index(Request $request)
     {
         $search = trim((string) $request->get('search', ''));
@@ -129,6 +161,7 @@ class SeniorController extends Controller
         $minAge = $request->get('min_age');
         $maxAge = $request->get('max_age');
         $category = $request->get('category');
+        $centenarians = $request->boolean('centenarians');
         $page = (int) $request->get('page', 1);
         $perPageRaw = $request->get('per_page', 15);
         $sortBy = $request->get('sort', 'last_name');
@@ -140,7 +173,7 @@ class SeniorController extends Controller
         // Fast-path: cache paginated search results for 45s (file cache, offline-friendly)
         $cacheVersion = Cache::get('seniors:cache_version', 1);
         $cacheKey = sprintf(
-            'seniors:index:v%s:%s:%s:%s:%s:%s:%s:%s:%s:%s:%s',
+            'seniors:index:v%s:%s:%s:%s:%s:%s:%s:%s:%s:%s:%s:%s',
             $cacheVersion,
             $hasSearch ? md5($search) : 'nosearch',
             $barangay ?? 'all',
@@ -148,25 +181,30 @@ class SeniorController extends Controller
             $minAge ?? 'nomin',
             $maxAge ?? 'nomax',
             $category ?? 'allcat',
+            $centenarians ? 'cents' : 'allcents',
             $perPageRaw,
             $sortBy,
             $sortOrder,
             $page
         );
-        $shouldCache = $hasSearch || $request->has('barangay') || $request->has('page') || $request->has('min_age') || $request->has('max_age') || $request->has('category');
+        $shouldCache = $hasSearch || $request->has('barangay') || $request->has('page') || $request->has('min_age') || $request->has('max_age') || $request->has('category') || $centenarians;
 
-        $exec = function () use ($request, $search, $hasSearch, $barangay, $status, $minAge, $maxAge, $category, $perPageRaw, $sortBy, $sortOrder) {
+        $exec = function () use ($request, $search, $hasSearch, $barangay, $status, $minAge, $maxAge, $category, $centenarians, $perPageRaw, $sortBy, $sortOrder) {
             $query = Senior::withCount('familyMembers')
                 ->select(['id','osca_id','first_name','middle_name','last_name','extension_name','date_of_birth','age','place_of_birth','sex','mothers_maiden_name','pension_status','barangay','street_address','contact_number','emergency_name','emergency_contact','rrn','national_id','community_tax_number','issued_on','issued_at','profile_photo_path','id_config','status','created_at','updated_at']);
 
             if (!$request->has('status')) {
-                $query->where('status', 'Active');
+                $query->whereIn('status', ['Active', 'active', 'approved', 'Approved']);
             } elseif ($status && $status !== 'All') {
                 $query->where('status', $status);
             }
 
             if ($hasSearch) {
                 $this->applySeniorSearch($query, $search);
+            }
+
+            if ($centenarians) {
+                $query->centenarians();
             }
 
             if ($barangay && $barangay !== 'All Barangays') {
@@ -1202,7 +1240,11 @@ class SeniorController extends Controller
         }
 
         if ($updated > 0) {
-            Cache::forget('stats:v3:all:all');
+            if (Cache::has('stats:cache_version')) {
+                Cache::increment('stats:cache_version');
+            } else {
+                Cache::forever('stats:cache_version', 2);
+            }
             if (Cache::has('seniors:cache_version')) {
                 Cache::increment('seniors:cache_version');
             } else {

@@ -4,6 +4,12 @@ import { withCache, clearCache, getCache } from '../../../core/api/cache';
 export const seniorsAPI = {
   clearCache: () => clearCache(),
 
+  getBarangays: async () => {
+    const response = await api.get('/seniors/barangays');
+    const data = response.data?.data ?? response.data ?? [];
+    return Array.isArray(data) ? data : [];
+  },
+
   getAll: async (params?: any) => {
     const requestParams = { ...(params || {}) };
     const forceRefresh = Boolean(requestParams.fresh);
@@ -32,7 +38,7 @@ export const seniorsAPI = {
 
   getByOscaId: async (oscaId: string) => {
     return withCache(`senior-osca-${oscaId}`, async () => {
-      const response = await api.get(`/seniors/osca/${oscaId}`);
+      const response = await api.get(`/seniors/${encodeURIComponent(oscaId)}`);
       return response.data;
     });
   },

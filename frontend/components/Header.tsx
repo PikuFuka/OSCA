@@ -9,7 +9,8 @@ import {
   MapPin, LayoutDashboard, ClipboardList, History, HardDrive,
   Users, ArrowRight, Command
 } from 'lucide-react';
-import { CurrentUser, BARANGAYS, ViewType } from '../types';
+import { CurrentUser, ViewType } from '../types';
+import { useBarangays } from '../hooks/useBarangays';
 import { requestsAPI, activityLogsAPI, seniorsAPI } from '../services/api';
 import { ProfilePhoto } from '../shared/components/ProfilePhoto';
 
@@ -60,6 +61,7 @@ const getHeaderContent = (viewTitle: string) => {
 };
 
 const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, onLogout, setView, onSelectSenior }) => {
+  const barangays = useBarangays();
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -126,8 +128,8 @@ const Header: React.FC<HeaderProps> = ({ viewTitle, toggleSidebar, currentUser, 
   const matchedBarangays = useMemo(() => {
     if (searchQuery.length < 2) return [];
     const q = searchQuery.toLowerCase();
-    return BARANGAYS.filter(b => b.toLowerCase().includes(q)).slice(0, 5);
-  }, [searchQuery]);
+    return barangays.filter(b => b.toLowerCase().includes(q)).slice(0, 5);
+  }, [searchQuery, barangays]);
 
   // Filtered pages & actions
   const filteredPages = useMemo(() => {

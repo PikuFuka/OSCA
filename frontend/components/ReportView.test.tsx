@@ -127,7 +127,7 @@ describe('ReportView Excel export loading', () => {
     };
 
     vi.mocked(seniorsAPI.getAll).mockImplementation((params: any) => {
-      if (params?.per_page === -1) {
+      if (params?.centenarians === true) {
         return Promise.resolve({ data: [verifiedCentenarian, placeholder, nonCentenarian] } as any);
       }
       return Promise.resolve({
@@ -144,6 +144,38 @@ describe('ReportView Excel export loading', () => {
     expect(screen.queryByText('Placeholder Birthdate')).not.toBeInTheDocument();
     expect(screen.queryByText('Seventy Year Old')).not.toBeInTheDocument();
     expect(screen.getByText('Total: 1')).toBeInTheDocument();
+  });
+
+  it('requests only the data each report section needs', async () => {
+    render(<ReportView notify={vi.fn()} />);
+
+    await waitFor(() => expect(seniorsAPI.getAll).toHaveBeenCalled());
+    expect(vi.mocked(seniorsAPI.getAll).mock.calls[0][0]).toMatchObject({
+      page: 1,
+      per_page: 15,
+    });
+    expect(vi.mocked(seniorsAPI.getAll).mock.calls[0][0]).not.toHaveProperty('centenarians');
+
+    vi.mocked(seniorsAPI.getAll).mockClear();
+
+    fireEvent.click(await screen.findByRole('button', { name: /living centenarians/i }));
+
+    await waitFor(() => expect(seniorsAPI.getAll).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(seniorsAPI.getAll).mock.calls[0][0]).toMatchObject({
+      centenarians: true,
+    });
+
+    vi.mocked(seniorsAPI.getAll).mockClear();
+
+    fireEvent.click(screen.getByRole('button', { name: /new registered/i }));
+
+    await waitFor(() => expect(seniorsAPI.getAll).toHaveBeenCalledTimes(1));
+    expect(vi.mocked(seniorsAPI.getAll).mock.calls[0][0]).toMatchObject({
+      per_page: 30,
+      sort: 'created_at',
+      order: 'desc',
+    });
+    expect(vi.mocked(seniorsAPI.getAll).mock.calls[0][0]).not.toHaveProperty('centenarians');
   });
 
   it('clears the loading overlay and reports an error when the download fails', async () => {

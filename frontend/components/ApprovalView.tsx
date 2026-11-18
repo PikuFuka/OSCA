@@ -102,29 +102,16 @@ const ApprovalView: React.FC<ApprovalViewProps> = ({ notify, setView }) => {
         to: meta.to ?? ((page - 1) * pagination.perPage) + transformedRequests.length,
       });
     } catch (error) {
-      const savedRequests = localStorage.getItem('pendingRequests');
-      if (savedRequests) {
-        const parsed = JSON.parse(savedRequests);
-        setRequests(parsed);
-        setPagination(prev => ({
-          ...prev,
-          currentPage: 1,
-          lastPage: 1,
-          total: parsed.length,
-          from: parsed.length ? 1 : 0,
-          to: parsed.length,
-        }));
-      } else {
-        setRequests([]);
-        setPagination(prev => ({
-          ...prev,
-          currentPage: 1,
-          lastPage: 1,
-          total: 0,
-          from: 0,
-          to: 0,
-        }));
-      }
+      setRequests([]);
+      setPagination(prev => ({
+        ...prev,
+        currentPage: 1,
+        lastPage: 1,
+        total: 0,
+        from: 0,
+        to: 0,
+      }));
+      if (!background) notify('Failed to load approval requests from the database.', 'error');
     } finally {
       if (!background) {
         setLoading(false);

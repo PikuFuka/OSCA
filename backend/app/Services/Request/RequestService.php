@@ -8,6 +8,7 @@ use App\Models\ActivityLog;
 use App\Models\FamilyMember;
 use App\Services\Senior\OscaIdVacancyService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 
 class RequestService
 {
@@ -17,20 +18,31 @@ class RequestService
 
     public function approve(SeniorRequest $req, ?string $oscaId, $actor): SeniorRequest
     {
-        if ($req->status !== 'Pending') {
-            abort(response()->json(['success' => false, 'message' => 'Only pending requests can be approved.'], 422));
-        }
-
         $oscaId = $oscaId !== null ? trim($oscaId) : null;
         $oscaId = $oscaId === '' ? null : $oscaId;
 
-        $senior = $req->senior;
-        if ($oscaId) {
-            $exists = Senior::where('osca_id', $oscaId)->whereNotNull('osca_id')->whereRaw("TRIM(osca_id) <> ''")->where('id','!=',$senior->id)->exists();
-            if ($exists) abort(response()->json(['success'=>false,'message'=>'The provided OSCA ID is already in use by another member.'], 422));
-        }
+        return DB::transaction(function() use ($req, $oscaId, $actor) {
+            $req = SeniorRequest::query()->lockForUpdate()->findOrFail($req->getKey());
+            if ($req->status !== 'Pending') {
+                abort(response()->json(['success' => false, 'message' => 'Only pending requests can be approved.'], 422));
+            }
 
-        return DB::transaction(function() use ($req, $senior, $oscaId, $actor) {
+            $senior = Senior::query()->lockForUpdate()->find($req->senior_id);
+            if (!$senior) {
+                abort(response()->json(['success' => false, 'message' => 'The senior record for this request was not found.'], 422));
+            }
+
+            if ($oscaId) {
+                $exists = Senior::where('osca_id', $oscaId)
+                    ->whereNotNull('osca_id')
+                    ->whereRaw("TRIM(osca_id) <> ''")
+                    ->where('id', '!=', $senior->id)
+                    ->exists();
+                if ($exists) {
+                    abort(response()->json(['success'=>false,'message'=>'The provided OSCA ID is already in use by another member.'], 422));
+                }
+            }
+
             if ($oscaId && $req->type !== 'ID Replacement') {
                 // Consume a released ID if this is one, inside the same
                 // transaction that assigns it so it cannot be double-claimed.
@@ -89,15 +101,27 @@ class RequestService
 
     public function reject(SeniorRequest $req, ?string $reason, $actor): SeniorRequest
     {
-        if ($req->status !== 'Pending') {
-            abort(response()->json(['success' => false, 'message' => 'Only pending requests can be rejected.'], 422));
-        }
-
         return DB::transaction(function() use ($req, $reason, $actor) {
-            $senior = $req->senior;
+            $req = SeniorRequest::query()->lockForUpdate()->findOrFail($req->getKey());
+            if ($req->status !== 'Pending') {
+                abort(response()->json(['success' => false, 'message' => 'Only pending requests can be rejected.'], 422));
+            }
+
+            $senior = Senior::query()->lockForUpdate()->find($req->senior_id);
             $req->update(['status'=>'Rejected','rejection_reason'=>$reason,'action_by'=>$actor->id]);
             ActivityLog::create(['user_id'=>$actor->id,'action'=>'REJECTED_REQUEST','target_type'=>'Request','target_id'=>$req->id,'details'=>['senior_id'=>$senior?->osca_id,'senior_name'=>$senior?->full_name ?? 'Unknown','reason'=>$reason ?? 'No reason provided'],'ip_address'=>request()->ip()]);
-            if ($req->type === 'New Application' && $senior) $senior->forceDelete();
+            if ($req->type === 'New Application' && $senior) {
+                $documents = $senior->documents()->get(['id', 'file_path']);
+                foreach ($documents as $document) {
+                    $document->delete();
+                }
+
+                if ($senior->profile_photo_path) {
+                    Storage::disk('public')->delete($senior->profile_photo_path);
+                }
+
+                $senior->forceDelete();
+            }
             return $req;
         });
     }

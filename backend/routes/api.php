@@ -24,6 +24,7 @@ Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,
 Route::post('/register', [SeniorController::class, 'store']);
 // Public endpoint to fetch the next available OSCA ID for registration
 Route::get('/seniors/next-id', [SeniorController::class, 'getNextId']);
+Route::get('/seniors/barangays', [SeniorController::class, 'barangays']);
 
 // ----------------------------------------------------------------------
 // Staff & admin routes (Admin and Staff only).

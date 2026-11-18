@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -20,21 +21,199 @@ class UserController extends Controller
             return response()->json(['message' => 'Unauthorized. Admin access required.'], 403);
         }
 
-        $users = User::orderBy('name')->get();
+        $search = trim((string) $request->get('search', ''));
+        $tab = (string) $request->get('tab', 'All');
+        $page = max(1, (int) $request->get('page', 1));
+        $perPage = min(max((int) $request->get('per_page', 15), 1), 100);
+
+        $accountsQuery = null;
+
+        if (in_array($tab, ['All', 'Admin', 'Staff'], true)) {
+            $userQuery = DB::table('users')
+                ->selectRaw("'User' as source")
+                ->addSelect('id as record_id')
+                ->selectRaw('NULL as osca_id')
+                ->addSelect('name as display_name')
+                ->addSelect('email')
+                ->addSelect('role')
+                ->selectRaw('barangay_assignment as barangay')
+                ->selectRaw('status as record_status')
+                ->selectRaw('NULL as first_name')
+                ->selectRaw('NULL as last_name')
+                ->selectRaw('NULL as profile_photo_path')
+                ->selectRaw('LOWER(name) as sort_key');
+
+            if ($tab === 'Admin') $userQuery->where('role', 'Admin');
+            if ($tab === 'Staff') $userQuery->where('role', 'Staff');
+            if ($search !== '') {
+                $userQuery->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('id', 'like', "%{$search}%");
+                });
+            }
+
+            $accountsQuery = $userQuery;
+        }
+
+        if (in_array($tab, ['All', 'Senior'], true)) {
+            $displayName = $this->seniorDisplayNameExpression();
+
+            $seniorQuery = DB::table('seniors')
+                ->whereNull('deleted_at')
+                ->selectRaw("'Senior' as source")
+                ->addSelect('id as record_id')
+                ->addSelect('osca_id')
+                ->selectRaw("{$displayName} as display_name")
+                ->selectRaw("'' as email")
+                ->selectRaw("'Senior Citizen' as role")
+                ->addSelect('barangay')
+                ->addSelect('status as record_status')
+                ->addSelect('first_name')
+                ->addSelect('last_name')
+                ->addSelect('profile_photo_path')
+                ->selectRaw("LOWER({$displayName}) as sort_key");
+
+            if ($search !== '') {
+                $seniorQuery->where(function ($q) use ($search) {
+                    $q->where('first_name', 'like', "%{$search}%")
+                        ->orWhere('middle_name', 'like', "%{$search}%")
+                        ->orWhere('last_name', 'like', "%{$search}%")
+                        ->orWhere('osca_id', 'like', "%{$search}%");
+                });
+            }
+
+            $accountsQuery = $accountsQuery
+                ? $accountsQuery->unionAll($seniorQuery)
+                : $seniorQuery;
+        }
+
+        $seniorCount = DB::table('seniors')->whereNull('deleted_at')->count();
+        $allCount = DB::table('users')->count() + $seniorCount;
+        $adminCount = DB::table('users')->where('role', 'Admin')->count();
+        $staffCount = DB::table('users')->where('role', 'Staff')->count();
+        $tabCounts = [
+            'All' => $allCount,
+            'Admin' => $adminCount,
+            'Staff' => $staffCount,
+            'Senior' => $seniorCount,
+        ];
+
+        if ($accountsQuery === null) {
+            $pageItems = [];
+            $total = 0;
+        } else {
+            // Count and page the union inside the database so the endpoint never
+            // hydrates the whole registry just to show one page. Without a
+            // search term the tab counts already give the exact total.
+            $total = $search === ''
+                ? (int) match ($tab) {
+                    'All' => $allCount,
+                    'Senior' => $seniorCount,
+                    'Admin' => $adminCount,
+                    'Staff' => $staffCount,
+                    default => 0,
+                }
+                : (int) DB::query()->fromSub(clone $accountsQuery, 'accounts')->count();
+
+            $pageItems = DB::query()
+                ->fromSub(clone $accountsQuery, 'accounts')
+                ->orderBy('sort_key')
+                ->orderBy('source')
+                ->orderBy('record_id')
+                ->offset(($page - 1) * $perPage)
+                ->limit($perPage)
+                ->get()
+                ->map(fn ($row) => $this->formatAccountRow($row))
+                ->values()
+                ->all();
+        }
 
         return response()->json([
-            'data' => $users->map(function($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'email' => $user->email,
-                    'role' => $user->role,
-                    'barangay_assignment' => $user->barangay_assignment,
-                    'status' => $user->status ?? 'Active',
-                    'lastActive' => $user->last_active_at?->format('Y-m-d H:i:s'),
-                ];
-            })
+            'data' => $pageItems,
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => max(1, (int) ceil($total / $perPage)),
+                'per_page' => $perPage,
+                'total' => $total,
+                'from' => $total ? (($page - 1) * $perPage) + 1 : 0,
+                'to' => $total ? min($page * $perPage, $total) : 0,
+                'tabCounts' => $tabCounts,
+            ],
         ]);
+    }
+
+    /**
+     * Portable SQL expression for a senior's display name.
+     */
+    private function seniorDisplayNameExpression(): string
+    {
+        if (DB::connection()->getDriverName() === 'sqlite') {
+            return "TRIM("
+                . "COALESCE(first_name, '') || ' ' || "
+                . "CASE WHEN COALESCE(middle_name, '') = '' THEN '' ELSE middle_name || ' ' END || "
+                . "CASE WHEN COALESCE(last_name, '') = '' THEN '' ELSE last_name || ' ' END || "
+                . "COALESCE(extension_name, '')"
+                . ")";
+        }
+
+        return "TRIM(CONCAT_WS(' ', first_name, NULLIF(middle_name, ''), NULLIF(last_name, ''), NULLIF(extension_name, '')))";
+    }
+
+    /**
+     * Shape a row produced by the accounts union into the public payload.
+     */
+    private function formatAccountRow(object $row): array
+    {
+        if ($row->source === 'User') {
+            $status = $row->record_status ?: 'Active';
+
+            return [
+                'id' => 'user-' . $row->record_id,
+                'name' => $row->display_name,
+                'role' => $row->role,
+                'barangay' => $row->barangay ?: 'All',
+                'status' => $status,
+                'email' => $row->email,
+                'type' => 'User',
+                'originalData' => [
+                    'id' => $row->record_id,
+                    'name' => $row->display_name,
+                    'email' => $row->email,
+                    'role' => $row->role,
+                    'barangay_assignment' => $row->barangay,
+                    'status' => $status,
+                ],
+            ];
+        }
+
+        $name = trim((string) $row->display_name);
+        $status = in_array(strtolower((string) $row->record_status), ['active', 'approved'], true)
+            ? 'Active'
+            : ($row->record_status ?: 'Pending');
+        $idPhoto = $row->profile_photo_path
+            ? '/api/storage/profiles/' . basename($row->profile_photo_path)
+            : null;
+
+        return [
+            'id' => 'senior-' . ($row->osca_id ?: $row->record_id),
+            'name' => $name,
+            'role' => 'Senior Citizen',
+            'barangay' => $row->barangay ?: 'Unknown',
+            'status' => $status,
+            'email' => '',
+            'type' => 'Senior',
+            'originalData' => [
+                'id' => $row->record_id,
+                'osca_id' => $row->osca_id,
+                'name' => $name,
+                'firstName' => $row->first_name,
+                'lastName' => $row->last_name,
+                'barangay' => $row->barangay,
+                'status' => $row->record_status,
+                'idPhoto' => $idPhoto,
+            ],
+        ];
     }
 
     /**

@@ -59,19 +59,40 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
       setLoading(true);
       try {
         const [masterlistResponse, allActiveResponse, deceasedResponse] = await Promise.all([
-          seniorsAPI.getAll({
-            barangay: selectedBrgy === 'All Barangays' ? undefined : selectedBrgy,
-            category: selectedCategory === 'All Categories' ? undefined : selectedCategory,
-            min_age: debouncedAgeMin || undefined,
-            max_age: debouncedAgeMax || undefined,
-            page,
-            per_page: itemsPerPage,
-          }),
-          seniorsAPI.getAll({
-            barangay: selectedBrgy === 'All Barangays' ? undefined : selectedBrgy,
-            per_page: -1,
-          }),
-          seniorsAPI.getDeceased(),
+          activeSection === 'masterlist'
+            ? seniorsAPI.getAll({
+                barangay: selectedBrgy === 'All Barangays' ? undefined : selectedBrgy,
+                category: selectedCategory === 'All Categories' ? undefined : selectedCategory,
+                min_age: debouncedAgeMin || undefined,
+                max_age: debouncedAgeMax || undefined,
+                page,
+                per_page: itemsPerPage,
+              })
+            : Promise.resolve(null),
+          activeSection === 'centenarians'
+            ? seniorsAPI.getAll({
+                barangay: selectedBrgy === 'All Barangays' ? undefined : selectedBrgy,
+                category: selectedCategory === 'All Categories' ? undefined : selectedCategory,
+                min_age: debouncedAgeMin || undefined,
+                max_age: debouncedAgeMax || undefined,
+                per_page: -1,
+                sort: 'last_name',
+                order: 'asc',
+                centenarians: true,
+              })
+            : activeSection === 'newly-registered'
+              ? seniorsAPI.getAll({
+                  barangay: selectedBrgy === 'All Barangays' ? undefined : selectedBrgy,
+                  category: selectedCategory === 'All Categories' ? undefined : selectedCategory,
+                  min_age: debouncedAgeMin || undefined,
+                  max_age: debouncedAgeMax || undefined,
+                  page: 1,
+                  per_page: 30,
+                  sort: 'created_at',
+                  order: 'desc',
+                })
+              : Promise.resolve(null),
+          activeSection === 'deceased' ? seniorsAPI.getDeceased() : Promise.resolve(null),
         ]);
 
         const masterlistData = masterlistResponse?.data
@@ -92,9 +113,11 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
             ? deceasedResponse
             : [];
 
-        setSeniorsData(masterlistData);
-        setTotalPages(masterlistResponse?.meta?.last_page || masterlistResponse?.last_page || 1);
-        setTotalCount(masterlistResponse?.meta?.total ?? masterlistResponse?.total ?? masterlistData.length);
+        if (activeSection === 'masterlist') {
+          setSeniorsData(masterlistData);
+          setTotalPages(masterlistResponse?.meta?.last_page || masterlistResponse?.last_page || 1);
+          setTotalCount(masterlistResponse?.meta?.total ?? masterlistResponse?.total ?? masterlistData.length);
+        }
         // The backend owns the centenarian rule: a real birthdate and age 100+.
         // Never infer it from the displayed age, which may be an unknown
         // fallback for imported 1900-01-01 placeholder records.
@@ -126,7 +149,7 @@ const ReportView: React.FC<ReportViewProps> = ({ notify, setGlobalLoading, initi
       }
     };
     fetchData();
-  }, [selectedBrgy, selectedCategory, debouncedAgeMin, debouncedAgeMax, page]);
+  }, [activeSection, selectedBrgy, selectedCategory, debouncedAgeMin, debouncedAgeMax, page]);
 
   useEffect(() => {
     scrollMainToTop();

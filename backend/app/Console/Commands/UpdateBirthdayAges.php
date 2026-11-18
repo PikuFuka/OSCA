@@ -49,7 +49,11 @@ class UpdateBirthdayAges extends Command
             });
 
         if ($updated > 0) {
-            \Illuminate\Support\Facades\Cache::forget('stats:v3:all:all');
+            if (\Illuminate\Support\Facades\Cache::has('stats:cache_version')) {
+                \Illuminate\Support\Facades\Cache::increment('stats:cache_version');
+            } else {
+                \Illuminate\Support\Facades\Cache::forever('stats:cache_version', 2);
+            }
             if (\Illuminate\Support\Facades\Cache::has('seniors:cache_version')) {
                 \Illuminate\Support\Facades\Cache::increment('seniors:cache_version');
             } else {

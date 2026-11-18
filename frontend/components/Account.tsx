@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import TransitionWrapper from './TransitionWrapper';
 import { createPortal } from 'react-dom';
 import { Search, Edit2, Plus, Users, Shield, FileText, Lock, X, Save, User, UserCheck, UserX, AlertOctagon, UserCog, UserPlus, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
-import { BARANGAYS } from '../types';
+import { useBarangays } from '../hooks/useBarangays';
 import { usersAPI, seniorsAPI } from '../services/api';
 import { CurrentUser } from '../types';
 import ConfirmModal from './ConfirmModal';
@@ -39,6 +39,7 @@ interface AccountProps {
 
 const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   const [accounts, setAccounts] = useState<UnifiedAccount[]>([]);
+  const barangays = useBarangays();
   const isAdmin = currentUser.role === 'Admin';
   
   const [loading, setLoading] = useState(true);
@@ -48,6 +49,9 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   const [selectedAccount, setSelectedAccount] = useState<UnifiedAccount | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalAccounts, setTotalAccounts] = useState(0);
+  const [tabCounts, setTabCounts] = useState({ All: 0, Admin: 0, Staff: 0, Senior: 0 });
   const itemsPerPage = 15;
 
   const fetchAccounts = async (background = false) => {
@@ -56,42 +60,18 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
     }
     setError(null);
     try {
-      const [usersResponse, seniorsResponse] = await Promise.all([
-        usersAPI.getAll(),
-        seniorsAPI.getAll({ per_page: -1, fresh: true })
-      ]);
-
-      const usersData = Array.isArray(usersResponse)
-        ? usersResponse
-        : (usersResponse?.data || []);
-      const seniorsData = Array.isArray(seniorsResponse)
-        ? seniorsResponse
-        : (seniorsResponse?.data || []);
-
-      const unifiedAccounts: UnifiedAccount[] = [
-        ...(Array.isArray(usersData) ? usersData : []).filter(u => u && typeof u === 'object').map((u: any) => ({
-          id: `user-${u.id || Math.random()}`,
-          name: String(u.name || 'Unknown'),
-          role: String(u.role || 'Staff'),
-          barangay: String(u.barangay_assignment || u.barangay || 'All'),
-          status: String(u.status || 'Active'),
-          email: String(u.email || ''),
-          type: 'User' as const,
-          originalData: u
-        })),
-        ...(Array.isArray(seniorsData) ? seniorsData : []).filter(s => s && typeof s === 'object').map((s: any) => ({
-          id: `senior-${s.osca_id || s.id || Math.random()}`,
-          name: String(s.name || `${s.firstName || s.first_name || ''} ${s.lastName || s.last_name || ''}`.trim() || 'Unknown'),
-          role: 'Senior Citizen',
-          barangay: String(s.barangay || 'Unknown'),
-          status: (s.status === 'approved' || s.status === 'Active') ? 'Active' : String(s.status || 'Pending'),
-          email: String(s.email || `senior-${s.osca_id || s.id}@osca.ph`),
-          type: 'Senior' as const,
-          originalData: s
-        }))
-      ];
-
-      setAccounts(unifiedAccounts);
+      const response = await usersAPI.getAll({
+        search: searchTerm.trim() || undefined,
+        tab: activeTab,
+        page,
+        per_page: itemsPerPage,
+      });
+      const accountsData = Array.isArray(response?.data) ? response.data : [];
+      setAccounts(accountsData);
+      const meta = response?.meta || {};
+      setTotalPages(Math.max(1, Number(meta.last_page || 1)));
+      setTotalAccounts(Number(meta.total || accountsData.length));
+      if (meta.tabCounts) setTabCounts(meta.tabCounts);
     } catch (err: any) {
       const errorMessage = err instanceof Error ? err.message : String(err);
       setError(errorMessage);
@@ -107,8 +87,9 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   
   // Fetch accounts from API
   useEffect(() => {
-    fetchAccounts();
-  }, []);
+    const timer = setTimeout(() => fetchAccounts(), searchTerm ? 220 : 0);
+    return () => clearTimeout(timer);
+  }, [searchTerm, activeTab, page]);
   
   // Confirmation state
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
@@ -129,38 +110,16 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
     name: '',
     email: '',
     role: 'Staff',
-    barangay: BARANGAYS[0],
+    barangay: '',
     password: '',
     confirmPassword: ''
   });
 
-  const filteredAccounts = useMemo(() => {
-    return accounts.filter(acc => {
-      const matchesSearch = (acc.name || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            (acc.id || '').toLowerCase().includes(searchTerm.toLowerCase());
-      
-      let matchesTab = true;
-      if (activeTab === 'Admin') matchesTab = acc.role === 'Admin';
-      if (activeTab === 'Staff') matchesTab = acc.role === 'Staff';
-      if (activeTab === 'Senior') matchesTab = acc.type === 'Senior';
-
-      return matchesSearch && matchesTab;
-    });
-  }, [accounts, searchTerm, activeTab]);
-
-  const displayedAccounts = filteredAccounts.slice((page - 1) * itemsPerPage, page * itemsPerPage);
-  const totalPages = Math.max(1, Math.ceil(filteredAccounts.length / itemsPerPage));
+  const displayedAccounts = accounts;
 
   useEffect(() => {
     scrollMainToTop();
   }, [page]);
-
-  const tabCounts = useMemo(() => ({
-    All: accounts.length,
-    Admin: accounts.filter(a => a.role === 'Admin').length,
-    Staff: accounts.filter(a => a.role === 'Staff').length,
-    Senior: accounts.filter(a => a.type === 'Senior').length
-  }), [accounts]);
 
   const tabs = [
     { id: 'All', label: 'All Accounts', icon: Users, count: tabCounts.All },
@@ -260,7 +219,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
         name: '',
         email: '',
         role: 'Staff',
-        barangay: BARANGAYS[0],
+        barangay: '',
         password: '',
         confirmPassword: ''
       });
@@ -273,8 +232,9 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
   const handleConfirmSave = async () => {
     if (selectedAccount) {
       try {
-        const idParts = selectedAccount.id.split('-');
-        const realId = idParts[1]; // Get the actual ID
+        const realId = selectedAccount.type === 'User'
+          ? selectedAccount.originalData.id
+          : (selectedAccount.originalData.id ?? selectedAccount.originalData.osca_id);
 
         if (selectedAccount.type === 'User') {
           await usersAPI.update(Number(realId), {
@@ -372,7 +332,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
                 <span className="text-[11px] leading-none">✕</span>
               </button>
             ) : (
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline text-[10px] font-medium text-slate-400 pointer-events-none">{filteredAccounts.length}</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 hidden sm:inline text-[10px] font-medium text-slate-400 pointer-events-none">{tabCounts[activeTab]}</span>
             )}
           </div>
         </div>
@@ -446,7 +406,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
            <ShowingText
              from={displayedAccounts.length ? (page - 1) * itemsPerPage + 1 : 0}
              to={(page - 1) * itemsPerPage + displayedAccounts.length}
-             total={filteredAccounts.length}
+             total={totalAccounts}
              noun="accounts"
            />
            <div className="flex items-center gap-1.5">
@@ -531,7 +491,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
                      {selectedAccount.type === 'User' ? (
                        <select className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700" value={editForm.barangay} onChange={(e) => setEditForm({...editForm, barangay: e.target.value})}>
                         <option value="Municipal Hall">Municipal Hall</option>
-                        {BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}
+                        {barangays.map(b => <option key={b} value={b}>{b}</option>)}
                       </select>
                      ) : (
                         <input type="text" value={editForm.barangay} readOnly className="w-full px-4 py-3 rounded-xl bg-slate-100 border border-slate-200 font-bold text-slate-500 cursor-not-allowed"/>
@@ -596,7 +556,7 @@ const Account: React.FC<AccountProps> = ({ currentUser, notify }) => {
                 <div className="space-y-2"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Email Address</label><input type="email" required className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700" value={createForm.email} onChange={(e) => setCreateForm({...createForm, email: e.target.value})} /></div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Role</label><select className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700" value={createForm.role} onChange={(e) => setCreateForm({...createForm, role: e.target.value})}><option value="Admin">Admin</option><option value="Staff">Staff</option></select></div>
-                  <div className="space-y-2"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Assignment / Unit</label><select className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700" value={createForm.barangay} onChange={(e) => setCreateForm({...createForm, barangay: e.target.value})}><option value="Municipal Hall">Municipal Hall</option>{BARANGAYS.map(b => <option key={b} value={b}>{b}</option>)}</select></div>
+                  <div className="space-y-2"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Assignment / Unit</label><select className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700" value={createForm.barangay} onChange={(e) => setCreateForm({...createForm, barangay: e.target.value})}><option value="Municipal Hall">Municipal Hall</option>{barangays.map(b => <option key={b} value={b}>{b}</option>)}</select></div>
                 </div>
                 <div className="pt-4 border-t border-slate-100"><p className="text-sm font-bold text-slate-800 mb-4">Set Password</p><div className="space-y-4"><div className="space-y-2"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Password</label><input type="password" required className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700" value={createForm.password} onChange={(e) => setCreateForm({...createForm, password: e.target.value})} /></div><div className="space-y-2"><label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Confirm Password</label><input type="password" required className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700" value={createForm.confirmPassword} onChange={(e) => setCreateForm({...createForm, confirmPassword: e.target.value})} /></div></div></div>
               </div>

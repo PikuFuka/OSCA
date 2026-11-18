@@ -68,6 +68,7 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
   const [showDetails, setShowDetails] = useState(false);
   const [memberData, setMemberData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
 
   useEffect(() => {
     const fetchMemberData = async () => {
@@ -75,14 +76,30 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
         // Always fetch fresh to avoid stale cache hiding uploaded documents
         const data = await seniorsAPI.getByIdFresh(currentUser.id as any);
         setMemberData(data);
+        setFetchError(false);
       } catch (error) {
-        // Silent fail
+        setMemberData(null);
+        setFetchError(true);
       } finally {
         setLoading(false);
       }
     };
     fetchMemberData();
   }, [currentUser.id]);
+
+  if (!loading && fetchError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-6">
+        <div className="p-6 bg-rose-50 rounded-full">
+          <AlertCircle className="text-rose-500" size={48} />
+        </div>
+        <div className="text-center max-w-md">
+          <h2 className="text-2xl font-black text-slate-900 mb-2">Unable to Load Your Record</h2>
+          <p className="text-slate-500 font-medium">Database information could not be retrieved. Please try again.</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!loading && memberData?.status !== 'Active') {
     return (
@@ -105,9 +122,11 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
 
   // Real details from memberData
   const details = {
-    dob: memberData.dateOfBirth || '1955-01-01',
-    pob: memberData.placeOfBirth || 'Pagsanjan, Laguna',
-    address: memberData.streetAddress || `Brgy. ${memberData.barangay}, Pagsanjan, Laguna`,
+    dob: memberData.dateOfBirth || 'Not provided',
+    pob: memberData.placeOfBirth || 'Not provided',
+    address: memberData.streetAddress
+      ? `${memberData.streetAddress}${memberData.barangay ? `, Brgy. ${memberData.barangay}` : ''}, Pagsanjan, Laguna`
+      : 'Not provided',
     contact: memberData.contactNumber || 'Not provided',
     rrn: memberData.rrn || 'N/A',
     nationalId: memberData.nationalId || 'N/A',
