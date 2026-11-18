@@ -336,6 +336,12 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
         <KPICard 
           title="Centenarians" 
           value={formatNumber(data.centenarians)} 
+          rawValue={data.centenarians}
+          data={data.monthlyStats.map((month: any) => ({
+            ...month,
+            centenarians: data.centenarians
+          }))}
+          dataKey="centenarians"
           icon={Award}
           statusLabel="Verified DB"
           onClick={() => onCardNavigate?.(ViewType.FINAL_REPORT, 'centenarians')}
