@@ -363,8 +363,8 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
               margin-bottom: 0;
             }
             .batch-card {
-              width: 3.5in;
-              height: 2.3in;
+              width: 85.6mm;
+              height: 53.5mm;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               position: relative;
@@ -375,7 +375,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
             .batch-card-content {
               width: 480px;
               height: 300px;
-              transform: scale(calc(3.5in / 480px), calc(2.3in / 300px));
+              transform: scale(calc(85.6mm / 480px), calc(53.5mm / 300px));
               transform-origin: top left;
               position: relative;
             }

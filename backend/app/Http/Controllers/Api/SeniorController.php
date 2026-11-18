@@ -69,11 +69,7 @@ class SeniorController extends Controller
 
         $query->where(function ($q) use ($search, $terms) {
             $q->where('osca_id', 'like', "%{$search}%")
-                ->orWhere('former_osca_id', 'like', "%{$search}%")
-                ->orWhere('barangay', 'like', "%{$search}%")
-                ->orWhere('contact_number', 'like', "%{$search}%")
-                ->orWhere('rrn', 'like', "%{$search}%")
-                ->orWhere('national_id', 'like', "%{$search}%");
+                ->orWhere('barangay', 'like', "%{$search}%");
 
             if ($terms === []) return;
 
@@ -97,10 +93,6 @@ class SeniorController extends Controller
                 'last_name',
                 'extension_name',
                 'barangay',
-                'contact_number',
-                'rrn',
-                'national_id',
-                'former_osca_id',
             ];
 
             // LIKE fallback also supports short terms and fields outside FULLTEXT.

@@ -583,6 +583,12 @@ main::-webkit-scrollbar-thumb:hover {
     box-shadow: none;
   }
 
+  .id-card-preview {
+    width: 480px;
+    height: 300px;
+    aspect-ratio: 8 / 5;
+  }
+
   .id-card-flip-stage {
     position: absolute;
     inset: 0;
@@ -717,7 +723,7 @@ main::-webkit-scrollbar-thumb:hover {
 @keyframes toastEnter {
   from {
     opacity: 0;
-    transform: translateY(-16px) scale(0.96);
+    transform: translateY(-10px) scale(0.985);
   }
   to {
     opacity: 1;
@@ -788,6 +794,10 @@ main::-webkit-scrollbar-thumb:hover {
   .chart-reveal,
   .dashboard-gender-bar {
     animation: none;
+  }
+
+  .dashboard-gender-bar {
+    transition: none !important;
   }
 
   .modal-backdrop-in {

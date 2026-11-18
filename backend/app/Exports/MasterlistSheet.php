@@ -162,10 +162,6 @@ class MasterlistSheet implements WithTitle, WithEvents
                         'last_name',
                         'extension_name',
                         'barangay',
-                        'contact_number',
-                        'rrn',
-                        'national_id',
-                        'former_osca_id',
                         'osca_id',
                     ];
 

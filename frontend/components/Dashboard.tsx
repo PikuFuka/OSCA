@@ -150,6 +150,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   const [birthdaysLoading, setBirthdaysLoading] = useState(true);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [genderBarsReady, setGenderBarsReady] = useState(false);
   const fetchIdRef = useRef(0);
 
   const years = useMemo(() => {
@@ -214,6 +215,13 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
   useEffect(() => {
     fetchStats();
   }, [selectedBarangay, selectedYear]);
+
+  useEffect(() => {
+    setGenderBarsReady(false);
+    if (!stats) return;
+    const frame = window.requestAnimationFrame(() => setGenderBarsReady(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, [stats, selectedBarangay, selectedYear]);
 
   const celebrants = useMemo(() => {
     if (!birthdaysData?.seniors) return [];
@@ -431,7 +439,11 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                          <span className="text-xl font-bold text-slate-900 tabular-nums">{formatNumber(f)}</span>
                        </div>
                        <div className="w-full h-2 bg-slate-100 rounded-none">
-                         <div style={{ width: `${fPct}%` }} className="h-full bg-rose-500 dashboard-gender-bar"></div>
+                         <div
+                           key={`female-${selectedBarangay}-${selectedYear}-${fPct}`}
+                           style={{ width: genderBarsReady ? `${fPct}%` : '0%' }}
+                           className="h-full bg-rose-500 dashboard-gender-bar"
+                         ></div>
                        </div>
                        <span className="text-[10px] text-slate-400 font-semibold mt-1 text-right">{fPct.toFixed(1)}%</span>
                      </div>
@@ -442,7 +454,11 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                          <span className="text-xl font-bold text-slate-900 tabular-nums">{formatNumber(m)}</span>
                        </div>
                        <div className="w-full h-2 bg-slate-100 rounded-none">
-                         <div style={{ width: `${mPct}%` }} className="h-full bg-systemBlue dashboard-gender-bar"></div>
+                         <div
+                           key={`male-${selectedBarangay}-${selectedYear}-${mPct}`}
+                           style={{ width: genderBarsReady ? `${mPct}%` : '0%' }}
+                           className="h-full bg-systemBlue dashboard-gender-bar"
+                         ></div>
                        </div>
                        <span className="text-[10px] text-slate-400 font-semibold mt-1 text-right">{mPct.toFixed(1)}%</span>
                      </div>

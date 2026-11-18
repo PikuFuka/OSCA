@@ -1745,8 +1745,8 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                   gap: 0mm !important;
                 }
                 .print-card {
-                  width: 3.5in !important;
-                  height: 2.3in !important;
+                  width: 85.6mm !important;
+                  height: 53.5mm !important;
                   -webkit-print-color-adjust: exact !important;
                   print-color-adjust: exact !important;
                   position: relative;
@@ -1756,7 +1756,7 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                 .print-content {
                   width: 480px;
                   height: 300px;
-                  transform: scale(calc(3.5in / 480px), calc(2.3in / 300px));
+                  transform: scale(calc(85.6mm / 480px), calc(53.5mm / 300px));
                   transform-origin: top left;
                 }
               }
@@ -2009,10 +2009,10 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                    </button>
 
                    <div 
-                      className="origin-top sm:origin-center transition-transform duration-300 mb-8 sm:mb-0 mt-8 sm:mt-0 scale-[0.55] sm:scale-75 md:scale-90 lg:scale-100"
+                      className="shrink-0 mb-8 sm:mb-0 mt-8 sm:mt-0"
                    >
                       <div 
-                        className="id-card-flip-shell w-[480px] h-[300px] rounded-xl relative overflow-hidden flex flex-col shrink-0 print:shadow-none cursor-pointer ring-4 ring-transparent"
+                        className="id-card-flip-shell id-card-preview rounded-xl relative overflow-hidden flex flex-col shrink-0 print:shadow-none cursor-pointer ring-4 ring-transparent"
                         onClick={() => setIsIdFlipped(!isIdFlipped)}
                       >
                           {/* Hint Label */}

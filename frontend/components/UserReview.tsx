@@ -161,7 +161,7 @@ const UserReview: React.FC<UserReviewProps> = ({ currentUser }) => {
         <div className="flex flex-col items-center">
             <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest mb-4">Digital Identification Card</h3>
             <div 
-              className="w-[480px] h-[300px] bg-white rounded-xl shadow-2xl relative overflow-hidden flex flex-col shrink-0 print:shadow-none cursor-pointer ring-4 ring-slate-100 select-none"
+              className="id-card-preview bg-white rounded-xl shadow-2xl relative overflow-hidden flex flex-col shrink-0 print:shadow-none cursor-pointer ring-4 ring-slate-100 select-none"
               onClick={() => setIsIdFlipped(!isIdFlipped)}
             >
                 {/* Hint Label */}
