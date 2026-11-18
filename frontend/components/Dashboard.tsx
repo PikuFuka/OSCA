@@ -365,14 +365,14 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           </div>
           
           <div className="flex-1 w-full min-h-0 min-w-0" style={{ minWidth: 0, minHeight: 0, width: '100%', height: '100%' }}>
-            <ChartContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <ChartContainer key={`velocity-${selectedBarangay}-${selectedYear}`} className="chart-reveal" width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={data.monthlyStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} />
                 <RechartsTooltip content={<SimpleTooltip />} cursor={{ stroke: '#cbd5e1' }} />
                 <ReferenceLine y={insights?.avgReg} stroke="#94a3b8" strokeDasharray="3 3" label={{ position: 'insideTopLeft', value: 'AVG', fill: '#94a3b8', fontSize: 10, fontWeight: 'bold' }} />
-                <Area type="monotone" dataKey="total" name="Registrations" stroke="#007aff" strokeWidth={2} fill="#007aff" fillOpacity={0.05} activeDot={{ r: 4, fill: '#007aff', stroke: '#fff', strokeWidth: 2 }} isAnimationActive={true} animationDuration={1400} animationEasing="ease-out" />
+                <Area type="monotone" dataKey="total" name="Registrations" stroke="#007aff" strokeWidth={2} fill="#007aff" fillOpacity={0.05} activeDot={{ r: 4, fill: '#007aff', stroke: '#fff', strokeWidth: 2 }} isAnimationActive={true} animationBegin={120} animationDuration={1250} animationEasing="ease-out" />
               </AreaChart>
             </ChartContainer>
           </div>
@@ -390,13 +390,13 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                 <span className="text-xs font-semibold">No age data yet</span>
               </div>
             ) : (
-              <ChartContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <ChartContainer key={`peak-ages-${selectedBarangay}-${selectedYear}`} className="chart-reveal" width="100%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart data={peakAges} layout="vertical" margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
                   <XAxis type="number" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} />
                   <YAxis type="category" dataKey="age" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10, fontWeight: 600}} width={30} />
                   <RechartsTooltip content={<SimpleTooltip />} cursor={{fill: '#f8fafc'}} />
-                  <Bar dataKey="count" name="Members" barSize={14} radius={[0, 4, 4, 0]} isAnimationActive={true} animationDuration={900} animationEasing="ease-out">
+                  <Bar dataKey="count" name="Members" barSize={14} radius={[0, 4, 4, 0]} isAnimationActive={true} animationBegin={220} animationDuration={1050} animationEasing="ease-out">
                     {peakAges.map((entry: any, index: number) => (
                       <Cell key={`peak-${entry.age}`} fill={['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'][index % 5]} />
                     ))}
@@ -431,7 +431,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                          <span className="text-xl font-bold text-slate-900 tabular-nums">{formatNumber(f)}</span>
                        </div>
                        <div className="w-full h-2 bg-slate-100 rounded-none">
-                         <div style={{ width: `${fPct}%` }} className="h-full bg-rose-500"></div>
+                         <div style={{ width: `${fPct}%` }} className="h-full bg-rose-500 dashboard-gender-bar"></div>
                        </div>
                        <span className="text-[10px] text-slate-400 font-semibold mt-1 text-right">{fPct.toFixed(1)}%</span>
                      </div>
@@ -442,7 +442,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                          <span className="text-xl font-bold text-slate-900 tabular-nums">{formatNumber(m)}</span>
                        </div>
                        <div className="w-full h-2 bg-slate-100 rounded-none">
-                         <div style={{ width: `${mPct}%` }} className="h-full bg-systemBlue"></div>
+                         <div style={{ width: `${mPct}%` }} className="h-full bg-systemBlue dashboard-gender-bar"></div>
                        </div>
                        <span className="text-[10px] text-slate-400 font-semibold mt-1 text-right">{mPct.toFixed(1)}%</span>
                      </div>
@@ -458,13 +458,13 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
           <p className="text-xs text-slate-500 mt-1 mb-6">Population sorted by age groups.</p>
           
           <div className="flex-1 w-full min-h-0 min-w-0" style={{ minWidth: 0, minHeight: 0, width: '100%', height: '100%' }}>
-            <ChartContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+            <ChartContainer key={`age-ranges-${selectedBarangay}-${selectedYear}`} className="chart-reveal" width="100%" height="100%" minWidth={0} minHeight={0}>
               <BarChart data={data.ageRanges} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                 <XAxis dataKey="range" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10, fontWeight: 600}} dy={10} />
                 <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} />
                 <RechartsTooltip content={<SimpleTooltip />} cursor={{fill: '#f8fafc'}} />
-                <Bar dataKey="count" name="Population" fill="#007aff" barSize={24} isAnimationActive={true} animationDuration={900} animationEasing="ease-out">
+                <Bar dataKey="count" name="Population" fill="#007aff" barSize={24} isAnimationActive={true} animationBegin={320} animationDuration={1050} animationEasing="ease-out">
                   {data.ageRanges.map((entry: any, index: number) => (
                     <Cell key={`cell-${index}`} fill={['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'][index % 5]} />
                   ))}
@@ -486,7 +486,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                   <span className="text-xs font-semibold">Zero Variance</span>
                </div>
             ) : (
-              <ChartContainer width="100%" height="100%" minWidth={0} minHeight={0}>
+              <ChartContainer key={`mortality-${selectedBarangay}-${selectedYear}`} className="chart-reveal" width="100%" height="100%" minWidth={0} minHeight={0}>
                 <LineChart data={data.monthlyStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 10}} dy={10} />
@@ -501,7 +501,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setView, onCardNavigate }) => {
                     dot={{ r: 2, fill: '#f43f5e', strokeWidth: 0 }}
                     activeDot={{ r: 4, fill: '#f43f5e' }}
                     isAnimationActive={true}
-                    animationDuration={1000}
+                    animationBegin={420}
+                    animationDuration={1100}
                     animationEasing="ease-out"
                   />
                 </LineChart>

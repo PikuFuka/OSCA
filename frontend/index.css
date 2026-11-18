@@ -648,7 +648,11 @@ main::-webkit-scrollbar-thumb:hover {
   .stagger-5 { animation-delay: 150ms; }
   
   .chart-reveal {
-    animation: chartReveal 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    animation: chartReveal 0.55s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+
+  .dashboard-gender-bar {
+    transition: width 850ms cubic-bezier(0.16, 1, 0.3, 1);
   }
 
 @keyframes smoothFadeOut {
@@ -780,7 +784,9 @@ main::-webkit-scrollbar-thumb:hover {
   .transition-content-soft,
   .view-enter,
   .stagger-in > *,
-  .stagger-sequence > * {
+  .stagger-sequence > *,
+  .chart-reveal,
+  .dashboard-gender-bar {
     animation: none;
   }
 
