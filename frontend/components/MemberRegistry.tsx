@@ -1727,36 +1727,39 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
             <style>{`
               @media print {
                 @page { 
-                  size: portrait;
-                  margin: 15mm; 
+                  size: A4 portrait;
+                  margin: 10mm;
                 }
                 body * { visibility: hidden; }
                 .print-container, .print-container * { visibility: visible; }
                 .print-container { 
-                  position: absolute; 
-                  left: 0; 
-                  top: 0; 
-                  width: 100%;
+                  position: absolute;
+                  left: 50%;
+                  top: 0;
+                  width: 171.2mm;
+                  transform: translateX(-50%);
                   display: flex !important;
                   flex-direction: row !important;
                   align-items: center !important;
                   justify-content: center !important;
-                  padding: 20px 0;
+                  padding: 0;
                   gap: 0mm !important;
                 }
                 .print-card {
                   width: 85.6mm !important;
-                  height: 53.5mm !important;
+                  height: 53.98mm !important;
+                  flex: 0 0 85.6mm !important;
                   -webkit-print-color-adjust: exact !important;
                   print-color-adjust: exact !important;
                   position: relative;
                   overflow: hidden;
-                  border: 0.1mm solid #ccc;
+                  border: 0 !important;
+                  box-sizing: border-box;
                 }
                 .print-content {
                   width: 480px;
                   height: 300px;
-                  transform: scale(calc(85.6mm / 480px), calc(53.5mm / 300px));
+                  transform: scale(0.674016, 0.680063);
                   transform-origin: top left;
                 }
               }

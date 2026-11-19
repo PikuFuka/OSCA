@@ -24,7 +24,7 @@ const StaticLabel = ({ text, config, className = "" }: { text: string, config: {
 
 const MAX_CARDS = 20;
 const CARD_WIDTH = 480;
-const CARD_HEIGHT = 300;
+const CARD_HEIGHT = 303;
 
 const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -346,14 +346,18 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
             }
             .batch-print-area {
               display: block !important;
-              width: 100%;
+              width: 171.2mm;
               margin: 0;
               padding: 0;
+              margin-left: auto;
+              margin-right: auto;
             }
             .batch-row {
               display: flex;
               flex-direction: row;
               justify-content: center;
+              width: 171.2mm;
+              height: 53.98mm;
               gap: 0;
               break-inside: avoid;
               page-break-inside: avoid;
@@ -364,18 +368,19 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
             }
             .batch-card {
               width: 85.6mm;
-              height: 53.5mm;
+              height: 53.98mm;
+              flex: 0 0 85.6mm;
               -webkit-print-color-adjust: exact !important;
               print-color-adjust: exact !important;
               position: relative;
               overflow: hidden;
-              border: 0.1mm solid #ccc;
+              border: 0;
               box-sizing: border-box;
             }
             .batch-card-content {
               width: 480px;
               height: 300px;
-              transform: scale(calc(85.6mm / 480px), calc(53.5mm / 300px));
+              transform: scale(0.674016, 0.680063);
               transform-origin: top left;
               position: relative;
             }

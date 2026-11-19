@@ -585,8 +585,8 @@ main::-webkit-scrollbar-thumb:hover {
 
   .id-card-preview {
     width: 480px;
-    height: 300px;
-    aspect-ratio: 8 / 5;
+    height: 302.625px;
+    aspect-ratio: 856 / 539.8;
   }
 
   .id-card-flip-stage {
