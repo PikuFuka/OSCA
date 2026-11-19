@@ -29,6 +29,7 @@ import { SeniorCitizen, CurrentUser, INITIAL_ID_CONFIG, ViewType } from '../type
 import { seniorsAPI, activityLogsAPI, reportsAPI } from '../services/api';
 import { useBarangays } from '../hooks/useBarangays';
 import { ProfilePhoto } from '../shared/components/ProfilePhoto';
+import { IdPrintPair, ID_CARD_PRINT_CSS, ID_PRINT_PAGE_CSS } from '../features/registry/print/IdCardPrint';
 import ConfirmModal from './ConfirmModal';
 import SeniorHistorySection from '../features/registry/history/SeniorHistorySection';
 import {
@@ -1722,92 +1723,92 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
 
       {/* ID Generation Modal */}
       {idModalOpen && idGenerationSenior && createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm modal-backdrop-in overflow-y-auto">
-          <div className="hidden print:flex flex-col items-center justify-start gap-0 p-0 bg-white w-full">
+        <div className="id-print-overlay fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm modal-backdrop-in overflow-y-auto">
+          <div className="id-print-sheet hidden print:flex flex-col items-center justify-start gap-0 p-0 bg-white w-full">
             <style>{`
               @media print {
-                @page { 
-                  size: A4 portrait;
-                  margin: 10mm;
+                ${ID_PRINT_PAGE_CSS}
+                body > * {
+                  display: none !important;
                 }
-                body * { visibility: hidden; }
-                .print-container, .print-container * { visibility: visible; }
-                .print-container { 
-                  position: absolute;
-                  left: 50%;
-                  top: 0;
-                  width: 171.2mm;
-                  transform: translateX(-50%);
-                  display: flex !important;
-                  flex-direction: row !important;
-                  align-items: center !important;
-                  justify-content: center !important;
-                  padding: 0;
-                  gap: 0mm !important;
+                body > #modal-root {
+                  display: block !important;
                 }
-                .print-card {
-                  width: 85.6mm !important;
-                  height: 53.98mm !important;
-                  flex: 0 0 85.6mm !important;
-                  -webkit-print-color-adjust: exact !important;
-                  print-color-adjust: exact !important;
-                  position: relative;
-                  overflow: hidden;
-                  border: 0 !important;
-                  box-sizing: border-box;
+                body > .id-print-overlay {
+                  display: block !important;
                 }
-                .print-content {
-                  width: 480px;
-                  height: 300px;
-                  transform: scale(0.674016, 0.680063);
-                  transform-origin: top left;
+                #modal-root > * {
+                  display: none !important;
                 }
+                #modal-root > .id-print-overlay {
+                  display: block !important;
+                }
+                .id-print-overlay {
+                  position: static !important;
+                  inset: auto !important;
+                  z-index: auto !important;
+                  width: auto !important;
+                  height: auto !important;
+                  min-height: 0 !important;
+                  max-height: none !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  overflow: visible !important;
+                  background: #fff !important;
+                  backdrop-filter: none !important;
+                  -webkit-backdrop-filter: none !important;
+                  animation: none !important;
+                  opacity: 1 !important;
+                }
+                .id-generation-modal {
+                  display: none !important;
+                }
+                .id-print-sheet {
+                  display: block !important;
+                  width: auto !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  background: #fff !important;
+                }
+                ${ID_CARD_PRINT_CSS}
               }
             `}</style>
             
-            <div className="print-container">
-              {/* BACK CARD (PRINT) - Left side */}
-              <div className="print-card">
-                <div className="print-content">
-                  <img src="img/BACK.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
-                </div>
-              </div>
+            <IdPrintPair
+              front={
+                <>
+                  {/* Background Image Tag for better print reliability */}
+                  <img src="img/FRONT.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
 
-              {/* FRONT CARD (PRINT) - Right side */}
-              <div className="print-card">
-                 <div className="print-content">
-                    {/* Background Image Tag for better print reliability */}
-                    <img src="img/FRONT.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
-                    
-                    <div className="absolute inset-0 z-10">
-                        <div className="absolute [left:12px] [top:139px] [width:125px] [height:127px] overflow-hidden flex items-center justify-center">
-                          {idPhoto && <ProfilePhoto src={idPhoto} name={formatIdDisplayName(idGenerationSenior)} />}
-                        </div>
-                        
-                        <div className="absolute inset-0 z-20">
-                          <StaticLabel text={formatIdDisplayName(idGenerationSenior)} config={textConfig.name} className="font-black text-slate-900 uppercase" />
-                          <StaticLabel text={`Brgy. ${idGenerationSenior.barangay}`} config={textConfig.barangay} className="font-black text-slate-900 uppercase" />
-                          <StaticLabel text="Pagsanjan, Laguna" config={textConfig.city} className="font-black text-slate-900 uppercase" />
-                          <StaticLabel text={String(idGenerationSenior.age)} config={textConfig.age} className="font-black text-slate-900" />
-                          <StaticLabel 
-                            text={idGenerationSenior.dateOfBirth 
-                              ? new Date(idGenerationSenior.dateOfBirth).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
-                              : 'N/A'}
-                            config={textConfig.dob} 
-                            className="font-black text-slate-900" 
-                          />
-                        <StaticLabel 
-                          text={(idGenerationSenior as any).sex || idGenerationSenior.gender} 
-                          config={textConfig.gender} 
-                          className="font-black text-slate-900 uppercase" 
-                        />
-                          <StaticLabel text={new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })} config={textConfig.dateIssued} className="font-black text-slate-900" />
-                          <StaticLabel text={idGenerationSenior.id} config={textConfig.id} className="font-black text-rose-600 tracking-tighter" />
-                        </div>
+                  <div className="absolute inset-0 z-10">
+                    <div className="absolute [left:12px] [top:139px] [width:125px] [height:127px] overflow-hidden flex items-center justify-center">
+                      {idPhoto && <ProfilePhoto src={idPhoto} name={formatIdDisplayName(idGenerationSenior)} />}
                     </div>
-                 </div>
-              </div>
-            </div>
+
+                    <div className="absolute inset-0 z-20">
+                      <StaticLabel text={formatIdDisplayName(idGenerationSenior)} config={textConfig.name} className="font-black text-slate-900 uppercase" />
+                      <StaticLabel text={`Brgy. ${idGenerationSenior.barangay}`} config={textConfig.barangay} className="font-black text-slate-900 uppercase" />
+                      <StaticLabel text="Pagsanjan, Laguna" config={textConfig.city} className="font-black text-slate-900 uppercase" />
+                      <StaticLabel text={String(idGenerationSenior.age)} config={textConfig.age} className="font-black text-slate-900" />
+                      <StaticLabel
+                        text={idGenerationSenior.dateOfBirth
+                          ? new Date(idGenerationSenior.dateOfBirth).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })
+                          : 'N/A'}
+                        config={textConfig.dob}
+                        className="font-black text-slate-900"
+                      />
+                      <StaticLabel
+                        text={(idGenerationSenior as any).sex || idGenerationSenior.gender}
+                        config={textConfig.gender}
+                        className="font-black text-slate-900 uppercase"
+                      />
+                      <StaticLabel text={new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric' })} config={textConfig.dateIssued} className="font-black text-slate-900" />
+                      <StaticLabel text={idGenerationSenior.id} config={textConfig.id} className="font-black text-rose-600 tracking-tighter" />
+                    </div>
+                  </div>
+                </>
+              }
+            />
           </div>
 
            <div className="id-generation-modal bg-white rounded-[2rem] w-full max-w-6xl shadow-2xl shadow-slate-950/20 overflow-hidden modal-panel-in flex flex-col max-h-[92vh] print:hidden">
@@ -2138,13 +2139,18 @@ const MemberRegistry: React.FC<RegistryProps> = ({ currentUser, notify, setView 
                       </div>
                    </div>
 
-                   <div className="flex flex-col sm:flex-row gap-3 mt-4 w-full sm:w-auto">
-                     <button 
-                       onClick={handlePrint}
-                       className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-xl"
-                     >
-                        <Printer size={18} /> Print Card
-                     </button>
+                   <div className="mt-4 w-full sm:w-auto">
+                     <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                       <button
+                         onClick={handlePrint}
+                         className="w-full sm:w-auto px-8 py-4 bg-slate-900 text-white rounded-xl font-bold flex items-center justify-center gap-3 hover:bg-slate-800 transition-all shadow-xl"
+                       >
+                          <Printer size={18} /> Print Card
+                       </button>
+                     </div>
+                     <p className="mt-2 text-center sm:text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                       A4 photo paper · print at 100% / Actual Size
+                     </p>
                    </div>
                 </div>
              </div>

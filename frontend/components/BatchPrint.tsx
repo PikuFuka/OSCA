@@ -7,6 +7,15 @@ import Skeleton from './Skeleton';
 import { BatchPrintSkeleton, BatchPrintViewSkeleton } from './skeletons';
 import TransitionWrapper from './TransitionWrapper';
 import { ProfilePhoto } from '../shared/components/ProfilePhoto';
+import {
+  IdPrintPair,
+  ID_CARD_PRINT_CSS,
+  ID_PRINT_CONTENT_HEIGHT_PX,
+  ID_PRINT_CONTENT_WIDTH_PX,
+  ID_PRINT_FRAME_WIDTH_MM,
+  ID_PRINT_PAGE_CSS,
+  paginateIdCards,
+} from '../features/registry/print/IdCardPrint';
 
 interface BatchPrintProps {
   currentUser: CurrentUser;
@@ -23,8 +32,8 @@ const StaticLabel = ({ text, config, className = "" }: { text: string, config: {
 );
 
 const MAX_CARDS = 20;
-const CARD_WIDTH = 480;
-const CARD_HEIGHT = 303;
+const CARD_WIDTH = ID_PRINT_CONTENT_WIDTH_PX;
+const CARD_HEIGHT = ID_PRINT_CONTENT_HEIGHT_PX;
 
 const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -273,7 +282,7 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h3 className="text-xl font-black text-slate-900 tracking-tight mb-1">Batch ID Preview</h3>
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Responsive front/back preview, aligned for A4 print output.</p>
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">4 IDs per A4 photo paper · 85.6 × 53.98 mm · print at 100%.</p>
           </div>
           <span className="inline-flex items-center px-4 py-1.5 rounded-full bg-amber-50 text-amber-600 border border-amber-100 text-[10px] font-black uppercase tracking-widest">
             Match to final print layout
@@ -319,92 +328,39 @@ const BatchPrint: React.FC<BatchPrintProps> = ({ notify }) => {
       </div>
 
       {/* Print-only content: portaled to <body> so app layout (h-screen,
-          overflow-hidden ancestors) can neither shrink nor clip it. Natural
-          flow paginates ~4 ID rows per A4 page: 20 cards = 5 pages, one job. */}
+          overflow-hidden ancestors) can neither shrink nor clip it. Each A4
+          sheet holds four seniors, each as a back/front pair. */}
       {createPortal(
-      <div className="hidden print:block">
+      <div className="hidden print:block batch-print-sheet">
         <style>{`
           @media print {
-            @page {
-              size: A4 portrait;
-              margin: 10mm;
-            }
-            html, body {
-              margin: 0 !important;
-              padding: 0 !important;
-              height: auto !important;
-              overflow: visible !important;
-              background: #fff !important;
-            }
-            body > *:not(:has(.batch-print-area)) {
+            ${ID_PRINT_PAGE_CSS}
+            body > * {
               display: none !important;
             }
-            body > :has(.batch-print-area) {
+            body > .batch-print-sheet {
               display: block !important;
               margin: 0 !important;
               padding: 0 !important;
             }
             .batch-print-area {
-              display: block !important;
-              width: 171.2mm;
-              margin: 0;
+              display: flex !important;
+              flex-direction: column;
+              width: ${ID_PRINT_FRAME_WIDTH_MM}mm;
+              margin: 0 auto;
               padding: 0;
-              margin-left: auto;
-              margin-right: auto;
             }
-            .batch-row {
-              display: flex;
-              flex-direction: row;
-              justify-content: center;
-              width: 171.2mm;
-              height: 53.98mm;
-              gap: 0;
-              break-inside: avoid;
-              page-break-inside: avoid;
-              margin: 0 0 4mm 0;
-            }
-            .batch-print-area > .batch-row:last-child {
-              margin-bottom: 0;
-            }
-            .batch-card {
-              width: 85.6mm;
-              height: 53.98mm;
-              flex: 0 0 85.6mm;
-              -webkit-print-color-adjust: exact !important;
-              print-color-adjust: exact !important;
-              position: relative;
-              overflow: hidden;
-              border: 0;
-              box-sizing: border-box;
-            }
-            .batch-card-content {
-              width: 480px;
-              height: 300px;
-              transform: scale(0.674016, 0.680063);
-              transform-origin: top left;
-              position: relative;
-            }
+            ${ID_CARD_PRINT_CSS}
           }
         `}</style>
         <div className="batch-print-area">
-          {selectedSeniors.map(senior => {
-            return (
-              <div key={senior.id} className="batch-row">
-                {/* Back card */}
-                <div className="batch-card">
-                  <div className="batch-card-content">
-                    <img src="img/BACK.jpg" className="absolute inset-0 w-full h-full object-cover z-0" alt="" />
-                  </div>
-                </div>
-                {/* Front card */}
-                <div className="batch-card">
-                  <div className="batch-card-content">
-                    {renderFrontCard(senior)}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {paginateIdCards(selectedSeniors).map((pageSeniors, pageIndex) => (
+            <div key={`batch-page-${pageIndex}`} className="id-print-page">
+              {pageSeniors.map(senior => (
+                <IdPrintPair key={senior.id} front={renderFrontCard(senior)} />
+              ))}
+            </div>
+          ))}
         </div>
       </div>,
       document.body
